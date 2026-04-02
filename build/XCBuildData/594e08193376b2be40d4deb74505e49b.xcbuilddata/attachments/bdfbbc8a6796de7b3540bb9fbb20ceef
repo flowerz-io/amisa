@@ -1,0 +1,26 @@
+{
+  "" : {
+    "const-values" : "/Users/jonas/Documents/App/Balibu/build/Balibu.build/Release-iphoneos/BalibuShareExtension.build/Objects-normal/arm64/BalibuShareExtension-primary.swiftconstvalues",
+    "dependencies" : "/Users/jonas/Documents/App/Balibu/build/Balibu.build/Release-iphoneos/BalibuShareExtension.build/Objects-normal/arm64/BalibuShareExtension-primary.d",
+    "diagnostics" : "/Users/jonas/Documents/App/Balibu/build/Balibu.build/Release-iphoneos/BalibuShareExtension.build/Objects-normal/arm64/BalibuShareExtension-primary.dia",
+    "emit-module-dependencies" : "/Users/jonas/Documents/App/Balibu/build/Balibu.build/Release-iphoneos/BalibuShareExtension.build/Objects-normal/arm64/BalibuShareExtension-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/jonas/Documents/App/Balibu/build/Balibu.build/Release-iphoneos/BalibuShareExtension.build/Objects-normal/arm64/BalibuShareExtension-primary-emit-module.dia",
+    "pch" : "/Users/jonas/Documents/App/Balibu/build/Balibu.build/Release-iphoneos/BalibuShareExtension.build/Objects-normal/arm64/BalibuShareExtension-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/jonas/Documents/App/Balibu/build/Balibu.build/Release-iphoneos/BalibuShareExtension.build/Objects-normal/arm64/BalibuShareExtension-primary.swiftdeps"
+  },
+  "/Users/jonas/Documents/App/Balibu/BalibuShareExtension/ShareExtensionStorage.swift" : {
+    "index-unit-output-path" : "/Balibu.build/Release-iphoneos/BalibuShareExtension.build/Objects-normal/arm64/ShareExtensionStorage.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Balibu/build/Balibu.build/Release-iphoneos/BalibuShareExtension.build/Objects-normal/arm64/ShareExtensionStorage.bc",
+    "object" : "/Users/jonas/Documents/App/Balibu/build/Balibu.build/Release-iphoneos/BalibuShareExtension.build/Objects-normal/arm64/ShareExtensionStorage.o"
+  },
+  "/Users/jonas/Documents/App/Balibu/BalibuShareExtension/ShareItemExtractor.swift" : {
+    "index-unit-output-path" : "/Balibu.build/Release-iphoneos/BalibuShareExtension.build/Objects-normal/arm64/ShareItemExtractor.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Balibu/build/Balibu.build/Release-iphoneos/BalibuShareExtension.build/Objects-normal/arm64/ShareItemExtractor.bc",
+    "object" : "/Users/jonas/Documents/App/Balibu/build/Balibu.build/Release-iphoneos/BalibuShareExtension.build/Objects-normal/arm64/ShareItemExtractor.o"
+  },
+  "/Users/jonas/Documents/App/Balibu/BalibuShareExtension/ShareViewController.swift" : {
+    "index-unit-output-path" : "/Balibu.build/Release-iphoneos/BalibuShareExtension.build/Objects-normal/arm64/ShareViewController.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Balibu/build/Balibu.build/Release-iphoneos/BalibuShareExtension.build/Objects-normal/arm64/ShareViewController.bc",
+    "object" : "/Users/jonas/Documents/App/Balibu/build/Balibu.build/Release-iphoneos/BalibuShareExtension.build/Objects-normal/arm64/ShareViewController.o"
+  }
+}

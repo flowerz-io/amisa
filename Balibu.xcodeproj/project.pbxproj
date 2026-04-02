@@ -3,8 +3,12 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 90;
 	objects = {
+
+/* Begin PBXBuildFile section */
+		DD2E04742F61863100B107F0 /* BalibuShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = DD2E046A2F61863000B107F0 /* BalibuShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
 		DD2E044A2F6184F000B107F0 /* PBXContainerItemProxy */ = {
@@ -21,17 +25,57 @@
 			remoteGlobalIDString = DD2E043B2F6184ED00B107F0;
 			remoteInfo = Balibu;
 		};
+		DD2E04722F61863100B107F0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DD2E04342F6184ED00B107F0 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DD2E04692F61863000B107F0;
+			remoteInfo = BalibuShareExtension;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		DD2E04792F61863100B107F0 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			dstPath = "";
+			dstSubfolder = PlugIns;
+			files = (
+				DD2E04742F61863100B107F0 /* BalibuShareExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		DD2E043C2F6184ED00B107F0 /* Balibu.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Balibu.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DD2E04492F6184F000B107F0 /* BalibuTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BalibuTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		DD2E04532F6184F000B107F0 /* BalibuUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BalibuUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		DD2E046A2F61863000B107F0 /* BalibuShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = BalibuShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		DD2E04752F61863100B107F0 /* Exceptions for "BalibuShareExtension" folder in "BalibuShareExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = DD2E04692F61863000B107F0 /* BalibuShareExtension */;
+		};
+		DDAC12FE2F630DC7006BF7BF /* Exceptions for "Balibu" folder in "Balibu" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = DD2E043B2F6184ED00B107F0 /* Balibu */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		DD2E043E2F6184ED00B107F0 /* Balibu */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				DDAC12FE2F630DC7006BF7BF /* Exceptions for "Balibu" folder in "Balibu" target */,
+			);
 			path = Balibu;
 			sourceTree = "<group>";
 		};
@@ -45,29 +89,36 @@
 			path = BalibuUITests;
 			sourceTree = "<group>";
 		};
+		DD2E046B2F61863000B107F0 /* BalibuShareExtension */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				DD2E04752F61863100B107F0 /* Exceptions for "BalibuShareExtension" folder in "BalibuShareExtension" target */,
+			);
+			path = BalibuShareExtension;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		DD2E04392F6184ED00B107F0 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 		DD2E04462F6184F000B107F0 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 		DD2E04502F6184F000B107F0 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DD2E04672F61863000B107F0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
 		};
 /* End PBXFrameworksBuildPhase section */
 
@@ -78,6 +129,7 @@
 				DD2E043E2F6184ED00B107F0 /* Balibu */,
 				DD2E044C2F6184F000B107F0 /* BalibuTests */,
 				DD2E04562F6184F000B107F0 /* BalibuUITests */,
+				DD2E046B2F61863000B107F0 /* BalibuShareExtension */,
 				DD2E043D2F6184ED00B107F0 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -88,6 +140,7 @@
 				DD2E043C2F6184ED00B107F0 /* Balibu.app */,
 				DD2E04492F6184F000B107F0 /* BalibuTests.xctest */,
 				DD2E04532F6184F000B107F0 /* BalibuUITests.xctest */,
+				DD2E046A2F61863000B107F0 /* BalibuShareExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -102,17 +155,17 @@
 				DD2E04382F6184ED00B107F0 /* Sources */,
 				DD2E04392F6184ED00B107F0 /* Frameworks */,
 				DD2E043A2F6184ED00B107F0 /* Resources */,
+				DD2E04792F61863100B107F0 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				DD2E04732F61863100B107F0 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				DD2E043E2F6184ED00B107F0 /* Balibu */,
 			);
 			name = Balibu;
-			packageProductDependencies = (
-			);
 			productName = Balibu;
 			productReference = DD2E043C2F6184ED00B107F0 /* Balibu.app */;
 			productType = "com.apple.product-type.application";
@@ -134,8 +187,6 @@
 				DD2E044C2F6184F000B107F0 /* BalibuTests */,
 			);
 			name = BalibuTests;
-			packageProductDependencies = (
-			);
 			productName = BalibuTests;
 			productReference = DD2E04492F6184F000B107F0 /* BalibuTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -157,11 +208,27 @@
 				DD2E04562F6184F000B107F0 /* BalibuUITests */,
 			);
 			name = BalibuUITests;
-			packageProductDependencies = (
-			);
 			productName = BalibuUITests;
 			productReference = DD2E04532F6184F000B107F0 /* BalibuUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		DD2E04692F61863000B107F0 /* BalibuShareExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DD2E04762F61863100B107F0 /* Build configuration list for PBXNativeTarget "BalibuShareExtension" */;
+			buildPhases = (
+				DD2E04662F61863000B107F0 /* Sources */,
+				DD2E04672F61863000B107F0 /* Frameworks */,
+				DD2E04682F61863000B107F0 /* Resources */,
+			);
+			buildRules = (
+			);
+			fileSystemSynchronizedGroups = (
+				DD2E046B2F61863000B107F0 /* BalibuShareExtension */,
+			);
+			name = BalibuShareExtension;
+			productName = BalibuShareExtension;
+			productReference = DD2E046A2F61863000B107F0 /* BalibuShareExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -184,6 +251,9 @@
 						CreatedOnToolsVersion = 26.0.1;
 						TestTargetID = DD2E043B2F6184ED00B107F0;
 					};
+					DD2E04692F61863000B107F0 = {
+						CreatedOnToolsVersion = 26.0.1;
+					};
 				};
 			};
 			buildConfigurationList = DD2E04372F6184ED00B107F0 /* Build configuration list for PBXProject "Balibu" */;
@@ -195,7 +265,7 @@
 			);
 			mainGroup = DD2E04332F6184ED00B107F0;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 77;
+			preferredProjectObjectVersion = 90;
 			productRefGroup = DD2E043D2F6184ED00B107F0 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -203,6 +273,7 @@
 				DD2E043B2F6184ED00B107F0 /* Balibu */,
 				DD2E04482F6184F000B107F0 /* BalibuTests */,
 				DD2E04522F6184F000B107F0 /* BalibuUITests */,
+				DD2E04692F61863000B107F0 /* BalibuShareExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -210,48 +281,46 @@
 /* Begin PBXResourcesBuildPhase section */
 		DD2E043A2F6184ED00B107F0 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 		DD2E04472F6184F000B107F0 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 		DD2E04512F6184F000B107F0 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DD2E04682F61863000B107F0 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		DD2E04382F6184ED00B107F0 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 		DD2E04452F6184F000B107F0 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 		DD2E044F2F6184F000B107F0 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DD2E04662F61863000B107F0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
 		};
 /* End PBXSourcesBuildPhase section */
 
@@ -266,10 +335,15 @@
 			target = DD2E043B2F6184ED00B107F0 /* Balibu */;
 			targetProxy = DD2E04542F6184F000B107F0 /* PBXContainerItemProxy */;
 		};
+		DD2E04732F61863100B107F0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DD2E04692F61863000B107F0 /* BalibuShareExtension */;
+			targetProxy = DD2E04722F61863100B107F0 /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
-		DD2E045B2F6184F000B107F0 /* Debug */ = {
+		DD2E045B2F6184F000B107F0 /* Debug configuration for PBXProject "Balibu" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -322,7 +396,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -333,7 +407,7 @@
 			};
 			name = Debug;
 		};
-		DD2E045C2F6184F000B107F0 /* Release */ = {
+		DD2E045C2F6184F000B107F0 /* Release configuration for PBXProject "Balibu" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -380,7 +454,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -390,16 +464,18 @@
 			};
 			name = Release;
 		};
-		DD2E045E2F6184F000B107F0 /* Debug */ = {
+		DD2E045E2F6184F000B107F0 /* Debug configuration for PBXNativeTarget "Balibu" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Balibu/Balibu.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 7VRLJJU8Q7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Balibu/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -410,7 +486,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = flowerz.io.Balibu;
+				PRODUCT_BUNDLE_IDENTIFIER = flowerz.io.Balibu.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -422,16 +498,18 @@
 			};
 			name = Debug;
 		};
-		DD2E045F2F6184F000B107F0 /* Release */ = {
+		DD2E045F2F6184F000B107F0 /* Release configuration for PBXNativeTarget "Balibu" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Balibu/Balibu.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 7VRLJJU8Q7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Balibu/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -442,7 +520,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = flowerz.io.Balibu;
+				PRODUCT_BUNDLE_IDENTIFIER = flowerz.io.Balibu.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -454,7 +532,7 @@
 			};
 			name = Release;
 		};
-		DD2E04612F6184F000B107F0 /* Debug */ = {
+		DD2E04612F6184F000B107F0 /* Debug configuration for PBXNativeTarget "BalibuTests" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
@@ -476,7 +554,7 @@
 			};
 			name = Debug;
 		};
-		DD2E04622F6184F000B107F0 /* Release */ = {
+		DD2E04622F6184F000B107F0 /* Release configuration for PBXNativeTarget "BalibuTests" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
@@ -498,7 +576,7 @@
 			};
 			name = Release;
 		};
-		DD2E04642F6184F000B107F0 /* Debug */ = {
+		DD2E04642F6184F000B107F0 /* Debug configuration for PBXNativeTarget "BalibuUITests" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
@@ -518,7 +596,7 @@
 			};
 			name = Debug;
 		};
-		DD2E04652F6184F000B107F0 /* Release */ = {
+		DD2E04652F6184F000B107F0 /* Release configuration for PBXNativeTarget "BalibuUITests" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
@@ -535,6 +613,64 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = Balibu;
+			};
+			name = Release;
+		};
+		DD2E04772F61863100B107F0 /* Debug configuration for PBXNativeTarget "BalibuShareExtension" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = BalibuShareExtension/BalibuShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7VRLJJU8Q7;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = BalibuShareExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = BalibuShareExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = flowerz.io.Balibu.app.ShareExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		DD2E04782F61863100B107F0 /* Release configuration for PBXNativeTarget "BalibuShareExtension" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = BalibuShareExtension/BalibuShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7VRLJJU8Q7;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = BalibuShareExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = BalibuShareExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = flowerz.io.Balibu.app.ShareExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -544,37 +680,41 @@
 		DD2E04372F6184ED00B107F0 /* Build configuration list for PBXProject "Balibu" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				DD2E045B2F6184F000B107F0 /* Debug */,
-				DD2E045C2F6184F000B107F0 /* Release */,
+				DD2E045B2F6184F000B107F0 /* Debug configuration for PBXProject "Balibu" */,
+				DD2E045C2F6184F000B107F0 /* Release configuration for PBXProject "Balibu" */,
 			);
-			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 		DD2E045D2F6184F000B107F0 /* Build configuration list for PBXNativeTarget "Balibu" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				DD2E045E2F6184F000B107F0 /* Debug */,
-				DD2E045F2F6184F000B107F0 /* Release */,
+				DD2E045E2F6184F000B107F0 /* Debug configuration for PBXNativeTarget "Balibu" */,
+				DD2E045F2F6184F000B107F0 /* Release configuration for PBXNativeTarget "Balibu" */,
 			);
-			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 		DD2E04602F6184F000B107F0 /* Build configuration list for PBXNativeTarget "BalibuTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				DD2E04612F6184F000B107F0 /* Debug */,
-				DD2E04622F6184F000B107F0 /* Release */,
+				DD2E04612F6184F000B107F0 /* Debug configuration for PBXNativeTarget "BalibuTests" */,
+				DD2E04622F6184F000B107F0 /* Release configuration for PBXNativeTarget "BalibuTests" */,
 			);
-			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 		DD2E04632F6184F000B107F0 /* Build configuration list for PBXNativeTarget "BalibuUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				DD2E04642F6184F000B107F0 /* Debug */,
-				DD2E04652F6184F000B107F0 /* Release */,
+				DD2E04642F6184F000B107F0 /* Debug configuration for PBXNativeTarget "BalibuUITests" */,
+				DD2E04652F6184F000B107F0 /* Release configuration for PBXNativeTarget "BalibuUITests" */,
 			);
-			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		DD2E04762F61863100B107F0 /* Build configuration list for PBXNativeTarget "BalibuShareExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DD2E04772F61863100B107F0 /* Debug configuration for PBXNativeTarget "BalibuShareExtension" */,
+				DD2E04782F61863100B107F0 /* Release configuration for PBXNativeTarget "BalibuShareExtension" */,
+			);
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */

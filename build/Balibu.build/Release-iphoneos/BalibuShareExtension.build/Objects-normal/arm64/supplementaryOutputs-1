@@ -1,0 +1,12 @@
+{
+  "/Users/jonas/Documents/App/Balibu/BalibuShareExtension/ShareExtensionStorage.swift" : {
+    "abi-baseline-json" : "/Users/jonas/Documents/App/Balibu/build/Balibu.build/Release-iphoneos/BalibuShareExtension.build/Objects-normal/arm64/BalibuShareExtension.abi.json",
+    "const-values" : "/Users/jonas/Documents/App/Balibu/build/Balibu.build/Release-iphoneos/BalibuShareExtension.build/Objects-normal/arm64/BalibuShareExtension-primary.swiftconstvalues",
+    "dependencies" : "/Users/jonas/Documents/App/Balibu/build/Balibu.build/Release-iphoneos/BalibuShareExtension.build/Objects-normal/arm64/BalibuShareExtension-primary.d",
+    "diagnostics" : "/Users/jonas/Documents/App/Balibu/build/Balibu.build/Release-iphoneos/BalibuShareExtension.build/Objects-normal/arm64/BalibuShareExtension-primary.dia",
+    "objc-header" : "/Users/jonas/Documents/App/Balibu/build/Balibu.build/Release-iphoneos/BalibuShareExtension.build/Objects-normal/arm64/BalibuShareExtension-Swift.h",
+    "swiftdoc" : "/Users/jonas/Documents/App/Balibu/build/Balibu.build/Release-iphoneos/BalibuShareExtension.build/Objects-normal/arm64/BalibuShareExtension.swiftdoc",
+    "swiftmodule" : "/Users/jonas/Documents/App/Balibu/build/Balibu.build/Release-iphoneos/BalibuShareExtension.build/Objects-normal/arm64/BalibuShareExtension.swiftmodule",
+    "swiftsourceinfo" : "/Users/jonas/Documents/App/Balibu/build/Balibu.build/Release-iphoneos/BalibuShareExtension.build/Objects-normal/arm64/BalibuShareExtension.swiftsourceinfo"
+  }
+}

@@ -1,0 +1,4 @@
+Target dependency graph (2 targets)
+Target 'Balibu' in project 'Balibu'
+➜ Explicit dependency on target 'BalibuShareExtension' in project 'Balibu'
+Target 'BalibuShareExtension' in project 'Balibu' (no dependencies)

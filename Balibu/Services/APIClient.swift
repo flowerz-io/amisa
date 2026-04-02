@@ -1,0 +1,121 @@
+//
+//  APIClient.swift
+//  Balibu
+//
+//  Client API pour l'endpoint POST /analyze-search.
+//
+
+import Foundation
+import UIKit
+
+// MARK: - Protocol (pour injection et mock)
+
+protocol APIClientProtocol: Sendable {
+    func analyzeAndSearch(image: UIImage) async throws -> AnalyzeSearchResponse
+    func analyzeAndSearch(imageData: Data) async throws -> AnalyzeSearchResponse
+}
+
+// MARK: - Implémentation réelle
+
+actor APIClient: APIClientProtocol {
+    func analyzeAndSearch(image: UIImage) async throws -> AnalyzeSearchResponse {
+        guard let imageData = image.jpegData(compressionQuality: 0.8) else {
+            throw APIError.invalidImage
+        }
+        return try await analyzeAndSearch(imageData: imageData)
+    }
+    static let shared = APIClient()
+
+    /// Fournit le client par défaut (pour injection depuis le MainActor).
+    @MainActor
+    static func makeDefault() -> APIClient {
+        shared
+    }
+
+    private let baseURL: URL
+    private let session: URLSession
+    private let decoder: JSONDecoder
+
+    init(baseURL: URL? = nil) {
+        self.baseURL = baseURL ?? APIConfig.baseURL
+        self.session = URLSession.shared
+        self.decoder = JSONDecoder()
+    }
+
+    func analyzeAndSearch(imageData: Data) async throws -> AnalyzeSearchResponse {
+        let url = baseURL.appending(path: "analyze-search")
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let body = AnalyzeSearchRequest(imageBase64: imageData.base64EncodedString())
+        request.httpBody = try JSONEncoder().encode(body)
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        print("STATUS:", httpResponse.statusCode)
+        print("RAW RESPONSE:", String(data: data, encoding: .utf8) ?? "nil")
+
+        switch httpResponse.statusCode {
+        case 200:
+            do {
+                return try decoder.decode(AnalyzeSearchResponse.self, from: data)
+            } catch {
+                print("DECODING ERROR:", error)
+                throw error
+            }
+        case 422:
+            if let errorBody = try? decoder.decode(APIErrorResponse.self, from: data),
+               errorBody.error == "low_confidence" {
+                throw APIError.lowConfidence
+            }
+            throw APIError.unknown(statusCode: 422)
+        case 400:
+            throw APIError.badRequest
+        case 500:
+            throw APIError.serverError
+        default:
+            throw APIError.unknown(statusCode: httpResponse.statusCode)
+        }
+    }
+}
+
+// MARK: - Error Response (422, etc.)
+
+private struct APIErrorResponse: Decodable {
+    let error: String?
+    let message: String?
+}
+
+// MARK: - Errors
+
+enum APIError: LocalizedError {
+    case invalidImage
+    case invalidResponse
+    case badRequest
+    case serverError
+    case lowConfidence
+    case unknown(statusCode: Int)
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidImage:
+            return "Image non exploitable"
+        case .invalidResponse:
+            return "Réponse invalide du serveur"
+        case .badRequest:
+            return "Image non exploitable"
+        case .serverError:
+            return "Serveur indisponible"
+        case .lowConfidence:
+            return "Image trop ambiguë. Essaie avec un recadrage plus précis ou une image plus nette."
+        case .unknown(let code):
+            return "Erreur (\(code))"
+        }
+    }
+}

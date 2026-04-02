@@ -2,16 +2,20 @@
 //  BalibuApp.swift
 //  Balibu
 //
-//  Created by Jonas Le Gall on 11/03/2026.
+//  Created for Balibu MVP.
 //
 
 import SwiftUI
+import Combine
 
 @main
 struct BalibuApp: App {
+    @StateObject private var router = Router()
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            AppRouter(router: router)
+                .environmentObject(router)
         }
     }
 }

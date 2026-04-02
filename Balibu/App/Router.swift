@@ -1,0 +1,34 @@
+//
+//  Router.swift
+//  Balibu
+//
+//  Coordonnateur de navigation pour l'app.
+//
+
+import SwiftUI
+import Combine
+
+@MainActor
+final class Router: ObservableObject {
+    @Published var path = NavigationPath()
+
+    func navigateToImageCrop(payload: SharedImagePayload) {
+        path.append(AppRoute.imageCrop(payload: payload))
+    }
+
+    func navigateToSharedImport(payload: SharedImagePayload) {
+        path.append(AppRoute.sharedImportReview(payload: payload))
+    }
+
+    func navigateToResults(session: SearchSession) {
+        path.append(AppRoute.results(session: session))
+    }
+
+    func navigateToSearchHistory() {
+        path.append(AppRoute.searchHistory)
+    }
+
+    func popToRoot() {
+        path = NavigationPath()
+    }
+}

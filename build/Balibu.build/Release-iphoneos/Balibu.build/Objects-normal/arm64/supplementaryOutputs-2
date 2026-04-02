@@ -1,0 +1,12 @@
+{
+  "/Users/jonas/Documents/App/Balibu/Balibu/App/AppRouter.swift" : {
+    "abi-baseline-json" : "/Users/jonas/Documents/App/Balibu/build/Balibu.build/Release-iphoneos/Balibu.build/Objects-normal/arm64/Balibu.abi.json",
+    "const-values" : "/Users/jonas/Documents/App/Balibu/build/Balibu.build/Release-iphoneos/Balibu.build/Objects-normal/arm64/Balibu-primary.swiftconstvalues",
+    "dependencies" : "/Users/jonas/Documents/App/Balibu/build/Balibu.build/Release-iphoneos/Balibu.build/Objects-normal/arm64/Balibu-primary.d",
+    "diagnostics" : "/Users/jonas/Documents/App/Balibu/build/Balibu.build/Release-iphoneos/Balibu.build/Objects-normal/arm64/Balibu-primary.dia",
+    "objc-header" : "/Users/jonas/Documents/App/Balibu/build/Balibu.build/Release-iphoneos/Balibu.build/Objects-normal/arm64/Balibu-Swift.h",
+    "swiftdoc" : "/Users/jonas/Documents/App/Balibu/build/Balibu.build/Release-iphoneos/Balibu.build/Objects-normal/arm64/Balibu.swiftdoc",
+    "swiftmodule" : "/Users/jonas/Documents/App/Balibu/build/Balibu.build/Release-iphoneos/Balibu.build/Objects-normal/arm64/Balibu.swiftmodule",
+    "swiftsourceinfo" : "/Users/jonas/Documents/App/Balibu/build/Balibu.build/Release-iphoneos/Balibu.build/Objects-normal/arm64/Balibu.swiftsourceinfo"
+  }
+}
