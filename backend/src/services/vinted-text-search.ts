@@ -24,8 +24,10 @@ export type VintedSearchItem = {
   source: 'Vinted';
 };
 
-export function buildVintedSearchUrl(searchText: string): string {
-  return `https://www.vinted.fr/catalog?search_text=${encodeURIComponent(searchText.trim())}`;
+export function buildVintedSearchUrl(searchText: string, page: number = 1): string {
+  const base = `https://www.vinted.fr/catalog?search_text=${encodeURIComponent(searchText.trim())}`;
+  if (page <= 1) return base;
+  return `${base}&page=${page}`;
 }
 
 function toAbsoluteUrl(href: string): string {
@@ -78,10 +80,18 @@ function extractSizeFromTitle(title: string): string | undefined {
   return m?.[1]?.trim();
 }
 
+export type VintedSearchOptions = {
+  /** Page catalogue Vinted (1-based). */
+  page?: number;
+};
+
 /**
- * Récupère jusqu'à 10 annonces depuis la page catalogue Vinted (HTML serveur).
+ * Récupère jusqu'à 10 annonces par page depuis le catalogue Vinted (HTML serveur).
  */
-export async function searchVintedByText(searchText: string): Promise<VintedSearchItem[]> {
+export async function searchVintedByText(
+  searchText: string,
+  options?: VintedSearchOptions
+): Promise<VintedSearchItem[]> {
   const q = searchText.trim();
   if (!q) {
     // eslint-disable-next-line no-console -- diagnostic recherche
@@ -89,7 +99,8 @@ export async function searchVintedByText(searchText: string): Promise<VintedSear
     return [];
   }
 
-  const url = buildVintedSearchUrl(q);
+  const page = Math.max(1, Math.floor(options?.page ?? 1));
+  const url = buildVintedSearchUrl(q, page);
   // eslint-disable-next-line no-console -- diagnostic recherche
   console.log('[VINTED_FETCH]', url);
 

@@ -10,6 +10,11 @@ import SwiftUI
 struct ResultsView: View {
     @StateObject private var viewModel: ResultsViewModel
 
+    @State private var showDetailsSheet = false
+    @State private var showSizeSheet = false
+    @State private var showPriceSheet = false
+    @State private var showConditionSheet = false
+
     private let listingGridColumns = [
         GridItem(.flexible(), spacing: DesignTokens.spacingM),
         GridItem(.flexible(), spacing: DesignTokens.spacingM),
@@ -23,7 +28,7 @@ struct ResultsView: View {
         Group {
             switch viewModel.state {
             case .loaded(let session):
-                resultsContent(session: session)
+                loadedContent(session: session)
 
             case .error(let message):
                 errorState(message: message)
@@ -32,90 +37,139 @@ struct ResultsView: View {
                 emptyState()
             }
         }
-        .navigationTitle("Results")
+        .navigationTitle(String(localized: "Results"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Color(uiColor: .secondarySystemGroupedBackground), for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                if !viewModel.showStickyHeader {
+                    Button {
+                        showDetailsSheet = true
+                    } label: {
+                        Image(systemName: "info.circle")
+                            .foregroundStyle(Color.primary)
+                    }
+                    .accessibilityLabel(String(localized: "Détails de l’analyse"))
+                }
+            }
+        }
     }
 
     @ViewBuilder
-    private func resultsContent(session: SearchSession) -> some View {
+    private func loadedContent(session: SearchSession) -> some View {
         ScrollView {
-            VStack(spacing: DesignTokens.spacingL) {
+            VStack(alignment: .leading, spacing: DesignTokens.spacingL) {
                 if let image = session.sourceImage {
                     Image(uiImage: image)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(maxHeight: 200)
                         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.radiusM, style: .continuous))
-                }
-
-                if !session.generatedQueries.isEmpty {
-                    VStack(alignment: .leading, spacing: DesignTokens.spacingS) {
-                        Text("Search queries")
-                            .font(DesignTokens.caption)
-                            .foregroundStyle(Color.secondary)
-                        ForEach(session.generatedQueries, id: \.self) { query in
-                            Text(query)
-                                .font(DesignTokens.body)
-                                .foregroundStyle(Color.primary)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(DesignTokens.spacingM)
-                    .background(DesignTokens.surfaceSecondary)
-                    .clipShape(RoundedRectangle(cornerRadius: DesignTokens.radiusM, style: .continuous))
-                } else if let query = session.generatedQuery {
-                    VStack(alignment: .leading, spacing: DesignTokens.spacingS) {
-                        Text("Search query")
-                            .font(DesignTokens.caption)
-                            .foregroundStyle(Color.secondary)
-                        Text(query)
-                            .font(DesignTokens.body)
-                            .foregroundStyle(Color.primary)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(DesignTokens.spacingM)
-                    .background(DesignTokens.surfaceSecondary)
-                    .clipShape(RoundedRectangle(cornerRadius: DesignTokens.radiusM, style: .continuous))
-                }
-
-                if let attrs = session.attributes {
-                    VStack(alignment: .leading, spacing: DesignTokens.spacingS) {
-                        Text("Detected attributes")
-                            .font(DesignTokens.headline)
-                            .foregroundStyle(Color.primary)
-
-                        Text("Category: \(attrs.category ?? "—")")
-                        Text("Subcategory: \(attrs.subcategory ?? "—")")
-                        Text("Brand: \(attrs.probableBrand ?? "—")")
-                        Text("Color: \(attrs.color ?? "—")")
-                        Text("Material: \(attrs.material ?? "—")")
-                        Text("Item: \(attrs.dominantItem ?? "—")")
-                        Text("Keywords: \((attrs.styleKeywords ?? []).isEmpty ? "—" : (attrs.styleKeywords ?? []).joined(separator: ", "))")
-                    }
-                    .font(DesignTokens.body)
-                    .foregroundStyle(Color.primary)
-                    .padding(DesignTokens.spacingM)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(DesignTokens.surfaceSecondary)
-                    .clipShape(RoundedRectangle(cornerRadius: DesignTokens.radiusM, style: .continuous))
+                        .background(
+                            GeometryReader { geo in
+                                Color.clear.preference(
+                                    key: HeroVisibilityPreferenceKey.self,
+                                    value: geo.frame(in: .named("resultsScroll")).minY
+                                )
+                            }
+                        )
                 }
 
                 VStack(alignment: .leading, spacing: DesignTokens.spacingM) {
-                    Text("\(session.listings.count) matches")
-                        .font(DesignTokens.headline)
-                        .foregroundStyle(Color.primary)
+                    Text(
+                        String(
+                            format: String(localized: "%lld annonces"),
+                            Int64(viewModel.displayedListings.count)
+                        )
+                    )
+                    .font(DesignTokens.headline)
+                    .foregroundStyle(Color.primary)
 
                     LazyVGrid(columns: listingGridColumns, spacing: DesignTokens.spacingM) {
-                        ForEach(session.listings) { listing in
+                        ForEach(viewModel.displayedListings) { listing in
                             ListingCardView(listing: listing)
+                                .onAppear {
+                                    viewModel.loadMoreIfNeeded(currentItem: listing)
+                                }
                         }
+                    }
+
+                    if viewModel.isLoadingMore {
+                        ProgressView()
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, DesignTokens.spacingM)
                     }
                 }
             }
             .padding(DesignTokens.spacingM)
         }
+        .coordinateSpace(name: "resultsScroll")
         .background(DesignTokens.background)
+        .onPreferenceChange(HeroVisibilityPreferenceKey.self) { minY in
+            viewModel.updateHeroVisibility(minY: minY)
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if viewModel.showStickyHeader {
+                ResultsStickyBar(
+                    thumbnail: session.sourceImage,
+                    showSizeSheet: $showSizeSheet,
+                    showPriceSheet: $showPriceSheet,
+                    showConditionSheet: $showConditionSheet,
+                    onInfoTap: { showDetailsSheet = true }
+                )
+                .padding(.horizontal, DesignTokens.spacingS)
+                .padding(.top, DesignTokens.spacingXXS)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: viewModel.showStickyHeader)
+        .sheet(isPresented: $showDetailsSheet) {
+            ResultsDetailsSheet(session: session)
+        }
+        .sheet(isPresented: $showSizeSheet) {
+            filterPlaceholderSheet(
+                title: String(localized: "Taille"),
+                message: String(localized: "Sélection multiple des tailles — à brancher."),
+                isPresented: $showSizeSheet
+            )
+        }
+        .sheet(isPresented: $showPriceSheet) {
+            filterPlaceholderSheet(
+                title: String(localized: "Prix"),
+                message: String(localized: "Min / max — à brancher."),
+                isPresented: $showPriceSheet
+            )
+        }
+        .sheet(isPresented: $showConditionSheet) {
+            filterPlaceholderSheet(
+                title: String(localized: "État"),
+                message: String(localized: "Multi-sélection état — à brancher."),
+                isPresented: $showConditionSheet
+            )
+        }
+    }
+
+    private func filterPlaceholderSheet(title: String, message: String, isPresented: Binding<Bool>) -> some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: DesignTokens.spacingM) {
+                Text(message)
+                    .font(DesignTokens.body)
+                    .foregroundStyle(Color.secondary)
+                Spacer()
+            }
+            .padding(DesignTokens.spacingM)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .background(DesignTokens.background)
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(String(localized: "Fermer")) {
+                        isPresented.wrappedValue = false
+                    }
+                }
+            }
+        }
     }
 
     private func errorState(message: String) -> some View {
@@ -137,10 +191,10 @@ struct ResultsView: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 48))
                 .foregroundStyle(Color.secondary)
-            Text("No results found")
+            Text(String(localized: "Aucun résultat"))
                 .font(DesignTokens.headline)
                 .foregroundStyle(Color.primary)
-            Text("Try a different image or search query.")
+            Text(String(localized: "Essaie une autre image ou requête."))
                 .font(DesignTokens.body)
                 .foregroundStyle(Color.secondary)
                 .multilineTextAlignment(.center)

@@ -13,6 +13,8 @@ import UIKit
 protocol APIClientProtocol: Sendable {
     func analyzeAndSearch(image: UIImage) async throws -> AnalyzeSearchResponse
     func analyzeAndSearch(imageData: Data) async throws -> AnalyzeSearchResponse
+    /// Pages suivantes Vinted (page ≥ 2). La page 1 vient de `analyze-search`.
+    func fetchVintedListingsPage(searchText: String, page: Int) async throws -> VintedListingsResponse
 }
 
 // MARK: - Implémentation réelle
@@ -83,6 +85,31 @@ actor APIClient: APIClientProtocol {
             throw APIError.unknown(statusCode: httpResponse.statusCode)
         }
     }
+
+    func fetchVintedListingsPage(searchText: String, page: Int) async throws -> VintedListingsResponse {
+        let url = baseURL.appending(path: "vinted-listings")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let body = VintedListingsRequest(searchText: searchText, page: page)
+        request.httpBody = try JSONEncoder().encode(body)
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        switch httpResponse.statusCode {
+        case 200:
+            return try decoder.decode(VintedListingsResponse.self, from: data)
+        case 400, 502:
+            throw APIError.listingPageFetchFailed
+        default:
+            throw APIError.unknown(statusCode: httpResponse.statusCode)
+        }
+    }
 }
 
 // MARK: - Error Response (422, etc.)
@@ -100,6 +127,7 @@ enum APIError: LocalizedError {
     case badRequest
     case serverError
     case lowConfidence
+    case listingPageFetchFailed
     case unknown(statusCode: Int)
 
     var errorDescription: String? {
@@ -114,6 +142,8 @@ enum APIError: LocalizedError {
             return "Serveur indisponible"
         case .lowConfidence:
             return "Image trop ambiguë. Essaie avec un recadrage plus précis ou une image plus nette."
+        case .listingPageFetchFailed:
+            return "Impossible de charger plus d’annonces pour le moment."
         case .unknown(let code):
             return "Erreur (\(code))"
         }

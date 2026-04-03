@@ -20,6 +20,42 @@ struct MockAPIClient: APIClientProtocol {
     func analyzeAndSearch(imageData: Data) async throws -> AnalyzeSearchResponse {
         try await analyzeAndSearch(image: UIImage(data: imageData) ?? UIImage())
     }
+
+    func fetchVintedListingsPage(searchText: String, page: Int) async throws -> VintedListingsResponse {
+        try await Task.sleep(nanoseconds: UInt64(delaySeconds * 500_000_000))
+        guard page >= 2 else {
+            return VintedListingsResponse(listings: [], page: page, hasMoreHint: false)
+        }
+        let extra: [MarketplaceListingDTO] = [
+            MarketplaceListingDTO(
+                id: "mock-p\(page)-1",
+                source: "Vinted",
+                title: "Mock page \(page) — item A",
+                price: 45,
+                currency: "EUR",
+                imageUrl: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=400",
+                thumbnailUrl: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=120",
+                listingUrl: "https://www.vinted.fr/items/mock-p\(page)-1",
+                brand: "Mock",
+                size: "M",
+                condition: "Bon état"
+            ),
+            MarketplaceListingDTO(
+                id: "mock-p\(page)-2",
+                source: "Vinted",
+                title: "Mock page \(page) — item B",
+                price: 52,
+                currency: "EUR",
+                imageUrl: "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=400",
+                thumbnailUrl: "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=120",
+                listingUrl: "https://www.vinted.fr/items/mock-p\(page)-2",
+                brand: nil,
+                size: "L",
+                condition: "Très bon état"
+            ),
+        ]
+        return VintedListingsResponse(listings: extra, page: page, hasMoreHint: page < 4)
+    }
 }
 
 // MARK: - Mock response

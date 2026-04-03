@@ -8,6 +8,7 @@ import {
 } from './config.js';
 import { analyzeSearchRoute } from './routes/analyze-search.js';
 import { resolveSharedUrlRoute } from './routes/resolve-shared-url.js';
+import { vintedListingsRoute } from './routes/vinted-listings.js';
 
 logVisionProviderDiagnostic();
 
@@ -17,6 +18,7 @@ await app.register(cors, { origin: true });
 
 app.register(analyzeSearchRoute, { prefix: '/' });
 app.register(resolveSharedUrlRoute, { prefix: '/' });
+app.register(vintedListingsRoute, { prefix: '/' });
 
 const port = parseInt(process.env.PORT ?? '3000', 10);
 await app.listen({ port, host: '0.0.0.0' });

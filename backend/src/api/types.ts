@@ -61,6 +61,20 @@ export interface AnalyzeSearchResponse {
   };
 }
 
+/** POST /vinted-listings — pagination sans ré-analyse vision */
+export interface VintedListingsRequest {
+  searchText: string;
+  /** Page catalogue Vinted (1-based). */
+  page: number;
+}
+
+export interface VintedListingsResponse {
+  listings: MarketplaceListingDTO[];
+  page: number;
+  /** Indique si une page suivante peut exister (10 résultats = page pleine). */
+  hasMoreHint: boolean;
+}
+
 // --- POST /resolve-shared-url ---
 
 export interface ResolveSharedUrlRequest {

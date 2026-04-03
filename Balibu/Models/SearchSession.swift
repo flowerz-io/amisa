@@ -59,6 +59,12 @@ struct SearchSession: Identifiable, Equatable, Hashable {
     /// Alias pour la vue Results.
     var generatedQuery: String? { searchQuery }
 
+    /// Texte utilisé pour la pagination Vinted (requête principale).
+    var vintedPaginationQuery: String {
+        let q = generatedQueries.first ?? searchQuery
+        return q.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     /// Attributs en chaînes pour affichage.
     var extractedAttributes: [String] {
         guard let attr = attributes else { return [] }
