@@ -41,14 +41,7 @@ struct MarketplaceListing: Identifiable, Codable, Equatable, Hashable {
     let condition: String?
 
     var formattedPrice: String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.locale = Locale.autoupdatingCurrent
-        formatter.currencyCode = currency ?? "EUR"
-        let fractional = abs(price.truncatingRemainder(dividingBy: 1)) > 0.009
-        formatter.maximumFractionDigits = fractional ? 2 : 0
-        formatter.minimumFractionDigits = 0
-        return formatter.string(from: NSNumber(value: price)) ?? "\(Int(price))"
+        PriceFormatting.formatCurrency(amount: price, currencyCode: currency)
     }
 }
 

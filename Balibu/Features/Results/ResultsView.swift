@@ -1,8 +1,7 @@
 //
 //  ResultsView.swift
-//  Balibu
 //
-//  Created for Balibu MVP.
+//  Liste résultats : hero, barre filtres, grille ; bannières sticky au scroll.
 //
 
 import SwiftUI
@@ -11,9 +10,11 @@ struct ResultsView: View {
     @StateObject private var viewModel: ResultsViewModel
 
     @State private var showDetailsSheet = false
+    @State private var showFilterSheet = false
     @State private var showSizeSheet = false
-    @State private var showPriceSheet = false
+    @State private var showBrandSheet = false
     @State private var showConditionSheet = false
+    @State private var showColorSheet = false
 
     private let listingGridColumns = [
         GridItem(.flexible(), spacing: DesignTokens.spacingM),
@@ -37,9 +38,10 @@ struct ResultsView: View {
                 emptyState()
             }
         }
-        .navigationTitle(String(localized: "Results"))
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Color(uiColor: .secondarySystemGroupedBackground), for: .navigationBar)
+        .toolbar(viewModel.showStickyHeader ? .hidden : .automatic, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 if !viewModel.showStickyHeader {
@@ -58,24 +60,20 @@ struct ResultsView: View {
     @ViewBuilder
     private func loadedContent(session: SearchSession) -> some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: DesignTokens.spacingL) {
-                if let image = session.sourceImage {
-                    Image(uiImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(maxHeight: 200)
-                        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.radiusM, style: .continuous))
-                        .background(
-                            GeometryReader { geo in
-                                Color.clear.preference(
-                                    key: HeroVisibilityPreferenceKey.self,
-                                    value: geo.frame(in: .named("resultsScroll")).minY
-                                )
-                            }
-                        )
+            VStack(alignment: .leading, spacing: DesignTokens.spacingM) {
+                heroImage(session: session)
+
+                if !viewModel.showStickyHeader {
+                    ResultsFiltersBar(
+                        showFilterSheet: $showFilterSheet,
+                        showSizeSheet: $showSizeSheet,
+                        showBrandSheet: $showBrandSheet,
+                        showConditionSheet: $showConditionSheet,
+                        showColorSheet: $showColorSheet
+                    )
                 }
 
-                VStack(alignment: .leading, spacing: DesignTokens.spacingM) {
+                VStack(alignment: .leading, spacing: DesignTokens.spacingS) {
                     Text(
                         String(
                             format: String(localized: "%lld annonces"),
@@ -91,24 +89,25 @@ struct ResultsView: View {
                             .foregroundStyle(Color.secondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
+                }
 
-                    LazyVGrid(columns: listingGridColumns, spacing: DesignTokens.spacingM) {
-                        ForEach(viewModel.displayedListings) { listing in
-                            ListingCardView(listing: listing)
-                                .onAppear {
-                                    viewModel.loadMoreIfNeeded(currentItem: listing)
-                                }
-                        }
-                    }
-
-                    if viewModel.isLoadingMore {
-                        ProgressView()
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, DesignTokens.spacingM)
+                LazyVGrid(columns: listingGridColumns, spacing: DesignTokens.spacingM) {
+                    ForEach(viewModel.displayedListings) { listing in
+                        ListingCardView(listing: listing)
+                            .onAppear {
+                                viewModel.loadMoreIfNeeded(currentItem: listing)
+                            }
                     }
                 }
+
+                if viewModel.isLoadingMore {
+                    ProgressView()
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, DesignTokens.spacingM)
+                }
             }
-            .padding(DesignTokens.spacingM)
+            .padding(.horizontal, DesignTokens.spacingM)
+            .padding(.bottom, DesignTokens.spacingS)
         }
         .coordinateSpace(name: "resultsScroll")
         .background(DesignTokens.background)
@@ -117,34 +116,33 @@ struct ResultsView: View {
         }
         .safeAreaInset(edge: .top, spacing: 0) {
             if viewModel.showStickyHeader {
-                ResultsStickyBar(
-                    thumbnail: session.sourceImage,
-                    showSizeSheet: $showSizeSheet,
-                    showPriceSheet: $showPriceSheet,
-                    showConditionSheet: $showConditionSheet,
-                    onInfoTap: { showDetailsSheet = true }
-                )
-                .padding(.horizontal, DesignTokens.spacingS)
-                .padding(.top, DesignTokens.spacingXXS)
-                .transition(.opacity.combined(with: .move(edge: .top)))
+                stickyHeaderStack(session: session)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
         .animation(.easeInOut(duration: 0.2), value: viewModel.showStickyHeader)
         .sheet(isPresented: $showDetailsSheet) {
             ResultsDetailsSheet(session: session)
         }
+        .sheet(isPresented: $showFilterSheet) {
+            filterPlaceholderSheet(
+                title: String(localized: "Filtrer"),
+                message: String(localized: "Filtres avancés — à brancher."),
+                isPresented: $showFilterSheet
+            )
+        }
         .sheet(isPresented: $showSizeSheet) {
             filterPlaceholderSheet(
                 title: String(localized: "Taille"),
-                message: String(localized: "Sélection multiple des tailles — à brancher."),
+                message: String(localized: "Sélection des tailles — à brancher."),
                 isPresented: $showSizeSheet
             )
         }
-        .sheet(isPresented: $showPriceSheet) {
+        .sheet(isPresented: $showBrandSheet) {
             filterPlaceholderSheet(
-                title: String(localized: "Prix"),
-                message: String(localized: "Min / max — à brancher."),
-                isPresented: $showPriceSheet
+                title: String(localized: "Marque"),
+                message: String(localized: "Filtrer par marque — à brancher."),
+                isPresented: $showBrandSheet
             )
         }
         .sheet(isPresented: $showConditionSheet) {
@@ -153,6 +151,56 @@ struct ResultsView: View {
                 message: String(localized: "Multi-sélection état — à brancher."),
                 isPresented: $showConditionSheet
             )
+        }
+        .sheet(isPresented: $showColorSheet) {
+            filterPlaceholderSheet(
+                title: String(localized: "Couleur"),
+                message: String(localized: "Filtrer par couleur — à brancher."),
+                isPresented: $showColorSheet
+            )
+        }
+    }
+
+    private func heroImage(session: SearchSession) -> some View {
+        Group {
+            if let image = session.sourceImage {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(maxHeight: 200)
+                    .clipShape(RoundedRectangle(cornerRadius: DesignTokens.radiusM, style: .continuous))
+                    .background(
+                        GeometryReader { geo in
+                            Color.clear.preference(
+                                key: HeroVisibilityPreferenceKey.self,
+                                value: geo.frame(in: .named("resultsScroll")).minY
+                            )
+                        }
+                    )
+            }
+        }
+    }
+
+    private func stickyHeaderStack(session: SearchSession) -> some View {
+        VStack(spacing: 0) {
+            ResultsStickyBar(
+                thumbnail: session.sourceImage,
+                onInfoTap: { showDetailsSheet = true }
+            )
+            ResultsFiltersBar(
+                showFilterSheet: $showFilterSheet,
+                showSizeSheet: $showSizeSheet,
+                showBrandSheet: $showBrandSheet,
+                showConditionSheet: $showConditionSheet,
+                showColorSheet: $showColorSheet
+            )
+            .padding(.horizontal, DesignTokens.spacingS)
+            .padding(.bottom, DesignTokens.spacingXS)
+        }
+        .background {
+            Rectangle()
+                .fill(.thinMaterial)
+                .ignoresSafeArea(edges: .top)
         }
     }
 

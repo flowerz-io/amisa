@@ -1,10 +1,10 @@
 //
 //  SharedImportReviewView.swift
-//  Balibu
 //
-//  Created for Balibu MVP.
+//  Review : recadrage, tap image = nouvelle photo, Analyser en bas.
 //
 
+import PhotosUI
 import SwiftUI
 
 struct SharedImportReviewView: View {
@@ -15,6 +15,8 @@ struct SharedImportReviewView: View {
 
     @State private var sourceUIImage: UIImage?
     @State private var cropController: SquareCropEditorViewController?
+    @State private var cropKey = UUID()
+    @State private var photoPickerItem: PhotosPickerItem?
 
     init(payload: SharedImagePayload, apiClient: (any APIClientProtocol)? = nil) {
         self.payload = payload
@@ -26,59 +28,128 @@ struct SharedImportReviewView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: DesignTokens.spacingXL) {
+            VStack(spacing: DesignTokens.spacingL) {
                 imageSection
                 explanationText
-                actionSection
+                errorBanner
             }
-            .padding(DesignTokens.spacingL)
+            .padding(.horizontal, DesignTokens.spacingM)
+            .padding(.top, DesignTokens.spacingS)
         }
         .background(DesignTokens.backgroundColor)
-        .navigationTitle("Review")
+        .navigationTitle(String(localized: "Review"))
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") {
-                    viewModel.cleanupAndDismiss { router.popToRoot() }
-                }
-            }
-        }
         .onAppear {
             viewModel.setSearchHistoryService(.shared)
             loadSourceImageIfNeeded()
+        }
+        .onChange(of: photoPickerItem) { _, newItem in
+            Task {
+                guard let newItem else { return }
+                if let data = try? await newItem.loadTransferable(type: Data.self),
+                   let ui = UIImage(data: data) {
+                    await MainActor.run {
+                        sourceUIImage = ui
+                        cropKey = UUID()
+                        viewModel.resetToIdle()
+                    }
+                }
+            }
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            bottomActionBar
+                .background(DesignTokens.backgroundColor.opacity(0.92))
         }
     }
 
     private var imageSection: some View {
         Group {
             if let ui = sourceUIImage {
-                VStack(spacing: DesignTokens.spacingS) {
-                    SquareCropEditorRepresentable(image: ui) { controller in
-                        cropController = controller
-                    }
-                    .frame(height: 360)
-                    .clipShape(RoundedRectangle(cornerRadius: DesignTokens.cornerRadiusM))
+                VStack(alignment: .leading, spacing: DesignTokens.spacingS) {
+                    PhotosPicker(selection: $photoPickerItem, matching: .images) {
+                        VStack(spacing: DesignTokens.spacingXS) {
+                            SquareCropEditorRepresentable(image: ui) { controller in
+                                cropController = controller
+                            }
+                            .id(cropKey)
+                            .frame(height: 360)
+                            .clipShape(RoundedRectangle(cornerRadius: DesignTokens.cornerRadiusM))
 
-                    Text(String(localized: "Déplace et pince pour cadrer l’article dans le carré."))
-                        .font(DesignTokens.captionFont)
-                        .foregroundColor(DesignTokens.textSecondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                            Text(String(localized: "Appuie pour changer la photo · déplace et pince pour cadrer."))
+                                .font(DesignTokens.captionFont)
+                                .foregroundColor(DesignTokens.textSecondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
                 }
             } else {
-                RoundedRectangle(cornerRadius: DesignTokens.cornerRadiusM)
-                    .fill(DesignTokens.cardBackground)
-                    .frame(height: 200)
-                    .overlay {
-                        VStack(spacing: DesignTokens.spacingS) {
-                            Image(systemName: "photo")
-                                .font(.largeTitle)
-                            Text("Image not available")
-                                .font(DesignTokens.bodyFont)
+                PhotosPicker(selection: $photoPickerItem, matching: .images) {
+                    RoundedRectangle(cornerRadius: DesignTokens.cornerRadiusM)
+                        .fill(DesignTokens.cardBackground)
+                        .frame(height: 200)
+                        .overlay {
+                            VStack(spacing: DesignTokens.spacingS) {
+                                Image(systemName: "photo.badge.plus")
+                                    .font(.largeTitle)
+                                Text(String(localized: "Choisir une photo"))
+                                    .font(DesignTokens.bodyFont)
+                            }
+                            .foregroundColor(DesignTokens.textSecondary)
                         }
-                        .foregroundColor(DesignTokens.textSecondary)
-                    }
+                }
+                .buttonStyle(.plain)
             }
         }
+    }
+
+    private var explanationText: some View {
+        Text(String(localized: "Nous analysons l’image et cherchons des articles similaires sur les marketplaces."))
+            .font(DesignTokens.bodyFont)
+            .foregroundColor(DesignTokens.textSecondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private var errorBanner: some View {
+        if case .error(let message) = viewModel.searchState {
+            VStack(spacing: DesignTokens.spacingXS) {
+                Text(message)
+                    .font(DesignTokens.captionFont)
+                    .foregroundColor(DesignTokens.errorColor)
+                    .multilineTextAlignment(.center)
+                Text(String(localized: "Tu peux corriger et appuyer sur Analyser pour réessayer."))
+                    .font(DesignTokens.captionFont)
+                    .foregroundColor(DesignTokens.textSecondary)
+                    .multilineTextAlignment(.center)
+            }
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    @ViewBuilder
+    private var bottomActionBar: some View {
+        VStack(spacing: DesignTokens.spacingS) {
+            switch viewModel.searchState {
+            case .loading:
+                LoadingView(message: String(localized: "Analyse en cours…"))
+                    .padding(.vertical, DesignTokens.spacingS)
+            case .idle, .error, .success:
+                Button {
+                    runSearch()
+                } label: {
+                    Text(String(localized: "Analyser"))
+                        .frame(maxWidth: .infinity)
+                        .padding(DesignTokens.spacingM)
+                }
+                .buttonStyle(BalibuButtonStyle())
+                .disabled(sourceUIImage == nil)
+            }
+        }
+        .padding(.horizontal, DesignTokens.spacingM)
+        .padding(.top, DesignTokens.spacingS)
+        .padding(.bottom, DesignTokens.spacingXS)
     }
 
     private func loadSourceImageIfNeeded() {
@@ -87,51 +158,6 @@ struct SharedImportReviewView: View {
               let data = try? Data(contentsOf: url),
               let ui = UIImage(data: data) else { return }
         sourceUIImage = ui
-    }
-
-    private var explanationText: some View {
-        Text("We'll analyze this image and find similar items on resale marketplaces.")
-            .font(DesignTokens.bodyFont)
-            .foregroundColor(DesignTokens.textSecondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var actionSection: some View {
-        VStack(spacing: DesignTokens.spacingM) {
-            switch viewModel.searchState {
-            case .idle, .error:
-                Button {
-                    runSearch()
-                } label: {
-                    HStack {
-                        Image(systemName: "magnifyingglass")
-                        Text("Search resale matches")
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(DesignTokens.spacingL)
-                }
-                .buttonStyle(BalibuButtonStyle())
-                .disabled(viewModel.searchState == .loading || sourceUIImage == nil)
-
-            case .loading:
-                LoadingView(message: "Analyzing image…")
-
-            case .success:
-                EmptyView()
-            }
-
-            if case .error(let message) = viewModel.searchState {
-                VStack(spacing: DesignTokens.spacingS) {
-                    Text(message)
-                        .font(DesignTokens.captionFont)
-                        .foregroundColor(DesignTokens.errorColor)
-                        .multilineTextAlignment(.center)
-                    Text("Tap the button above to try again.")
-                        .font(DesignTokens.captionFont)
-                        .foregroundColor(DesignTokens.textSecondary)
-                }
-            }
-        }
     }
 
     private func runSearch() {

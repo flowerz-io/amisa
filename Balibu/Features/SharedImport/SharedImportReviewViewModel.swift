@@ -31,6 +31,11 @@ final class SharedImportReviewViewModel: ObservableObject {
         searchState = .error(message)
     }
 
+    /// Nouvelle image choisie : permet de relancer une analyse proprement.
+    func resetToIdle() {
+        searchState = .idle
+    }
+
     /// Recadrage déjà appliqué côté UI ; préparation JPEG puis analyse.
     func startSearch(croppedImage: UIImage, completion: @escaping (SearchSession) -> Void) {
         searchState = .loading

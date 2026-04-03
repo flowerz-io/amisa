@@ -1,50 +1,75 @@
 //
 //  ResultsStickyBar.swift
-//  Balibu
 //
-//  Barre collante : miniature + filtres (structure prête).
+//  Bannière collante : retour · miniature centrée · infos (sans titre « Results »).
 //
 
 import SwiftUI
-import UIKit
 
 struct ResultsStickyBar: View {
     let thumbnail: UIImage?
-    @Binding var showSizeSheet: Bool
-    @Binding var showPriceSheet: Bool
-    @Binding var showConditionSheet: Bool
     let onInfoTap: () -> Void
+
+    @Environment(\.dismiss) private var dismiss
+
+    private let thumbSize: CGFloat = 40
 
     var body: some View {
         HStack(spacing: DesignTokens.spacingS) {
-            Group {
-                if let ui = thumbnail {
-                    Image(uiImage: ui)
-                        .resizable()
-                        .scaledToFill()
-                } else {
-                    RoundedRectangle(cornerRadius: DesignTokens.radiusS, style: .continuous)
-                        .fill(Color(uiColor: .tertiarySystemFill))
-                        .overlay {
-                            Image(systemName: "photo")
-                                .foregroundStyle(Color.secondary)
-                        }
-                }
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(Color.primary)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
-            .frame(width: 40, height: 40)
-            .clipShape(RoundedRectangle(cornerRadius: DesignTokens.radiusS, style: .continuous))
+            .buttonStyle(.plain)
+            .accessibilityLabel(String(localized: "Retour"))
 
-            ResultsFiltersBar(
-                showSizeSheet: $showSizeSheet,
-                showPriceSheet: $showPriceSheet,
-                showConditionSheet: $showConditionSheet,
-                onInfoTap: onInfoTap
-            )
+            Spacer(minLength: 0)
+
+            thumbnailView
+                .frame(width: thumbSize, height: thumbSize)
+                .clipShape(RoundedRectangle(cornerRadius: thumbSize * 0.22, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: thumbSize * 0.22, style: .continuous)
+                        .strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5)
+                )
+                .accessibilityHidden(true)
+
+            Spacer(minLength: 0)
+
+            Button {
+                onInfoTap()
+            } label: {
+                Image(systemName: "info.circle")
+                    .font(.body)
+                    .foregroundStyle(Color.primary)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(String(localized: "Détails de l’analyse"))
         }
-        .padding(.horizontal, DesignTokens.spacingM)
-        .padding(.vertical, DesignTokens.spacingXS)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.radiusM, style: .continuous))
-        .shadow(color: Color.black.opacity(0.08), radius: 8, y: 2)
+        .padding(.horizontal, DesignTokens.spacingXS)
+        .padding(.vertical, DesignTokens.spacingXXS)
+    }
+
+    @ViewBuilder
+    private var thumbnailView: some View {
+        if let ui = thumbnail {
+            Image(uiImage: ui)
+                .resizable()
+                .scaledToFill()
+        } else {
+            RoundedRectangle(cornerRadius: thumbSize * 0.22, style: .continuous)
+                .fill(Color(uiColor: .tertiarySystemFill))
+                .overlay {
+                    Image(systemName: "photo")
+                        .foregroundStyle(Color.secondary)
+                }
+        }
     }
 }

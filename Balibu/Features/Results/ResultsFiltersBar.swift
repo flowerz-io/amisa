@@ -1,32 +1,35 @@
 //
 //  ResultsFiltersBar.swift
-//  Balibu
 //
-//  Filtres placeholder + accès détails. Logique métier à brancher plus tard.
+//  Barre horizontale : UI seulement, sheets placeholder.
 //
 
 import SwiftUI
 
 struct ResultsFiltersBar: View {
+    @Binding var showFilterSheet: Bool
     @Binding var showSizeSheet: Bool
-    @Binding var showPriceSheet: Bool
+    @Binding var showBrandSheet: Bool
     @Binding var showConditionSheet: Bool
-    let onInfoTap: () -> Void
+    @Binding var showColorSheet: Bool
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: DesignTokens.spacingXS) {
+                FilterChip(title: String(localized: "Filtrer"), systemImage: "line.3.horizontal.decrease.circle") {
+                    showFilterSheet = true
+                }
                 FilterChip(title: String(localized: "Taille"), systemImage: "ruler") {
                     showSizeSheet = true
                 }
-                FilterChip(title: String(localized: "Prix"), systemImage: "eurosign.circle") {
-                    showPriceSheet = true
+                FilterChip(title: String(localized: "Marque"), systemImage: "tag") {
+                    showBrandSheet = true
                 }
-                FilterChip(title: String(localized: "État"), systemImage: "tag") {
+                FilterChip(title: String(localized: "État"), systemImage: "checkmark.seal") {
                     showConditionSheet = true
                 }
-                FilterChip(title: String(localized: "Infos"), systemImage: "info.circle") {
-                    onInfoTap()
+                FilterChip(title: String(localized: "Couleur"), systemImage: "paintpalette") {
+                    showColorSheet = true
                 }
             }
             .padding(.vertical, 2)
