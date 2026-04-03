@@ -14,8 +14,11 @@ export type VintedSearchItem = {
   title: string;
   imageUrl: string;
   listingUrl: string;
+  /** Marque (ligne au-dessus de l’état sur la carte catalogue) */
+  brand?: string;
   size?: string;
   condition?: string;
+  /** Prix principal : préférence prix acheteur (frais inclus) si présent sur la carte */
   price?: number;
   currency?: string;
   source: 'Vinted';
@@ -61,8 +64,12 @@ function parseVintedPriceText(raw: string): { price?: number; currency?: string 
 function extractTitleFromVintedText(text: string): string {
   const t = text.trim();
   if (!t) return '';
-  const idx = t.indexOf(', marque:');
-  if (idx > 0) return t.slice(0, idx).trim();
+  const idxMarque = t.indexOf(', marque:');
+  if (idxMarque > 0) return t.slice(0, idxMarque).trim();
+  const idxEtat = t.indexOf(', état:');
+  if (idxEtat > 0) return t.slice(0, idxEtat).trim();
+  const idxEtatEn = t.indexOf(', condition:');
+  if (idxEtatEn > 0) return t.slice(0, idxEtatEn).trim();
   return t;
 }
 
@@ -128,8 +135,31 @@ export async function searchVintedByText(searchText: string): Promise<VintedSear
       .text()
       .trim();
 
-    const priceText = $root.find('[data-testid$="--price-text"]').first().text();
-    const { price, currency } = parseVintedPriceText(priceText);
+    const brandRaw = $root.find('[data-testid$="--description-title"]').first().text().trim();
+    let brandNorm: string | undefined =
+      brandRaw.length > 0 ? brandRaw : undefined;
+    if (brandNorm && title && brandNorm.toLowerCase() === title.toLowerCase()) {
+      brandNorm = undefined;
+    }
+
+    // Prix vendeur (petit gris) — fallback
+    const sellerPriceText = $root.find('[data-testid$="--price-text"]').first().text();
+    // Prix total avec frais / protection acheteur (ligne mise en avant sur la carte)
+    const buyerTotalText = $root.find('[data-testid="total-combined-price"]').first().text();
+
+    let parsed = parseVintedPriceText(buyerTotalText);
+    let priceSource: 'buyer_total' | 'seller' = 'buyer_total';
+    if (parsed.price === undefined) {
+      parsed = parseVintedPriceText(sellerPriceText);
+      priceSource = 'seller';
+    }
+
+    const { price, currency } = parsed;
+
+    if (priceSource === 'seller') {
+      // eslint-disable-next-line no-console -- diagnostic parsing
+      console.log('[VINTED_PRICE_USED_SELLER_NOT_BUYER_TOTAL]', listingUrl.slice(-48));
+    }
 
     const size = extractSizeFromTitle(title);
 
@@ -137,6 +167,7 @@ export async function searchVintedByText(searchText: string): Promise<VintedSear
       title,
       imageUrl,
       listingUrl,
+      ...(brandNorm ? { brand: brandNorm } : {}),
       ...(size ? { size } : {}),
       ...(condition ? { condition } : {}),
       ...(price !== undefined ? { price } : {}),

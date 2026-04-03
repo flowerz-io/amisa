@@ -19,6 +19,7 @@ struct MarketplaceListingDTO: Decodable {
     let imageUrl: String?
     let thumbnailUrl: String?
     let listingUrl: String?
+    let brand: String?
     let size: String?
     let condition: String?
 }
@@ -35,15 +36,19 @@ struct MarketplaceListing: Identifiable, Codable, Equatable, Hashable {
     let thumbnailURL: URL?
     let listingURL: URL?
     let source: String
+    let brand: String?
     let size: String?
     let condition: String?
 
     var formattedPrice: String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
+        formatter.locale = Locale.autoupdatingCurrent
         formatter.currencyCode = currency ?? "EUR"
-        formatter.maximumFractionDigits = 0
-        return formatter.string(from: NSNumber(value: price)) ?? "€\(Int(price))"
+        let fractional = abs(price.truncatingRemainder(dividingBy: 1)) > 0.009
+        formatter.maximumFractionDigits = fractional ? 2 : 0
+        formatter.minimumFractionDigits = 0
+        return formatter.string(from: NSNumber(value: price)) ?? "\(Int(price))"
     }
 }
 
@@ -60,6 +65,7 @@ extension MarketplaceListing {
             thumbnailURL: (dto.thumbnailUrl ?? dto.imageUrl).flatMap { URL(string: $0) },
             listingURL: dto.listingUrl.flatMap { URL(string: $0) },
             source: dto.source,
+            brand: dto.brand,
             size: dto.size,
             condition: dto.condition
         )
@@ -79,6 +85,7 @@ extension MarketplaceListing {
             thumbnailURL: URL(string: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=120"),
             listingURL: URL(string: "https://grailed.com/listings/gr-1"),
             source: "Grailed",
+            brand: "Maison Margiela",
             size: "42",
             condition: "Very Good"
         ),
@@ -91,6 +98,7 @@ extension MarketplaceListing {
             thumbnailURL: URL(string: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=120"),
             listingURL: URL(string: "https://vinted.fr/items/example"),
             source: "Vinted",
+            brand: nil,
             size: "41",
             condition: "Good"
         ),

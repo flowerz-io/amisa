@@ -30,6 +30,8 @@ export interface MarketplaceListingDTO {
   imageUrl?: string;
   thumbnailUrl?: string;
   listingUrl?: string;
+  /** Marque affichée sur la carte (ex. Vinted) */
+  brand?: string;
   size?: string;
   condition?: string;
 }

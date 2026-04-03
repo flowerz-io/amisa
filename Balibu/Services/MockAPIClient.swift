@@ -59,6 +59,7 @@ extension MarketplaceListingDTO {
                 imageUrl: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=400",
                 thumbnailUrl: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=400",
                 listingUrl: "https://grailed.com/listings/gr-1",
+                brand: "Maison Margiela",
                 size: "42",
                 condition: "Very Good"
             ),
@@ -71,6 +72,7 @@ extension MarketplaceListingDTO {
                 imageUrl: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=400",
                 thumbnailUrl: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=400",
                 listingUrl: "https://vinted.fr/items/example",
+                brand: nil,
                 size: "41",
                 condition: "Good"
             ),

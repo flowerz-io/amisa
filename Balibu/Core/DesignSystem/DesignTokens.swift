@@ -2,35 +2,41 @@
 //  DesignTokens.swift
 //  Balibu
 //
-//  Created for Balibu MVP. Style premium minimal noir/blanc/gris.
+//  Created for Balibu MVP. Couleurs sémantiques UIKit (clair / sombre).
 //
 
 import SwiftUI
 
 enum DesignTokens {
-    // MARK: - Colors (aliases pour compatibilité)
-    static let backgroundColor = Color(white: 0.05)
-    static let backgroundPrimary = Color(white: 0.05)
-    static let backgroundSecondary = Color(white: 0.08)
-    static let backgroundCard = Color(white: 0.12)
-    static let cardBackground = Color(white: 0.12)
-    static let textPrimary = Color.white
-    static let textSecondary = Color(white: 0.6)
-    static let textTertiary = Color(white: 0.4)
-    static let accent = Color.white
-    static let accentMuted = Color(white: 0.25)
-    static let divider = Color(white: 0.15)
-    static let borderColor = Color(white: 0.2)
+    // MARK: - Colors (sémantiques — clair / sombre système)
+    static let backgroundColor = Color(uiColor: .systemGroupedBackground)
+    static let backgroundPrimary = Color(uiColor: .systemGroupedBackground)
+    static let backgroundSecondary = Color(uiColor: .secondarySystemGroupedBackground)
+    static let backgroundCard = Color(uiColor: .secondarySystemGroupedBackground)
+    static let cardBackground = Color(uiColor: .secondarySystemGroupedBackground)
+    /// Fond carte listing (grille Results)
+    static let cardFill = Color(uiColor: .secondarySystemGroupedBackground)
+    /// Contour discret carte
+    static let cardStroke = Color(uiColor: .separator)
+    /// Placeholder image async
+    static let imagePlaceholderFill = Color(uiColor: .tertiarySystemFill)
+    static let textPrimary = Color(uiColor: .label)
+    static let textSecondary = Color(uiColor: .secondaryLabel)
+    static let textTertiary = Color(uiColor: .tertiaryLabel)
+    static let accent = Color.accentColor
+    static let accentMuted = Color(uiColor: .tertiarySystemFill)
+    static let divider = Color(uiColor: .separator)
+    static let borderColor = Color(uiColor: .separator)
     static let error = Color(red: 0.9, green: 0.3, blue: 0.3)
     static let errorColor = Color(red: 0.9, green: 0.3, blue: 0.3)
-    static let success = Color(white: 0.7)
+    static let success = Color(uiColor: .systemGreen)
 
     enum Colors {
-        static let background = Color(white: 0.05)
-        static let surface = Color(white: 0.08)
-        static let surfaceSecondary = Color(white: 0.12)
-        static let text = Color.white
-        static let textSecondary = Color(white: 0.6)
+        static let background = Color(uiColor: .systemGroupedBackground)
+        static let surface = Color(uiColor: .secondarySystemGroupedBackground)
+        static let surfaceSecondary = Color(uiColor: .tertiarySystemGroupedBackground)
+        static let text = Color(uiColor: .label)
+        static let textSecondary = Color(uiColor: .secondaryLabel)
     }
 
     // MARK: - Typography

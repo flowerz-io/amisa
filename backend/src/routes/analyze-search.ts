@@ -27,6 +27,7 @@ function vintedItemsToListings(items: VintedSearchItem[]): MarketplaceListingDTO
       imageUrl: item.imageUrl,
       thumbnailUrl: item.imageUrl,
       listingUrl: item.listingUrl,
+      ...(item.brand ? { brand: item.brand } : {}),
       size: item.size,
       condition: item.condition,
     };
