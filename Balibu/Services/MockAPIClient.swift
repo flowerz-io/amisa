@@ -24,7 +24,7 @@ struct MockAPIClient: APIClientProtocol {
     func fetchVintedListingsPage(searchText: String, page: Int) async throws -> VintedListingsResponse {
         try await Task.sleep(nanoseconds: UInt64(delaySeconds * 500_000_000))
         guard page >= 2 else {
-            return VintedListingsResponse(listings: [], page: page, hasMoreHint: false)
+            return VintedListingsResponse(listings: [], page: page, hasMore: false)
         }
         let extra: [MarketplaceListingDTO] = [
             MarketplaceListingDTO(
@@ -54,7 +54,7 @@ struct MockAPIClient: APIClientProtocol {
                 condition: "Très bon état"
             ),
         ]
-        return VintedListingsResponse(listings: extra, page: page, hasMoreHint: page < 4)
+        return VintedListingsResponse(listings: extra, page: page, hasMore: page < 4)
     }
 }
 

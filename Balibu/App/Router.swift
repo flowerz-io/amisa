@@ -12,11 +12,7 @@ import Combine
 final class Router: ObservableObject {
     @Published var path = NavigationPath()
 
-    func navigateToImageCrop(payload: SharedImagePayload) {
-        path.append(AppRoute.imageCrop(payload: payload))
-    }
-
-    func navigateToSharedImport(payload: SharedImagePayload) {
+    func navigateToSharedImportReview(payload: SharedImagePayload) {
         path.append(AppRoute.sharedImportReview(payload: payload))
     }
 

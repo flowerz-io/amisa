@@ -85,6 +85,13 @@ struct ResultsView: View {
                     .font(DesignTokens.headline)
                     .foregroundStyle(Color.primary)
 
+                    if session.vintedSearchFailed {
+                        Text(String(localized: "Le catalogue Vinted n’a pas pu être chargé pour cette recherche. Tu peux réessayer plus tard."))
+                            .font(DesignTokens.caption)
+                            .foregroundStyle(Color.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+
                     LazyVGrid(columns: listingGridColumns, spacing: DesignTokens.spacingM) {
                         ForEach(viewModel.displayedListings) { listing in
                             ListingCardView(listing: listing)

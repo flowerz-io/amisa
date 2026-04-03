@@ -53,17 +53,19 @@ export async function vintedListingsRoute(app: FastifyInstance) {
     try {
       const items = await searchVintedByText(searchText, { page });
       const listings = vintedItemsToListings(items);
-      const hasMoreHint = items.length >= PER_PAGE;
+      const hasMore = items.length >= PER_PAGE;
 
       const response: VintedListingsResponse = {
         listings,
         page,
-        hasMoreHint,
+        hasMore,
       };
 
       return reply.send(response);
     } catch (err) {
       request.log.error(err, 'vinted-listings failed');
+      // eslint-disable-next-line no-console -- diagnostic
+      console.error('[VINTED_LISTINGS_ROUTE_FAILED]', err);
       return reply.status(502).send({
         error: 'vinted_fetch_failed',
         message: 'Could not load listings',

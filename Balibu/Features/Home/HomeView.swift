@@ -104,7 +104,7 @@ struct HomeView: View {
         .onChange(of: viewModel.selectedItems) { _, _ in
             viewModel.onPhotoSelected { payload in
                 if let payload {
-                    router.navigateToImageCrop(payload: payload)
+                    router.navigateToSharedImportReview(payload: payload)
                 }
             }
         }

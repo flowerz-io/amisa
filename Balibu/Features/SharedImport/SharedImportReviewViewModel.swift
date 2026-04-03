@@ -27,32 +27,46 @@ final class SharedImportReviewViewModel: ObservableObject {
         searchHistoryService = service
     }
 
-    func startSearch(completion: @escaping (SearchSession) -> Void) {
-        guard let imageURL = payload.imageURL,
-              let imageData = try? Data(contentsOf: imageURL) else {
-            searchState = .error("Image not available")
-            return
-        }
+    func setErrorMessage(_ message: String) {
+        searchState = .error(message)
+    }
 
+    /// Recadrage déjà appliqué côté UI ; préparation JPEG puis analyse.
+    func startSearch(croppedImage: UIImage, completion: @escaping (SearchSession) -> Void) {
         searchState = .loading
 
         Task {
+            let imageData: Data
+            do {
+                imageData = try ImageUploadPreprocessor.prepareForUpload(croppedImage)
+            } catch {
+                await MainActor.run {
+                    searchState = .error(error.localizedDescription)
+                }
+                return
+            }
+
             do {
                 let response = try await apiClient.analyzeAndSearch(imageData: imageData)
 
                 let primaryQuery = response.generatedQueries.first ?? ""
                 let listings = response.listings.map { MarketplaceListing.from($0) }
 
-                let session = SearchSession(
+                var session = SearchSession(
                     id: UUID(),
-                    imageFileName: payload.imageFileName,
+                    imageFileName: nil,
                     thumbnailImageURL: nil,
                     searchQuery: primaryQuery,
                     generatedQueries: response.generatedQueries,
                     attributes: response.visionResult,
                     listings: listings,
-                    createdAt: Date()
+                    createdAt: Date(),
+                    vintedSearchFailed: response.vintedSearchFailed ?? false
                 )
+
+                if let fileName = imagePersistence.saveImage(imageData) {
+                    session.imageFileName = fileName
+                }
 
                 searchHistoryService?.addSession(session)
 
@@ -61,9 +75,15 @@ final class SharedImportReviewViewModel: ObservableObject {
                     finalSession.thumbnailImageURL = thumbURL
                 }
 
+                imagePersistence.cleanupTemporaryImage(at: payload.imageURL)
+
                 await MainActor.run {
                     searchState = .success(finalSession)
                     completion(finalSession)
+                }
+            } catch let apiError as APIError {
+                await MainActor.run {
+                    searchState = .error(apiError.localizedDescription ?? "Erreur")
                 }
             } catch {
                 await MainActor.run {

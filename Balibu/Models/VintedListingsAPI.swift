@@ -15,5 +15,5 @@ struct VintedListingsRequest: Encodable {
 struct VintedListingsResponse: Decodable {
     let listings: [MarketplaceListingDTO]
     let page: Int
-    let hasMoreHint: Bool
+    let hasMore: Bool
 }

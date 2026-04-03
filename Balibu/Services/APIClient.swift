@@ -21,10 +21,8 @@ protocol APIClientProtocol: Sendable {
 
 actor APIClient: APIClientProtocol {
     func analyzeAndSearch(image: UIImage) async throws -> AnalyzeSearchResponse {
-        guard let imageData = image.jpegData(compressionQuality: 0.8) else {
-            throw APIError.invalidImage
-        }
-        return try await analyzeAndSearch(imageData: imageData)
+        let data = try ImageUploadPreprocessor.prepareForUpload(image)
+        return try await analyzeAndSearch(imageData: data)
     }
     static let shared = APIClient()
 
@@ -60,23 +58,35 @@ actor APIClient: APIClientProtocol {
             throw APIError.invalidResponse
         }
 
-        print("STATUS:", httpResponse.statusCode)
-        print("RAW RESPONSE:", String(data: data, encoding: .utf8) ?? "nil")
-
         switch httpResponse.statusCode {
         case 200:
             do {
                 return try decoder.decode(AnalyzeSearchResponse.self, from: data)
             } catch {
-                print("DECODING ERROR:", error)
-                throw error
+                throw APIError.invalidResponse
             }
+        case 413:
+            if let err = try? decoder.decode(APIErrorBody.self, from: data), err.error == "payload_too_large" {
+                throw APIError.payloadTooLarge
+            }
+            throw APIError.payloadTooLarge
         case 422:
-            if let errorBody = try? decoder.decode(APIErrorResponse.self, from: data),
-               errorBody.error == "low_confidence" {
-                throw APIError.lowConfidence
+            if let err = try? decoder.decode(APIErrorBody.self, from: data) {
+                switch err.error {
+                case "low_confidence":
+                    throw APIError.lowConfidence
+                case "non_fashion":
+                    throw APIError.nonFashion
+                default:
+                    break
+                }
             }
             throw APIError.unknown(statusCode: 422)
+        case 502:
+            if let err = try? decoder.decode(APIErrorBody.self, from: data), err.error == "openai_error" {
+                throw APIError.openAIError
+            }
+            throw APIError.unknown(statusCode: 502)
         case 400:
             throw APIError.badRequest
         case 500:
@@ -105,16 +115,16 @@ actor APIClient: APIClientProtocol {
         case 200:
             return try decoder.decode(VintedListingsResponse.self, from: data)
         case 400, 502:
-            throw APIError.listingPageFetchFailed
+            throw APIError.vintedSearchFailed
         default:
             throw APIError.unknown(statusCode: httpResponse.statusCode)
         }
     }
 }
 
-// MARK: - Error Response (422, etc.)
+// MARK: - Error Response
 
-private struct APIErrorResponse: Decodable {
+private struct APIErrorBody: Decodable {
     let error: String?
     let message: String?
 }
@@ -127,7 +137,10 @@ enum APIError: LocalizedError {
     case badRequest
     case serverError
     case lowConfidence
-    case listingPageFetchFailed
+    case nonFashion
+    case payloadTooLarge
+    case openAIError
+    case vintedSearchFailed
     case unknown(statusCode: Int)
 
     var errorDescription: String? {
@@ -137,13 +150,19 @@ enum APIError: LocalizedError {
         case .invalidResponse:
             return "Réponse invalide du serveur"
         case .badRequest:
-            return "Image non exploitable"
+            return "Requête invalide. Vérifie l’image et réessaie."
         case .serverError:
-            return "Serveur indisponible"
+            return "Serveur indisponible. Réessaie dans un instant."
         case .lowConfidence:
-            return "Image trop ambiguë. Essaie avec un recadrage plus précis ou une image plus nette."
-        case .listingPageFetchFailed:
-            return "Impossible de charger plus d’annonces pour le moment."
+            return "Image trop ambiguë. Essaie avec un recadrage plus précis ou une photo plus nette."
+        case .nonFashion:
+            return "Cette image ne semble pas montrer un vêtement ou accessoire mode. Essaie une photo plus nette de l’article."
+        case .payloadTooLarge:
+            return "L’image est encore trop lourde après compression. Essaie une photo plus petite ou un recadrage plus serré."
+        case .openAIError:
+            return "L’analyse automatique n’a pas pu aboutir. Réessaie dans quelques instants."
+        case .vintedSearchFailed:
+            return "Impossible de charger les annonces Vinted pour le moment."
         case .unknown(let code):
             return "Erreur (\(code))"
         }

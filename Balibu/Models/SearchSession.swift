@@ -18,6 +18,8 @@ struct SearchSession: Identifiable, Equatable, Hashable {
     let attributes: FashionVisionResult?
     let listings: [MarketplaceListing]
     let createdAt: Date
+    /// La recherche Vinted initiale n’a pas pu être chargée (vision OK).
+    var vintedSearchFailed: Bool
 
     init(
         id: UUID = UUID(),
@@ -27,7 +29,8 @@ struct SearchSession: Identifiable, Equatable, Hashable {
         generatedQueries: [String] = [],
         attributes: FashionVisionResult?,
         listings: [MarketplaceListing],
-        createdAt: Date = Date()
+        createdAt: Date = Date(),
+        vintedSearchFailed: Bool = false
     ) {
         self.id = id
         self.imageFileName = imageFileName
@@ -37,6 +40,7 @@ struct SearchSession: Identifiable, Equatable, Hashable {
         self.attributes = attributes
         self.listings = listings
         self.createdAt = createdAt
+        self.vintedSearchFailed = vintedSearchFailed
     }
 
     /// Requête affichée (alias).
@@ -110,7 +114,8 @@ extension SearchSession {
 
 extension SearchSession: Codable {
     enum CodingKeys: String, CodingKey {
-        case id, imageFileName, thumbnailImageURL, searchQuery, generatedQueries, attributes, listings, createdAt
+        case id, imageFileName, thumbnailImageURL, searchQuery, generatedQueries, attributes, listings, createdAt,
+             vintedSearchFailed
     }
 
     init(from decoder: Decoder) throws {
@@ -124,6 +129,7 @@ extension SearchSession: Codable {
         let attributes = try c.decodeIfPresent(FashionVisionResult.self, forKey: .attributes)
         let listings = try c.decode([MarketplaceListing].self, forKey: .listings)
         let createdAt = try c.decode(Date.self, forKey: .createdAt)
+        let vintedSearchFailed = try c.decodeIfPresent(Bool.self, forKey: .vintedSearchFailed) ?? false
         self.init(
             id: id,
             imageFileName: imageFileName,
@@ -132,7 +138,8 @@ extension SearchSession: Codable {
             generatedQueries: generatedQueries,
             attributes: attributes,
             listings: listings,
-            createdAt: createdAt
+            createdAt: createdAt,
+            vintedSearchFailed: vintedSearchFailed
         )
     }
 
@@ -146,5 +153,6 @@ extension SearchSession: Codable {
         try c.encodeIfPresent(attributes, forKey: .attributes)
         try c.encode(listings, forKey: .listings)
         try c.encode(createdAt, forKey: .createdAt)
+        try c.encode(vintedSearchFailed, forKey: .vintedSearchFailed)
     }
 }

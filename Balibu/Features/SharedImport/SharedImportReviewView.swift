@@ -13,6 +13,9 @@ struct SharedImportReviewView: View {
 
     let payload: SharedImagePayload
 
+    @State private var sourceUIImage: UIImage?
+    @State private var cropController: SquareCropEditorViewController?
+
     init(payload: SharedImagePayload, apiClient: (any APIClientProtocol)? = nil) {
         self.payload = payload
         _viewModel = StateObject(wrappedValue: SharedImportReviewViewModel(
@@ -42,23 +45,25 @@ struct SharedImportReviewView: View {
         }
         .onAppear {
             viewModel.setSearchHistoryService(.shared)
+            loadSourceImageIfNeeded()
         }
     }
 
     private var imageSection: some View {
         Group {
-            if let url = payload.imageURL,
-               let data = try? Data(contentsOf: url),
-               let uiImage = UIImage(data: data) {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(maxHeight: 320)
+            if let ui = sourceUIImage {
+                VStack(spacing: DesignTokens.spacingS) {
+                    SquareCropEditorRepresentable(image: ui) { controller in
+                        cropController = controller
+                    }
+                    .frame(height: 360)
                     .clipShape(RoundedRectangle(cornerRadius: DesignTokens.cornerRadiusM))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: DesignTokens.cornerRadiusM)
-                            .stroke(DesignTokens.borderColor, lineWidth: 1)
-                    )
+
+                    Text(String(localized: "Déplace et pince pour cadrer l’article dans le carré."))
+                        .font(DesignTokens.captionFont)
+                        .foregroundColor(DesignTokens.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
             } else {
                 RoundedRectangle(cornerRadius: DesignTokens.cornerRadiusM)
                     .fill(DesignTokens.cardBackground)
@@ -76,6 +81,14 @@ struct SharedImportReviewView: View {
         }
     }
 
+    private func loadSourceImageIfNeeded() {
+        guard sourceUIImage == nil,
+              let url = payload.imageURL,
+              let data = try? Data(contentsOf: url),
+              let ui = UIImage(data: data) else { return }
+        sourceUIImage = ui
+    }
+
     private var explanationText: some View {
         Text("We'll analyze this image and find similar items on resale marketplaces.")
             .font(DesignTokens.bodyFont)
@@ -88,9 +101,7 @@ struct SharedImportReviewView: View {
             switch viewModel.searchState {
             case .idle, .error:
                 Button {
-                    viewModel.startSearch { session in
-                        router.navigateToResults(session: session)
-                    }
+                    runSearch()
                 } label: {
                     HStack {
                         Image(systemName: "magnifyingglass")
@@ -100,7 +111,7 @@ struct SharedImportReviewView: View {
                     .padding(DesignTokens.spacingL)
                 }
                 .buttonStyle(BalibuButtonStyle())
-                .disabled(viewModel.searchState == .loading)
+                .disabled(viewModel.searchState == .loading || sourceUIImage == nil)
 
             case .loading:
                 LoadingView(message: "Analyzing image…")
@@ -120,6 +131,20 @@ struct SharedImportReviewView: View {
                         .foregroundColor(DesignTokens.textSecondary)
                 }
             }
+        }
+    }
+
+    private func runSearch() {
+        guard let controller = cropController else {
+            viewModel.setErrorMessage(String(localized: "Le cadre n’est pas prêt. Réessaie dans un instant."))
+            return
+        }
+        guard let cropped = controller.exportCroppedImage() else {
+            viewModel.setErrorMessage(String(localized: "Impossible d’exporter la zone sélectionnée."))
+            return
+        }
+        viewModel.startSearch(croppedImage: cropped) { session in
+            router.navigateToResults(session: session)
         }
     }
 }

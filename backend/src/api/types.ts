@@ -52,6 +52,8 @@ export interface AnalyzeSearchResponse {
   visionResult: FashionVisionResult;
   generatedQueries: string[];
   listings: MarketplaceListingDTO[];
+  /** True si le flux vision a réussi mais le catalogue Vinted n’a pas pu être chargé. */
+  vintedSearchFailed?: boolean;
   /** Présent uniquement quand DEBUG=1 ou NODE_ENV=development */
   debug?: {
     visionProvider: string;
@@ -71,8 +73,8 @@ export interface VintedListingsRequest {
 export interface VintedListingsResponse {
   listings: MarketplaceListingDTO[];
   page: number;
-  /** Indique si une page suivante peut exister (10 résultats = page pleine). */
-  hasMoreHint: boolean;
+  /** False si la page est vide ou contient moins de résultats qu’une page complète (pas de page suivante fiable). */
+  hasMore: boolean;
 }
 
 // --- POST /resolve-shared-url ---
