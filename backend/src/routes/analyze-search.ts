@@ -2,12 +2,36 @@ import { FastifyInstance } from 'fastify';
 import type { AnalyzeSearchRequest, AnalyzeSearchResponse } from '../api/types.js';
 import { mockVisionProvider } from '../vision/mock-provider.js';
 import { openaiVisionProvider } from '../vision/openai-provider.js';
-import { generateListingsFromQueries } from '../services/listings-from-queries.js';
 import { generateSearchQueriesFromVision } from '../services/search-query-generator.js';
+import {
+  buildVintedSearchUrl,
+  searchVintedByText,
+  type VintedSearchItem,
+} from '../services/vinted-text-search.js';
+import type { MarketplaceListingDTO } from '../api/types.js';
 import { visionProviderName, isDebug } from '../config.js';
 
 const visionProvider =
   visionProviderName === 'openai' ? openaiVisionProvider : mockVisionProvider;
+
+function vintedItemsToListings(items: VintedSearchItem[]): MarketplaceListingDTO[] {
+  return items.map((item, index) => {
+    const idMatch = item.listingUrl.match(/\/items\/(\d+)/);
+    const id = idMatch?.[1] ?? `vinted-${index}`;
+    return {
+      id,
+      source: 'Vinted',
+      title: item.title,
+      price: item.price ?? 0,
+      currency: item.currency ?? 'EUR',
+      imageUrl: item.imageUrl,
+      thumbnailUrl: item.imageUrl,
+      listingUrl: item.listingUrl,
+      size: item.size,
+      condition: item.condition,
+    };
+  });
+}
 
 export async function analyzeSearchRoute(app: FastifyInstance) {
   app.post<{
@@ -68,15 +92,32 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
       // eslint-disable-next-line no-console -- traçage strict
       console.log('[GENERATED_SEARCH_QUERIES]', JSON.stringify(generatedQueries));
 
-      const fallbackQuery =
+      const primaryQuery =
+        generatedQueries[0] ??
         visionResult.dominantItem ??
         visionResult.subcategory ??
         visionResult.category ??
         'fashion item';
-      const listings = generateListingsFromQueries(
-        generatedQueries.length > 0 ? generatedQueries : [fallbackQuery],
-        8
-      );
+
+      const trimmedPrimary = String(primaryQuery).trim();
+      const vintedSearchUrl = buildVintedSearchUrl(trimmedPrimary);
+      // eslint-disable-next-line no-console -- traçage recherche Vinted
+      console.log('[VINTED_PRIMARY_QUERY]', trimmedPrimary);
+      // eslint-disable-next-line no-console -- traçage recherche Vinted
+      console.log('[VINTED_SEARCH_URL]', vintedSearchUrl);
+
+      let vintedItems: VintedSearchItem[] = [];
+      try {
+        vintedItems = await searchVintedByText(trimmedPrimary);
+      } catch (vintedErr) {
+        request.log.error(vintedErr, 'Vinted catalog fetch/parse failed');
+        // eslint-disable-next-line no-console -- erreur métier
+        console.error('[VINTED_SEARCH_FAILED]', vintedErr);
+      }
+
+      const listings = vintedItemsToListings(vintedItems);
+      // eslint-disable-next-line no-console -- traçage strict
+      console.log('[LISTINGS_COUNT]', listings.length);
 
       const response: AnalyzeSearchResponse = {
         visionResult,

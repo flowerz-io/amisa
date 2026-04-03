@@ -19,6 +19,6 @@ enum APIConfig {
 
     /// URL de base du backend.
     static var baseURL: URL {
-        URL(string: "http://127.0.0.1:3000")!
+        URL(string: "https://balibu-production.up.railway.app")!
     }
 }
