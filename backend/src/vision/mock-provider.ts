@@ -2,12 +2,37 @@ import type { VisionProvider } from './types.js';
 import type { FashionVisionResult } from '../api/types.js';
 import type { VisionAnalyzeResult } from './types.js';
 
-const MOCK_QUERIES = [
-  'Maison Margiela tabi boots black',
-  'black leather split toe boots',
-  'Our Legacy wool jacket brown',
-  'Lemaire oversized blazer',
-  'Margaret Howell linen trousers',
+const MOCK_SAMPLES: FashionVisionResult[] = [
+  {
+    category: 'footwear',
+    subcategory: 'ankle boots',
+    dominantItem: 'Black leather tabi ankle boots',
+    probableBrand: 'Maison Margiela',
+    color: 'black',
+    dominantColorPrecise: 'black',
+    material: 'leather',
+    styleKeywords: ['tabi', 'split toe'],
+    confidence: 0.85,
+    sourceConfidence: 0.88,
+    inferredEntity: undefined,
+    secondaryMarking: undefined,
+    inferredModel: 'Tabi',
+    itemTypeCanonical: 'boots',
+  },
+  {
+    category: 'outerwear',
+    subcategory: 'jacket',
+    dominantItem: 'Wool overshirt',
+    probableBrand: 'Our Legacy',
+    color: 'brown',
+    dominantColorPrecise: 'brown',
+    material: 'wool',
+    styleKeywords: ['minimal'],
+    confidence: 0.82,
+    sourceConfidence: 0.86,
+    inferredModel: undefined,
+    itemTypeCanonical: 'jacket',
+  },
 ];
 
 function pick<T>(arr: T[]): T {
@@ -16,25 +41,7 @@ function pick<T>(arr: T[]): T {
 
 export const mockVisionProvider: VisionProvider = {
   async analyzeFashionItem(): Promise<VisionAnalyzeResult> {
-    const query = pick(MOCK_QUERIES);
-    const [brandPart, ...rest] = query.split(' ');
-    const category = rest.some((w) => ['boots', 'jacket', 'blazer', 'trousers'].includes(w))
-      ? rest.find((w) => ['boots', 'jacket', 'blazer', 'trousers'].includes(w))
-      : 'footwear';
-    const color = rest.find((w) =>
-      ['black', 'brown', 'white', 'navy', 'grey', 'beige'].includes(w)
-    );
-    const visionResult: FashionVisionResult = {
-      category,
-      subcategory: category === 'boots' ? 'ankle boots' : category,
-      dominantItem: query,
-      probableBrand: brandPart,
-      color,
-      material: pick(['leather', 'wool', 'linen', 'cotton']),
-      styleKeywords: ['minimal', 'luxury'],
-      confidence: 0.85,
-      sourceConfidence: 0.88,
-    };
+    const visionResult = pick(MOCK_SAMPLES);
     return {
       visionResult,
       rawOutput: JSON.stringify(visionResult),

@@ -12,13 +12,25 @@ export interface AnalyzeSearchRequest {
 export interface FashionVisionResult {
   category?: string;
   subcategory?: string;
+  /** Description courte factuelle de l’objet (pas une search query). */
   dominantItem?: string;
   probableBrand?: string;
+  /** Couleur héritée / secours ; préférer dominantColorPrecise pour la query. */
   color?: string;
   material?: string;
   styleKeywords?: string[];
   confidence?: number;
   sourceConfidence?: number;
+  /** Équipe, club, franchise, univers logo (ex: Mets, Yankees). Omis si incertain. */
+  inferredEntity?: string;
+  /** Collaboration ou texte secondaire utile (ex: MoMA). Omis si absent ou incertain. */
+  secondaryMarking?: string;
+  /** Modèle reconnaissable (ex: Detroit Jacket, Boston). Omis si trop incertain. */
+  inferredModel?: string;
+  /** Couleur dominante réelle de l’item (~80 % surface), un seul terme simple. */
+  dominantColorPrecise?: string;
+  /** Type canon court pour désambiguïser (ex: jacket, cap, clog, sneaker). */
+  itemTypeCanonical?: string;
 }
 
 export interface MarketplaceListingDTO {

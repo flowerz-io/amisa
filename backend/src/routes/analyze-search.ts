@@ -88,7 +88,7 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
         } as unknown as AnalyzeSearchResponse);
       }
 
-      const generatedQueries = generateSearchQueriesFromVision(visionResult, 4);
+      const generatedQueries = generateSearchQueriesFromVision(visionResult, 3);
 
       // eslint-disable-next-line no-console -- traçage strict
       console.log('[GENERATED_SEARCH_QUERIES]', JSON.stringify(generatedQueries));

@@ -7,87 +7,114 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY ?? '',
 });
 
-const VISION_SYSTEM_PROMPT = `Tu analyses une image pour identifier UNIQUEMENT l'item fashion principal. Analyse visuelle stricte — pas de génération de requêtes.
+const VISION_SYSTEM_PROMPT = `Tu analyses une image pour identifier UNIQUEMENT l'item fashion principal et remplir un JSON STRUCTURÉ.
+Tu ne rédiges JAMAIS de phrase marketing, JAMAIS de search query libre, JAMAIS de synonymes ni de variations créatives.
 
-RÈGLES STRICTES :
+OBJECTIF DES CHAMPS :
+Les champs servent au backend à construire une requête de recherche déterministe. Chaque valeur doit être courte, stable et factuelle.
 
-1. OBJET PRINCIPAL : Déterminer l'item fashion dominant par : surface visuelle occupée + centralité + netteté. Ignorer décor, fond, accessoires secondaires, autres vêtements.
+RÈGLES GÉNÉRALES :
+1. OBJET PRINCIPAL : item dominant = surface visuelle + centralité + netteté. Ignorer décor, fond, accessoires non portés.
 
-2. CHAUSSURES : Si une chaussure (botte, sneaker, escarpin, mocassin, etc.) est l'objet principal visible, category DOIT être "footwear". Ne JAMAIS renvoyer outerwear, tops ou bottoms si l'unique objet dominant est une chaussure.
+2. CHAUSSURES : Si une chaussure est l'objet principal, category = "footwear".
 
-3. MARQUE : probableBrand = null sauf si la marque est explicitement lisible (logo visible, étiquette reconnaissable) ou hautement reconnaissable. Ne jamais deviner.
+3. probableBrand : uniquement si marque lisible (logo, étiquette) OU reconnaissance visuelle très forte. Sinon null. Ne pas deviner.
 
-4. MATIÈRE : material = null sauf si identifiable de façon visuellement fiable (texture, aspect). Ne jamais inventer.
+4. inferredEntity : équipe / club / franchise / univers sportif ou culturel identifiable par logo ou texte (ex: Mets, Lakers, NBA). Sinon null.
 
-5. COULEUR : si incertain, retourner null. Ne pas inventer.
+5. secondaryMarking : collaboration, collection capsule, institution, texte secondaire sur l'item (ex: MoMA, Supreme x …). Sinon null.
 
-6. CATEGORY INCERTAINE : Si doute entre plusieurs classes, choisir la plus visible et concrète. Ne jamais inventer une classe hors de l'enum.
+6. inferredModel : nom de modèle SI reconnaissance visuelle forte ou logo modèle (ex: Detroit Jacket, Boston, 991, 59Fifty). Sinon null — ne pas inventer.
 
-7. SUBCATEGORY : retourner une sous-catégorie simple et concrète si identifiable, sinon null.
+7. dominantColorPrecise : UNE SEULE couleur simple couvrant ~80 % de la surface de l'objet principal (pas le fond). Si incertain, null.
 
-8. dominantItem : courte phrase décrivant l'item principal si identifiable, sinon null.
+8. color : secours / approximation si dominantColorPrecise impossible ; sinon aligné ou null.
 
-9. NON-FASHION : Si l’image ne contient PAS un item fashion clair (vêtements, chaussures, sacs, accessoires portables), retourner category = null, subcategory = null, dominantItem = null, confidence < 0.3 et sourceConfidence < 0.3.
+9. itemTypeCanonical : UN mot ou deux max pour le type d'objet (jacket, cap, clog, sneaker, tote bag) pour désambiguïser quand le modèle ne le contient pas. Sinon null.
 
-10. styleKeywords : tableau de 0 à 4 mots-clés visuels max. Si rien de fiable, retourner [].
+10. subcategory : type concret (ankle boots, baseball cap, etc.) si identifiable.
 
-11. confidence et sourceConfidence : nombres entre 0 et 1.
+11. dominantItem : courte description factuelle de l'objet (max ~8 mots), PAS une requête de recherche, pas une liste de synonymes.
 
-12. Si plusieurs items fashion visibles, choisir celui le plus proche du centre ET le plus distinct visuellement.`;
+12. material : seulement si fiable visuellement, sinon null.
 
-const VISION_USER_PROMPT = `Analyse l'image. Retourne UNIQUEMENT un JSON valide conforme au schéma.
+13. styleKeywords : 0 à 4 mots-clés visuels factuels max ; sinon [].
 
-Champs attendus :
-- category : footwear | outerwear | tops | bottoms | bags | accessories
-- subcategory : string ou null
-- dominantItem : string ou null
-- probableBrand : string ou null
-- color : string ou null
-- material : string ou null
-- styleKeywords : tableau de strings
-- confidence : number
-- sourceConfidence : number`;
+14. NON-FASHION : si pas d'item fashion clair : category = null, sous-champs nulls, confidence et sourceConfidence < 0.3.
+
+15. confidence / sourceConfidence : entre 0 et 1.
+
+16. Ne multiplie pas les synonymes. Pas de texte long. Pas de phrases libres type publicité.`;
+
+const VISION_USER_PROMPT = `Analyse l'image. Retourne UNIQUEMENT un JSON valide conforme au schéma strict.
+
+Rappel : valeurs courtes, structurées ; null si incertain ; pas de search query libre.`;
 
 const VISION_JSON_SCHEMA = {
   type: 'object' as const,
   properties: {
     category: {
-      type: 'string',
-      enum: ['footwear', 'outerwear', 'tops', 'bottoms', 'bags', 'accessories'],
-      description: "Catégorie de l'item principal",
+      anyOf: [
+        {
+          type: 'string',
+          enum: ['footwear', 'outerwear', 'tops', 'bottoms', 'bags', 'accessories'],
+        },
+        { type: 'null' },
+      ],
+      description: "Catégorie de l'item principal, ou null si non fashion",
     },
     subcategory: {
       type: ['string', 'null'],
-      description: 'Sous-catégorie simple : boots, sneakers, blazer, coat, t-shirt, trousers, etc.',
+      description: 'Sous-type concret ou null',
     },
     dominantItem: {
       type: ['string', 'null'],
-      description: "Description courte de l'item principal",
+      description: 'Description factuelle courte, pas une requête de recherche',
     },
     probableBrand: {
       type: ['string', 'null'],
-      description: 'Marque seulement si explicitement lisible ou hautement reconnaissable, sinon null',
+      description: 'Marque seulement si lisible ou très reconnaissable',
     },
     color: {
       type: ['string', 'null'],
-      description: 'Couleur dominante la plus probable, ou null si incertain',
+      description: 'Couleur secours si besoin',
     },
     material: {
       type: ['string', 'null'],
-      description: 'Matériau seulement si visuellement fiable, sinon null',
+      description: 'Matière si fiable',
     },
     styleKeywords: {
       type: 'array',
       items: { type: 'string' },
-      description: '0 à 4 mots-clés visuels maximum',
+      description: '0 à 4 mots-clés',
     },
     confidence: {
       type: 'number',
-      description: 'Confiance globale entre 0 et 1',
+      description: 'Entre 0 et 1',
     },
     sourceConfidence: {
       type: 'number',
-      description: "Confiance que l'objet principal est bien un item fashion, entre 0 et 1",
+      description: 'Entre 0 et 1',
+    },
+    inferredEntity: {
+      type: ['string', 'null'],
+      description: 'Équipe, club, franchise si logo/texte clair',
+    },
+    secondaryMarking: {
+      type: ['string', 'null'],
+      description: 'Collab, MoMA, texte secondaire utile',
+    },
+    inferredModel: {
+      type: ['string', 'null'],
+      description: 'Modèle si fortement identifiable, sinon null',
+    },
+    dominantColorPrecise: {
+      type: ['string', 'null'],
+      description: 'Une couleur simple dominante sur ~80% de l’objet',
+    },
+    itemTypeCanonical: {
+      type: ['string', 'null'],
+      description: 'Type court: jacket, cap, sneaker, clog, etc.',
     },
   },
   required: [
@@ -100,9 +127,36 @@ const VISION_JSON_SCHEMA = {
     'styleKeywords',
     'confidence',
     'sourceConfidence',
+    'inferredEntity',
+    'secondaryMarking',
+    'inferredModel',
+    'dominantColorPrecise',
+    'itemTypeCanonical',
   ],
   additionalProperties: false,
 };
+
+type ParsedVision = {
+  category: string | null;
+  subcategory: string | null;
+  dominantItem: string | null;
+  probableBrand: string | null;
+  color: string | null;
+  material: string | null;
+  styleKeywords: string[];
+  confidence: number;
+  sourceConfidence: number;
+  inferredEntity: string | null;
+  secondaryMarking: string | null;
+  inferredModel: string | null;
+  dominantColorPrecise: string | null;
+  itemTypeCanonical: string | null;
+};
+
+function toUndef(s: string | null | undefined): string | undefined {
+  if (s == null || s === '') return undefined;
+  return s;
+}
 
 export const openaiVisionProvider: VisionProvider = {
   async analyzeFashionItem(imageBuffer: Buffer): Promise<VisionAnalyzeResult> {
@@ -143,28 +197,23 @@ export const openaiVisionProvider: VisionProvider = {
       throw new Error('OpenAI Vision returned empty response');
     }
 
-    const parsed = JSON.parse(content) as {
-      category: string;
-      subcategory: string | null;
-      dominantItem: string | null;
-      probableBrand: string | null;
-      color: string | null;
-      material: string | null;
-      styleKeywords: string[];
-      confidence: number;
-      sourceConfidence: number;
-    };
+    const parsed = JSON.parse(content) as ParsedVision;
 
     const visionResult: FashionVisionResult = {
-      category: parsed.category,
-      subcategory: parsed.subcategory ?? undefined,
-      dominantItem: parsed.dominantItem ?? undefined,
-      probableBrand: parsed.probableBrand ?? undefined,
-      color: parsed.color ?? undefined,
-      material: parsed.material ?? undefined,
+      category: toUndef(parsed.category),
+      subcategory: toUndef(parsed.subcategory),
+      dominantItem: toUndef(parsed.dominantItem),
+      probableBrand: toUndef(parsed.probableBrand),
+      color: toUndef(parsed.color),
+      material: toUndef(parsed.material),
       styleKeywords: parsed.styleKeywords,
       confidence: parsed.confidence,
       sourceConfidence: parsed.sourceConfidence,
+      inferredEntity: toUndef(parsed.inferredEntity),
+      secondaryMarking: toUndef(parsed.secondaryMarking),
+      inferredModel: toUndef(parsed.inferredModel),
+      dominantColorPrecise: toUndef(parsed.dominantColorPrecise),
+      itemTypeCanonical: toUndef(parsed.itemTypeCanonical),
     };
 
     return {

@@ -81,7 +81,7 @@ extension SearchSession {
             thumbnailImageURL: nil,
             searchQuery: "Maison Margiela tabi boots black",
             attributes: FashionVisionResult(
-                category: "boots",
+                category: "footwear",
                 subcategory: "ankle boots",
                 dominantItem: "black leather ankle boots",
                 probableBrand: "Maison Margiela",
@@ -89,7 +89,12 @@ extension SearchSession {
                 material: "leather",
                 styleKeywords: ["tabi", "split toe"],
                 confidence: 0.84,
-                sourceConfidence: 0.8
+                sourceConfidence: 0.8,
+                inferredEntity: nil,
+                secondaryMarking: nil,
+                inferredModel: "Tabi",
+                dominantColorPrecise: "black",
+                itemTypeCanonical: "boots"
             ),
             listings: MarketplaceListing.mockListings,
             createdAt: Date()

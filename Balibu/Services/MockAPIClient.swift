@@ -36,7 +36,12 @@ extension AnalyzeSearchResponse {
                 material: "leather",
                 styleKeywords: ["tabi", "split toe"],
                 confidence: 0.84,
-                sourceConfidence: 0.8
+                sourceConfidence: 0.8,
+                inferredEntity: nil,
+                secondaryMarking: nil,
+                inferredModel: "Tabi",
+                dominantColorPrecise: "black",
+                itemTypeCanonical: "boots"
             ),
             generatedQueries: [
                 "Maison Margiela tabi boots black",

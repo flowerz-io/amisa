@@ -19,4 +19,14 @@ struct FashionVisionResult: Codable, Equatable, Hashable {
     let confidence: Double?
     /// Confiance que l'image est une source e-commerce/fashion (0-1).
     let sourceConfidence: Double?
+    /// Équipe, club, franchise (ex: Mets).
+    let inferredEntity: String?
+    /// Collab / texte secondaire (ex: MoMA).
+    let secondaryMarking: String?
+    /// Modèle si identifiable (ex: Detroit Jacket).
+    let inferredModel: String?
+    /// Couleur dominante sur ~80 % de l’objet.
+    let dominantColorPrecise: String?
+    /// Type canon court (ex: jacket, cap, clog).
+    let itemTypeCanonical: String?
 }

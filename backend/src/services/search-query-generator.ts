@@ -1,4 +1,9 @@
 import type { FashionVisionResult } from '../api/types.js';
+import {
+  buildFallbackBrandTypeColor,
+  buildFallbackTypeColor,
+  buildPrimarySearchQuery,
+} from './search-query-assembly.js';
 
 const INVALID_STRINGS = ['null', 'undefined'];
 
@@ -13,13 +18,20 @@ function hasInvalidPart(s: string): boolean {
 }
 
 /**
- * Génère jusqu'à 4 requêtes propres orientées marketplaces.
- * Priorité : brand+subcategory+color > dominantItem > subcategory+color > subcategory
+ * Jusqu’à 3 requêtes, entièrement déterministes :
+ * 1. Principale (prefix + core + couleur)
+ * 2. Fallback : marque/entité + type + couleur
+ * 3. Fallback minimal : type + couleur
  */
 export function generateSearchQueriesFromVision(
   vision: FashionVisionResult,
-  count: number = 4
+  count: number = 3
 ): string[] {
+  const q1 = buildPrimarySearchQuery(vision);
+  const q2 = buildFallbackBrandTypeColor(vision);
+  const q3 = buildFallbackTypeColor(vision);
+
+  const candidates = [q1, q2, q3];
   const queries: string[] = [];
   const seen = new Set<string>();
 
@@ -31,42 +43,14 @@ export function generateSearchQueriesFromVision(
     if (seen.has(normalized)) return;
     seen.add(normalized);
     queries.push(trimmed);
-
   };
 
-  const category = vision.category ?? '';
-  const subcategory = isValid(vision.subcategory)
-    ? vision.subcategory!.trim()
-    : isValid(category)
-      ? category.trim()
-      : '';
-  const color = isValid(vision.color) ? vision.color!.trim() : '';
-  const brand = isValid(vision.probableBrand) ? vision.probableBrand!.trim() : null;
-  const dominantItem = isValid(vision.dominantItem)
-    ? vision.dominantItem!.trim()
-    : null;
-
-  // 1. brand + subcategory + color (si probableBrand existe)
-  if (brand && subcategory) {
-    add([brand, subcategory, color].filter(Boolean).join(' '));
+  for (const c of candidates) {
+    if (isValid(c)) add(c);
+    if (queries.length >= Math.min(count, 3)) break;
   }
 
-  // 2. dominantItem (doit être incluse si existe)
-  if (dominantItem && dominantItem.length < 60) {
-    add(dominantItem);
-  }
-
-  // 3. subcategory + color
-  if (subcategory && color) {
-    add([subcategory, color].join(' '));
-  }
-
-  // 4. subcategory seule
-  if (subcategory) {
-    add(subcategory);
-  }
-
-  const final = queries.slice(0, Math.min(count, 4));
+  const final = queries.slice(0, Math.min(count, 3));
 
   // eslint-disable-next-line no-console -- traçage
   console.log('[GENERATED_SEARCH_QUERIES_FINAL]', JSON.stringify(final));
