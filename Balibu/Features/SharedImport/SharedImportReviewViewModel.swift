@@ -7,18 +7,19 @@
 
 import SwiftUI
 import Combine
+import UIKit
 
 @MainActor
 final class SharedImportReviewViewModel: ObservableObject {
     @Published var searchState: SearchState = .idle
 
-    private let payload: SharedImagePayload
+    private let payload: SharedImportPayload
     private let apiClient: APIClientProtocol
     private var searchHistoryService: SearchHistoryService?
     private let shareStorage: ShareStorageService = .shared
     private let imagePersistence: ImagePersistenceService = .shared
 
-    init(payload: SharedImagePayload, apiClient: any APIClientProtocol) {
+    init(payload: SharedImportPayload, apiClient: any APIClientProtocol) {
         self.payload = payload
         self.apiClient = apiClient
     }
@@ -34,6 +35,17 @@ final class SharedImportReviewViewModel: ObservableObject {
     /// Nouvelle image choisie : permet de relancer une analyse proprement.
     func resetToIdle() {
         searchState = .idle
+    }
+
+    /// Image déjà préparée dans l’App Group (Share Extension) : même pipeline que le recadrage in-app.
+    func startAnalysisFromPreparedFile(completion: @escaping (SearchSession) -> Void) {
+        guard let url = payload.imageURL,
+              let data = try? Data(contentsOf: url),
+              let ui = UIImage(data: data) else {
+            searchState = .error(String(localized: "Image introuvable dans le conteneur partagé."))
+            return
+        }
+        startSearch(croppedImage: ui, completion: completion)
     }
 
     /// Recadrage déjà appliqué côté UI ; préparation JPEG puis analyse.
@@ -83,12 +95,12 @@ final class SharedImportReviewViewModel: ObservableObject {
                 imagePersistence.cleanupTemporaryImage(at: payload.imageURL)
 
                 await MainActor.run {
-                    searchState = .success(finalSession)
                     completion(finalSession)
+                    searchState = .success(finalSession)
                 }
             } catch let apiError as APIError {
                 await MainActor.run {
-                    searchState = .error(apiError.localizedDescription ?? "Erreur")
+                    searchState = .error(apiError.localizedDescription)
                 }
             } catch {
                 await MainActor.run {

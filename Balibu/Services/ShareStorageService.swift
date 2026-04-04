@@ -2,7 +2,7 @@
 //  ShareStorageService.swift
 //  Balibu
 //
-//  Gère le payload partagé via App Group entre extension et app principale.
+//  Payload App Group : import par id (deep link) + compat ancienne clé fichier seul.
 //
 
 import Foundation
@@ -11,7 +11,10 @@ final class ShareStorageService {
     static let shared = ShareStorageService()
 
     static let appGroupIdentifier = "group.flowerz.io.Balibu"
-    private let payloadKey = "balibu.sharedImagePayload"
+
+    /// Ancienne clé : uniquement le nom de fichier (sans JSON).
+    private let legacyFilenameKey = "balibu.sharedImagePayload"
+    private let pendingImportIdKey = "balibu.pendingImportId"
 
     private var userDefaults: UserDefaults? {
         UserDefaults(suiteName: Self.appGroupIdentifier)
@@ -19,31 +22,68 @@ final class ShareStorageService {
 
     private init() {}
 
-    /// Enregistre le payload partagé (appelé par la Share Extension).
-    func savePayload(_ payload: SharedImagePayload) {
-        userDefaults?.set(payload.imageFileName, forKey: payloadKey)
+    private func payloadStorageKey(for id: UUID) -> String {
+        "balibu.importPayload.\(id.uuidString)"
+    }
+
+    /// Enregistre un payload complet (JSON) + index optionnel pour diagnostic.
+    func savePendingImport(_ payload: SharedImportPayload) throws {
+        let data = try JSONEncoder().encode(payload)
+        userDefaults?.set(data, forKey: payloadStorageKey(for: payload.id))
+        userDefaults?.set(payload.id.uuidString, forKey: pendingImportIdKey)
         userDefaults?.synchronize()
     }
 
-    /// Récupère et consomme le payload (appelé par l'app principale).
-    /// Retourne nil si aucun payload en attente.
-    func consumePayload() -> SharedImagePayload? {
-        guard let fileName = userDefaults?.string(forKey: payloadKey) else {
+    /// Lit et supprime le payload pour cet id (après deep link).
+    func consumePayload(id: UUID) -> SharedImportPayload? {
+        let key = payloadStorageKey(for: id)
+        guard let data = userDefaults?.data(forKey: key) else { return nil }
+        userDefaults?.removeObject(forKey: key)
+        if userDefaults?.string(forKey: pendingImportIdKey) == id.uuidString {
+            userDefaults?.removeObject(forKey: pendingImportIdKey)
+        }
+        userDefaults?.synchronize()
+        return try? JSONDecoder().decode(SharedImportPayload.self, from: data)
+    }
+
+    /// Ancien flux : une seule clé = nom de fichier (sans id). Consommé → Review classique.
+    func consumeLegacyFilenamePayload() -> SharedImportPayload? {
+        guard let fileName = userDefaults?.string(forKey: legacyFilenameKey) else {
             return nil
         }
-        userDefaults?.removeObject(forKey: payloadKey)
+        userDefaults?.removeObject(forKey: legacyFilenameKey)
         userDefaults?.synchronize()
-        return SharedImagePayload(imageFileName: fileName)
+        return SharedImportPayload(imageFileName: fileName)
     }
 
-    /// Vérifie si un payload est en attente sans le consommer.
     func hasPendingPayload() -> Bool {
-        userDefaults?.string(forKey: payloadKey) != nil
+        if userDefaults?.string(forKey: legacyFilenameKey) != nil { return true }
+        if let idString = userDefaults?.string(forKey: pendingImportIdKey),
+           let id = UUID(uuidString: idString),
+           userDefaults?.data(forKey: payloadStorageKey(for: id)) != nil {
+            return true
+        }
+        return false
     }
 
-    /// Efface le payload (utilisé après nettoyage).
+    /// Efface tout ce qui concerne un import (ex. abandon).
     func clearPayload() {
-        userDefaults?.removeObject(forKey: payloadKey)
+        userDefaults?.removeObject(forKey: legacyFilenameKey)
+        if let idString = userDefaults?.string(forKey: pendingImportIdKey),
+           let id = UUID(uuidString: idString) {
+            userDefaults?.removeObject(forKey: payloadStorageKey(for: id))
+        }
+        userDefaults?.removeObject(forKey: pendingImportIdKey)
         userDefaults?.synchronize()
+    }
+
+    // MARK: - Rétrocompat API nommée
+
+    func savePayload(_ payload: SharedImportPayload) {
+        try? savePendingImport(payload)
+    }
+
+    func consumePayload() -> SharedImportPayload? {
+        consumeLegacyFilenamePayload()
     }
 }
