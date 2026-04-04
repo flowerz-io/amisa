@@ -11,8 +11,8 @@ import SwiftUI
 struct ListingCardView: View {
     let listing: MarketplaceListing
 
-    /// Ratio portrait produit (largeur : hauteur)
-    private static let imageAspectRatio: CGFloat = 3.0 / 4.0
+    /// Hauteur fixe zone image (identique pour toutes les cartes).
+    private static let imageBlockHeight: CGFloat = 190
 
     /// Hauteur fixe du bloc texte pour garantir des cartes homogènes cross-source
     private static let textBlockHeight: CGFloat = 92
@@ -78,7 +78,7 @@ struct ListingCardView: View {
 
     private var imageSection: some View {
         ZStack(alignment: .topTrailing) {
-            listingImage
+            ListingCardImageView(imageURL: listing.thumbnailURL ?? listing.imageURL)
 
             Text(listing.sourceDisplayLabel)
                 .font(.caption2.weight(.semibold))
@@ -89,36 +89,16 @@ struct ListingCardView: View {
                 .padding(8)
         }
         .frame(maxWidth: .infinity)
-        .aspectRatio(Self.imageAspectRatio, contentMode: .fit)
-        .clipped()
-    }
-
-    @ViewBuilder
-    private var listingImage: some View {
-        AsyncImage(url: listing.thumbnailURL ?? listing.imageURL) { phase in
-            switch phase {
-            case .success(let image):
-                image
-                    .resizable()
-                    .scaledToFill()
-            case .failure:
-                Rectangle()
-                    .fill(DesignTokens.imagePlaceholderFill)
-                    .overlay {
-                        Image(systemName: "photo")
-                            .font(.title2)
-                            .foregroundStyle(Color.secondary)
-                    }
-            case .empty:
-                Rectangle()
-                    .fill(DesignTokens.imagePlaceholderFill)
-                    .overlay { ProgressView() }
-            @unknown default:
-                Rectangle()
-                    .fill(DesignTokens.imagePlaceholderFill)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(height: Self.imageBlockHeight)
+        .clipShape(
+            UnevenRoundedRectangle(
+                topLeadingRadius: DesignTokens.radiusM,
+                bottomLeadingRadius: 0,
+                bottomTrailingRadius: 0,
+                topTrailingRadius: DesignTokens.radiusM,
+                style: .continuous
+            )
+        )
         .clipped()
     }
 
@@ -154,6 +134,41 @@ struct ListingCardView: View {
             parts.append(meta)
         }
         return parts.joined(separator: ", ")
+    }
+}
+
+private struct ListingCardImageView: View {
+    let imageURL: URL?
+
+    var body: some View {
+        AsyncImage(url: imageURL) { phase in
+            switch phase {
+            case .success(let image):
+                image
+                    .resizable()
+                    .scaledToFill()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                    .clipped()
+            case .failure:
+                placeholder
+            case .empty:
+                placeholder.overlay { ProgressView() }
+            @unknown default:
+                placeholder
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        .clipped()
+    }
+
+    private var placeholder: some View {
+        Rectangle()
+            .fill(DesignTokens.imagePlaceholderFill)
+            .overlay {
+                Image(systemName: "photo")
+                    .font(.title2)
+                    .foregroundStyle(Color.secondary)
+            }
     }
 }
 
