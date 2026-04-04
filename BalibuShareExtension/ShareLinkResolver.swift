@@ -52,6 +52,19 @@ struct BackendShareLinkResolver: ShareLinkResolving {
     }
 }
 
+/// Instagram : résolution locale depuis l’URL du post ; autres liens : backend.
+struct CompositeShareLinkResolver: ShareLinkResolving {
+    private let instagram = InstagramPostResolver()
+    private let backend = BackendShareLinkResolver()
+
+    func loadCandidateImages(from pageURL: URL) async throws -> [UIImage] {
+        if InstagramURLDetector.isInstagram(pageURL) {
+            return try await instagram.loadCandidateImages(from: pageURL)
+        }
+        return try await backend.loadCandidateImages(from: pageURL)
+    }
+}
+
 enum ShareLinkResolverError: LocalizedError {
     case invalidResponse
     case noImage

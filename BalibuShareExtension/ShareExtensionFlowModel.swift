@@ -32,9 +32,15 @@ final class ShareFlowModel: ObservableObject {
 
     private(set) var pendingImportId: UUID?
 
+    /// Aperçu de l’image recadrée sur l’écran de confirmation.
+    @Published private(set) var confirmPreviewImage: UIImage?
+
+    /// Si `open` vers l’app hôte échoue (completion `false`).
+    @Published private(set) var hostAppOpenError: String?
+
     private let linkResolver: ShareLinkResolving
 
-    init(extensionContext: NSExtensionContext?, linkResolver: ShareLinkResolving = BackendShareLinkResolver()) {
+    init(extensionContext: NSExtensionContext?, linkResolver: ShareLinkResolving = CompositeShareLinkResolver()) {
         self.extensionContext = extensionContext
         self.linkResolver = linkResolver
     }
@@ -106,6 +112,8 @@ final class ShareFlowModel: ObservableObject {
         do {
             try ShareExtensionStorage.saveImport(payload: payload, imageData: data)
             pendingImportId = importId
+            confirmPreviewImage = cropped
+            hostAppOpenError = nil
             phase = .confirmReady
         } catch {
             phase = .error("Enregistrement impossible : \(error.localizedDescription)")
@@ -113,18 +121,27 @@ final class ShareFlowModel: ObservableObject {
     }
 
     func openHostAppAndFinish() {
+        hostAppOpenError = nil
         guard let id = pendingImportId else {
             extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
             return
         }
-        let urlString = "balibu://shared-import?id=\(id.uuidString)"
-        guard let url = URL(string: urlString) else {
-            extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
+        var components = URLComponents()
+        components.scheme = "balibu"
+        components.host = "shared-import"
+        components.queryItems = [URLQueryItem(name: "id", value: id.uuidString)]
+        guard let url = components.url else {
+            hostAppOpenError = String(localized: "Lien vers Balibu invalide.")
             return
         }
-        extensionContext?.open(url, completionHandler: { [weak self] _ in
+        extensionContext?.open(url, completionHandler: { [weak self] success in
             Task { @MainActor in
-                self?.extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
+                guard let model = self else { return }
+                if success {
+                    model.extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
+                } else {
+                    model.hostAppOpenError = String(localized: "Impossible d’ouvrir Balibu. Ouvrez l’app manuellement ou réessayez.")
+                }
             }
         })
     }

@@ -17,27 +17,34 @@ enum ShareExtractedContent {
 }
 
 enum ShareItemExtractor {
-    /// Priorité : première image jointe ; sinon première URL exploitable.
+    /// Collecte images + URLs ; si une URL Instagram est présente, elle prime sur les previews jointes.
     static func extractContent(from context: NSExtensionContext?) async -> ShareExtractedContent? {
         guard let context = context,
               let items = context.inputItems as? [NSExtensionItem],
               !items.isEmpty else { return nil }
 
-        var firstURL: URL?
+        var collectedImages: [Data] = []
+        var collectedURLs: [URL] = []
 
         for item in items {
             guard let attachments = item.attachments else { continue }
             for provider in attachments {
-                if let data = await loadImage(from: provider) {
-                    return .image(data)
-                }
                 if let url = await loadURL(from: provider) {
-                    if firstURL == nil { firstURL = url }
+                    collectedURLs.append(url)
+                }
+                if let data = await loadImage(from: provider) {
+                    collectedImages.append(data)
                 }
             }
         }
 
-        if let url = firstURL {
+        if let ig = collectedURLs.first(where: { InstagramURLDetector.isInstagram($0) }) {
+            return .link(ig)
+        }
+        if let firstImg = collectedImages.first {
+            return .image(firstImg)
+        }
+        if let url = collectedURLs.first {
             return .link(url)
         }
         return nil

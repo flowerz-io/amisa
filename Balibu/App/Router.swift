@@ -39,4 +39,28 @@ final class Router: ObservableObject {
     func popToRoot() {
         path = NavigationPath()
     }
+
+    /// Deep links `balibu://` (Share Extension, imports).
+    func handleIncomingURL(_ url: URL) {
+        guard url.scheme?.lowercased() == "balibu" else { return }
+        let host = (url.host ?? "").lowercased()
+        let storage = ShareStorageService.shared
+
+        if host == "shared-import" {
+            guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+                  let idString = components.queryItems?.first(where: { $0.name == "id" })?.value,
+                  let id = UUID(uuidString: idString),
+                  let payload = storage.consumePayload(id: id) else {
+                return
+            }
+            navigateToShareImportProcessing(payload: payload)
+            return
+        }
+
+        if host == "shared" {
+            if let payload = storage.consumeLegacyFilenamePayload() {
+                navigateToSharedImportReview(payload: payload)
+            }
+        }
+    }
 }

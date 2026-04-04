@@ -92,6 +92,17 @@ struct ShareExtensionRootView: View {
 
         case .confirmReady:
             VStack(spacing: 24) {
+                if let preview = model.confirmPreviewImage {
+                    Image(uiImage: preview)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 96, height: 96)
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .strokeBorder(Color.secondary.opacity(0.2), lineWidth: 1)
+                        )
+                }
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 48))
                     .foregroundStyle(.secondary)
@@ -102,6 +113,14 @@ struct ShareExtensionRootView: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
+
+                if let openErr = model.hostAppOpenError {
+                    Text(openErr)
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
 
                 Button {
                     model.openHostAppAndFinish()

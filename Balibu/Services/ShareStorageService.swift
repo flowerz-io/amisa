@@ -34,16 +34,19 @@ final class ShareStorageService {
         userDefaults?.synchronize()
     }
 
-    /// Lit et supprime le payload pour cet id (après deep link).
+    /// Lit et supprime le payload pour cet id (après deep link). Ne supprime que si le JSON est valide.
     func consumePayload(id: UUID) -> SharedImportPayload? {
         let key = payloadStorageKey(for: id)
         guard let data = userDefaults?.data(forKey: key) else { return nil }
+        guard let payload = try? JSONDecoder().decode(SharedImportPayload.self, from: data) else {
+            return nil
+        }
         userDefaults?.removeObject(forKey: key)
         if userDefaults?.string(forKey: pendingImportIdKey) == id.uuidString {
             userDefaults?.removeObject(forKey: pendingImportIdKey)
         }
         userDefaults?.synchronize()
-        return try? JSONDecoder().decode(SharedImportPayload.self, from: data)
+        return payload
     }
 
     /// Ancien flux : une seule clé = nom de fichier (sans id). Consommé → Review classique.

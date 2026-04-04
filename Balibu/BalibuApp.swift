@@ -16,6 +16,9 @@ struct BalibuApp: App {
         WindowGroup {
             AppRouter(router: router)
                 .environmentObject(router)
+                .onOpenURL { url in
+                    router.handleIncomingURL(url)
+                }
         }
     }
 }
