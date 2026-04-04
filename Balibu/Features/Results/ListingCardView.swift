@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-/// Carte listing : image, badge source, marque, titre, méta (taille • état), prix. Toute la carte ouvre l’URL.
+/// Carte listing : image, badge source, marque, titre, méta (taille · état), prix. Toute la carte ouvre l’URL.
 struct ListingCardView: View {
     let listing: MarketplaceListing
 
@@ -79,7 +79,7 @@ struct ListingCardView: View {
         ZStack(alignment: .topTrailing) {
             listingImage
 
-            Text(listing.source)
+            Text(listing.sourceDisplayLabel)
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(Color.primary)
                 .padding(.horizontal, 8)
@@ -127,7 +127,7 @@ struct ListingCardView: View {
         let hasS = !s.isEmpty
         let hasC = !c.isEmpty
         if hasS, hasC {
-            return "\(s) • \(c)"
+            return "\(s) · \(c)"
         }
         if hasS {
             return s
@@ -148,7 +148,7 @@ struct ListingCardView: View {
         if let b = displayBrand {
             parts.append(b)
         }
-        parts.append(contentsOf: [listing.title, listing.formattedPrice, listing.source])
+        parts.append(contentsOf: [listing.title, listing.formattedPrice, listing.sourceDisplayLabel])
         if let meta = metaLine {
             parts.append(meta)
         }

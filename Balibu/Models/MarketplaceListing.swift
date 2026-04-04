@@ -40,8 +40,17 @@ struct MarketplaceListing: Identifiable, Codable, Equatable, Hashable {
     let size: String?
     let condition: String?
 
+    /// Libellé badge (Vinted, Grailed, …) ; jamais vide côté UI.
+    var sourceDisplayLabel: String {
+        MarketplaceSource.displayLabel(from: source)
+    }
+
     var formattedPrice: String {
-        PriceFormatting.formatCurrency(amount: price, currencyCode: currency)
+        PriceFormatting.formatListingPrice(
+            amount: price,
+            currencyCode: currency,
+            fallbackCurrencyCode: MarketplaceSource.defaultCurrencyCode(forSource: source)
+        )
     }
 }
 
@@ -73,7 +82,7 @@ extension MarketplaceListing {
             id: "gr-1",
             title: "Maison Margiela Tabi Ankle Boots",
             price: 390,
-            currency: "EUR",
+            currency: "USD",
             imageURL: URL(string: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=400"),
             thumbnailURL: URL(string: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=120"),
             listingURL: URL(string: "https://grailed.com/listings/gr-1"),
