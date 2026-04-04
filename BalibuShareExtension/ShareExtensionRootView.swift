@@ -81,7 +81,7 @@ struct ShareExtensionRootView: View {
                     Button {
                         model.commitCropAndPrepareImport()
                     } label: {
-                        Text(String(localized: "Rechercher"))
+                        Text(String(localized: "Enregistrer"))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
                     }
@@ -106,26 +106,18 @@ struct ShareExtensionRootView: View {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 48))
                     .foregroundStyle(.secondary)
-                Text(String(localized: "Recherche prête"))
+                Text(String(localized: "Recherche enregistrée"))
                     .font(.title2.weight(.semibold))
-                Text(String(localized: "L’analyse et la recherche d’annonces se feront dans Balibu."))
+                Text(String(localized: "Ouvre Balibu pour voir les résultats."))
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
 
-                if let openErr = model.hostAppOpenError {
-                    Text(openErr)
-                        .font(.footnote)
-                        .foregroundStyle(.red)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
-                }
-
                 Button {
-                    model.openHostAppAndFinish()
+                    model.finishAndDismissExtension()
                 } label: {
-                    Text(String(localized: "Voir les résultats dans Balibu"))
+                    Text(String(localized: "Terminé"))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
                 }

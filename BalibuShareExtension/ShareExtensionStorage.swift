@@ -27,8 +27,11 @@ enum ShareExtensionStorage {
     }
 
     private static let pendingImportIdKey = "balibu.pendingImportId"
+    /// Aligné sur `ShareStorageService` : l’app lit ce statut au lancement pour lancer l’analyse.
+    private static let shareImportStatusKey = "balibu.shareImportStatus"
+    private static let shareImportStatusPending = "pending"
 
-    /// Enregistre le JPEG final + métadonnées JSON pour le deep link `balibu://shared-import?id=`.
+    /// Enregistre le JPEG final + JSON + id + statut `pending` (l’app consomme au prochain lancement).
     static func saveImport(payload: SharedImportPayload, imageData: Data) throws {
         guard let dir = sharedImagesURL else {
             throw ShareExtensionStorageError.containerUnavailable
@@ -40,6 +43,7 @@ enum ShareExtensionStorage {
         let encoded = try JSONEncoder().encode(payload)
         userDefaults?.set(encoded, forKey: payloadKey(for: payload.id))
         userDefaults?.set(payload.id.uuidString, forKey: pendingImportIdKey)
+        userDefaults?.set(shareImportStatusPending, forKey: shareImportStatusKey)
         userDefaults?.synchronize()
     }
 

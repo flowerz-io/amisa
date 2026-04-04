@@ -18,6 +18,7 @@ enum AppRoute: Hashable {
 
 struct AppRouter: View {
     @ObservedObject var router: Router
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         NavigationStack(path: $router.path) {
@@ -38,7 +39,15 @@ struct AppRouter: View {
                 }
             }
             .onAppear {
-                checkPendingLegacySharedPayload()
+                router.processPendingShareImportIfNeeded()
+                if router.path.isEmpty {
+                    checkPendingLegacySharedPayload()
+                }
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase == .active {
+                    router.processPendingShareImportIfNeeded()
+                }
             }
         }
     }

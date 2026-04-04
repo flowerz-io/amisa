@@ -15,6 +15,9 @@ final class ShareStorageService {
     /// Ancienne clé : uniquement le nom de fichier (sans JSON).
     private let legacyFilenameKey = "balibu.sharedImagePayload"
     private let pendingImportIdKey = "balibu.pendingImportId"
+    /// `pending` tant que l’app n’a pas terminé l’analyse et marqué la consommation.
+    private let shareImportStatusKey = "balibu.shareImportStatus"
+    private let shareImportStatusPending = "pending"
 
     private var userDefaults: UserDefaults? {
         UserDefaults(suiteName: Self.appGroupIdentifier)
@@ -26,27 +29,58 @@ final class ShareStorageService {
         "balibu.importPayload.\(id.uuidString)"
     }
 
-    /// Enregistre un payload complet (JSON) + index optionnel pour diagnostic.
+    /// Enregistre un payload complet (JSON) + id + statut pending (aligné extension / app).
     func savePendingImport(_ payload: SharedImportPayload) throws {
         let data = try JSONEncoder().encode(payload)
         userDefaults?.set(data, forKey: payloadStorageKey(for: payload.id))
         userDefaults?.set(payload.id.uuidString, forKey: pendingImportIdKey)
+        userDefaults?.set(shareImportStatusPending, forKey: shareImportStatusKey)
         userDefaults?.synchronize()
     }
 
-    /// Lit et supprime le payload pour cet id (après deep link). Ne supprime que si le JSON est valide.
+    /// Lit et supprime le payload pour cet id (deep link manuel / rétrocompat). Ne supprime que si le JSON est valide.
     func consumePayload(id: UUID) -> SharedImportPayload? {
         let key = payloadStorageKey(for: id)
         guard let data = userDefaults?.data(forKey: key) else { return nil }
         guard let payload = try? JSONDecoder().decode(SharedImportPayload.self, from: data) else {
             return nil
         }
+        removePayloadKeys(for: id)
+        return payload
+    }
+
+    /// Import Share Extension en attente : lecture **sans** suppression (l’app lance l’analyse puis `markPendingShareImportConsumed`).
+    func peekPendingShareImportPayload() -> SharedImportPayload? {
+        guard let idString = userDefaults?.string(forKey: pendingImportIdKey),
+              let id = UUID(uuidString: idString) else { return nil }
+        let key = payloadStorageKey(for: id)
+        guard let data = userDefaults?.data(forKey: key) else { return nil }
+        guard let payload = try? JSONDecoder().decode(SharedImportPayload.self, from: data),
+              payload.id == id else {
+            return nil
+        }
+        let status = userDefaults?.string(forKey: shareImportStatusKey)
+        if status == nil {
+            // Ancienne écriture sans clé de statut : traiter comme en attente.
+            return payload
+        }
+        guard status == shareImportStatusPending else { return nil }
+        return payload
+    }
+
+    /// Après navigation vers Results (analyse réussie) : supprime JSON, id, statut (le fichier image est nettoyé par le VM).
+    func markPendingShareImportConsumed(id: UUID) {
+        removePayloadKeys(for: id)
+    }
+
+    private func removePayloadKeys(for id: UUID) {
+        let key = payloadStorageKey(for: id)
         userDefaults?.removeObject(forKey: key)
         if userDefaults?.string(forKey: pendingImportIdKey) == id.uuidString {
             userDefaults?.removeObject(forKey: pendingImportIdKey)
         }
+        userDefaults?.removeObject(forKey: shareImportStatusKey)
         userDefaults?.synchronize()
-        return payload
     }
 
     /// Ancien flux : une seule clé = nom de fichier (sans id). Consommé → Review classique.
@@ -61,12 +95,7 @@ final class ShareStorageService {
 
     func hasPendingPayload() -> Bool {
         if userDefaults?.string(forKey: legacyFilenameKey) != nil { return true }
-        if let idString = userDefaults?.string(forKey: pendingImportIdKey),
-           let id = UUID(uuidString: idString),
-           userDefaults?.data(forKey: payloadStorageKey(for: id)) != nil {
-            return true
-        }
-        return false
+        return peekPendingShareImportPayload() != nil
     }
 
     /// Efface tout ce qui concerne un import (ex. abandon).
@@ -77,6 +106,7 @@ final class ShareStorageService {
             userDefaults?.removeObject(forKey: payloadStorageKey(for: id))
         }
         userDefaults?.removeObject(forKey: pendingImportIdKey)
+        userDefaults?.removeObject(forKey: shareImportStatusKey)
         userDefaults?.synchronize()
     }
 

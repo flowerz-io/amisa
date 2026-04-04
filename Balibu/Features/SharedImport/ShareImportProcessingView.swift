@@ -57,6 +57,7 @@ struct ShareImportProcessingView: View {
             viewModel.setSearchHistoryService(.shared)
             viewModel.startAnalysisFromPreparedFile { session in
                 router.replaceShareImportWithResults(session: session)
+                ShareStorageService.shared.markPendingShareImportConsumed(id: payload.id)
             }
         }
     }

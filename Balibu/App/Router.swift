@@ -40,7 +40,14 @@ final class Router: ObservableObject {
         path = NavigationPath()
     }
 
-    /// Deep links `balibu://` (Share Extension, imports).
+    /// Détecte un import Share Extension `pending` dans l’App Group et lance l’analyse (sans deep link).
+    func processPendingShareImportIfNeeded() {
+        guard path.isEmpty else { return }
+        guard let payload = ShareStorageService.shared.peekPendingShareImportPayload() else { return }
+        navigateToShareImportProcessing(payload: payload)
+    }
+
+    /// Deep links `balibu://` (optionnel ; l’import principal passe par `peekPendingShareImportPayload`).
     func handleIncomingURL(_ url: URL) {
         guard url.scheme?.lowercased() == "balibu" else { return }
         let host = (url.host ?? "").lowercased()

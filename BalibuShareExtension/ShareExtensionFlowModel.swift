@@ -2,7 +2,7 @@
 //  ShareExtensionFlowModel.swift
 //  BalibuShareExtension
 //
-//  Machine à états : chargement → (sélection) → crop → confirmation → deep link.
+//  Machine à états : chargement → (sélection) → crop → confirmation → enregistrement App Group (pending).
 //
 
 import Combine
@@ -30,13 +30,8 @@ final class ShareFlowModel: ObservableObject {
     /// URL de page d’origine si import lien (métadonnées payload).
     private(set) var linkSourceURL: String?
 
-    private(set) var pendingImportId: UUID?
-
     /// Aperçu de l’image recadrée sur l’écran de confirmation.
     @Published private(set) var confirmPreviewImage: UIImage?
-
-    /// Si `open` vers l’app hôte échoue (completion `false`).
-    @Published private(set) var hostAppOpenError: String?
 
     private let linkResolver: ShareLinkResolving
 
@@ -92,7 +87,7 @@ final class ShareFlowModel: ObservableObject {
         phase = .crop(image)
     }
 
-    /// Après recadrage : enregistre dans l’App Group et passe à l’écran de confirmation.
+    /// Après recadrage : enregistre dans l’App Group (pending) et passe à l’écran de confirmation.
     func commitCropAndPrepareImport() {
         guard let cropped = cropController?.exportCroppedImage(),
               let data = cropped.jpegData(compressionQuality: 0.88) else {
@@ -111,39 +106,16 @@ final class ShareFlowModel: ObservableObject {
 
         do {
             try ShareExtensionStorage.saveImport(payload: payload, imageData: data)
-            pendingImportId = importId
             confirmPreviewImage = cropped
-            hostAppOpenError = nil
             phase = .confirmReady
         } catch {
             phase = .error("Enregistrement impossible : \(error.localizedDescription)")
         }
     }
 
-    func openHostAppAndFinish() {
-        hostAppOpenError = nil
-        guard let id = pendingImportId else {
-            extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
-            return
-        }
-        var components = URLComponents()
-        components.scheme = "balibu"
-        components.host = "shared-import"
-        components.queryItems = [URLQueryItem(name: "id", value: id.uuidString)]
-        guard let url = components.url else {
-            hostAppOpenError = String(localized: "Lien vers Balibu invalide.")
-            return
-        }
-        extensionContext?.open(url, completionHandler: { [weak self] success in
-            Task { @MainActor in
-                guard let model = self else { return }
-                if success {
-                    model.extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
-                } else {
-                    model.hostAppOpenError = String(localized: "Impossible d’ouvrir Balibu. Ouvrez l’app manuellement ou réessayez.")
-                }
-            }
-        })
+    /// Ferme l’extension après confirmation (aucune ouverture de l’app hôte).
+    func finishAndDismissExtension() {
+        extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
     }
 
     func cancelExtension() {
