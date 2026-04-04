@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 /// Carte listing : image, badge source, marque, titre, méta (taille · état), prix. Toute la carte ouvre l’URL.
 struct ListingCardView: View {
@@ -64,6 +65,10 @@ struct ListingCardView: View {
                 RoundedRectangle(cornerRadius: DesignTokens.radiusM, style: .continuous)
                     .strokeBorder(DesignTokens.cardStroke, lineWidth: 0.5)
             )
+            .overlay(alignment: .topTrailing) {
+                ProviderBadgeView(source: listing.source, fallbackLabel: listing.sourceDisplayLabel)
+                    .padding(8)
+            }
         }
         .buttonStyle(.plain)
         .accessibilityLabel(accessibilityDescription)
@@ -77,17 +82,7 @@ struct ListingCardView: View {
     }
 
     private var imageSection: some View {
-        ZStack(alignment: .topTrailing) {
-            ListingCardImageView(imageURL: listing.thumbnailURL ?? listing.imageURL)
-
-            Text(listing.sourceDisplayLabel)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(Color.primary)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(.ultraThinMaterial, in: Capsule())
-                .padding(8)
-        }
+        ListingCardImageView(imageURL: listing.thumbnailURL ?? listing.imageURL)
         .frame(maxWidth: .infinity)
         .frame(height: Self.imageBlockHeight)
         .clipShape(
@@ -169,6 +164,49 @@ private struct ListingCardImageView: View {
                     .font(.title2)
                     .foregroundStyle(Color.secondary)
             }
+    }
+}
+
+private struct ProviderBadgeView: View {
+    let source: String
+    let fallbackLabel: String
+
+    private static let badgeHeight: CGFloat = 26
+    private static let maxLogoWidth: CGFloat = 72
+
+    var body: some View {
+        ZStack {
+            if let logo = logoImage {
+                logo
+                    .resizable()
+                    .renderingMode(.original)
+                    .interpolation(.high)
+                    .scaledToFit()
+                    .frame(maxWidth: Self.maxLogoWidth, maxHeight: Self.badgeHeight - 8, alignment: .center)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+            } else {
+                Text(fallbackLabel)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(Color.primary)
+                    .lineLimit(1)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+            }
+        }
+        .frame(minHeight: Self.badgeHeight)
+        .background(.ultraThinMaterial, in: Capsule())
+        .overlay(
+            Capsule()
+                .strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5)
+        )
+        .accessibilityLabel(fallbackLabel)
+    }
+
+    private var logoImage: Image? {
+        guard let assetName = MarketplaceSource.logoAssetName(from: source) else { return nil }
+        guard UIImage(named: assetName) != nil else { return nil }
+        return Image(assetName)
     }
 }
 
