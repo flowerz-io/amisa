@@ -54,6 +54,8 @@ export interface AnalyzeSearchResponse {
   listings: MarketplaceListingDTO[];
   /** True si le flux vision a réussi mais le catalogue Vinted n’a pas pu être chargé. */
   vintedSearchFailed?: boolean;
+  /** True si le catalogue Grailed n’a pas pu être chargé (Vinted peut avoir réussi). */
+  grailedSearchFailed?: boolean;
   /** Présent uniquement quand DEBUG=1 ou NODE_ENV=development */
   debug?: {
     visionProvider: string;
@@ -74,6 +76,19 @@ export interface VintedListingsResponse {
   listings: MarketplaceListingDTO[];
   page: number;
   /** False si la page est vide ou contient moins de résultats qu’une page complète (pas de page suivante fiable). */
+  hasMore: boolean;
+}
+
+/** POST /grailed-listings — pagination texte Grailed sans ré-analyse vision */
+export interface GrailedListingsRequest {
+  searchText: string;
+  /** Page catalogue Grailed (1-based). */
+  page: number;
+}
+
+export interface GrailedListingsResponse {
+  listings: MarketplaceListingDTO[];
+  page: number;
   hasMore: boolean;
 }
 

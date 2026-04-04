@@ -8,6 +8,11 @@ import {
   searchVintedByText,
   type VintedSearchItem,
 } from '../services/vinted-text-search.js';
+import {
+  buildGrailedSearchUrl,
+  searchGrailedByText,
+  type GrailedSearchItem,
+} from '../services/grailed-text-search.js';
 import type { MarketplaceListingDTO } from '../api/types.js';
 import { visionProviderName, isDebug } from '../config.js';
 
@@ -33,6 +38,25 @@ function vintedItemsToListings(items: VintedSearchItem[]): MarketplaceListingDTO
       ...(item.brand ? { brand: item.brand } : {}),
       size: item.size,
       condition: item.condition,
+    };
+  });
+}
+
+function grailedItemsToListings(items: GrailedSearchItem[]): MarketplaceListingDTO[] {
+  return items.map((item, index) => {
+    const idMatch = item.listingUrl.match(/\/listings\/(\d+)/);
+    const id = idMatch?.[1] ?? `grailed-${index}`;
+    return {
+      id,
+      source: 'Grailed',
+      title: item.title,
+      price: item.price ?? 0,
+      currency: item.currency ?? 'USD',
+      imageUrl: item.imageUrl,
+      thumbnailUrl: item.imageUrl,
+      listingUrl: item.listingUrl,
+      ...(item.brand ? { brand: item.brand } : {}),
+      size: item.size,
     };
   });
 }
@@ -135,10 +159,13 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
 
     const trimmedPrimary = String(primaryQuery).trim();
     const vintedSearchUrl = buildVintedSearchUrl(trimmedPrimary);
+    const grailedSearchUrl = buildGrailedSearchUrl(trimmedPrimary);
     // eslint-disable-next-line no-console -- traçage recherche Vinted
     console.log('[VINTED_PRIMARY_QUERY]', trimmedPrimary);
     // eslint-disable-next-line no-console -- traçage recherche Vinted
     console.log('[VINTED_SEARCH_URL]', vintedSearchUrl);
+    // eslint-disable-next-line no-console -- traçage recherche Grailed
+    console.log('[GRAILED_SEARCH_URL]', grailedSearchUrl);
 
     let vintedItems: VintedSearchItem[] = [];
     let vintedSearchFailed = false;
@@ -151,7 +178,21 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
       console.error('[VINTED_SEARCH_FAILED]', vintedErr);
     }
 
-    const listings = vintedItemsToListings(vintedItems);
+    let grailedItems: GrailedSearchItem[] = [];
+    let grailedSearchFailed = false;
+    try {
+      grailedItems = await searchGrailedByText(trimmedPrimary);
+    } catch (grailedErr) {
+      grailedSearchFailed = true;
+      request.log.error(grailedErr, 'Grailed catalog fetch/parse failed');
+      // eslint-disable-next-line no-console -- erreur métier
+      console.error('[GRAILED_SEARCH_FAILED]', grailedErr);
+    }
+
+    const listings = [
+      ...vintedItemsToListings(vintedItems),
+      ...grailedItemsToListings(grailedItems),
+    ];
     // eslint-disable-next-line no-console -- traçage strict
     console.log('[LISTINGS_COUNT]', listings.length);
 
@@ -160,6 +201,7 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
       generatedQueries,
       listings,
       ...(vintedSearchFailed ? { vintedSearchFailed: true } : {}),
+      ...(grailedSearchFailed ? { grailedSearchFailed: true } : {}),
       ...(isDebug && {
         debug: {
           visionProvider: visionProviderName,
