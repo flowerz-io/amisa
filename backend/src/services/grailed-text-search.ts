@@ -5,9 +5,17 @@ const GRAILED_ORIGIN = 'https://www.grailed.com';
 
 const FETCH_HEADERS: Record<string, string> = {
   'User-Agent':
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+  Accept:
+    'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
   'Accept-Language': 'en-US,en;q=0.9',
+  'Cache-Control': 'no-cache',
+  Pragma: 'no-cache',
+  Referer: 'https://www.google.com/',
+  'Sec-Fetch-Dest': 'document',
+  'Sec-Fetch-Mode': 'navigate',
+  'Sec-Fetch-Site': 'same-origin',
+  'Upgrade-Insecure-Requests': '1',
 };
 
 export type GrailedSearchItem = {
@@ -85,9 +93,14 @@ export async function searchGrailedByText(
   console.log('[GRAILED_FETCH]', url);
 
   const res = await fetch(url, { headers: FETCH_HEADERS, redirect: 'follow' });
+  // eslint-disable-next-line no-console -- diagnostic anti-bot Grailed
+  console.log('GRAILED_STATUS', res.status);
   if (!res.ok) {
-    // eslint-disable-next-line no-console -- diagnostic recherche
+    const body = await res.text();
+    // eslint-disable-next-line no-console -- diagnostic anti-bot Grailed
     console.error('[GRAILED_FETCH_HTTP_ERROR]', res.status, res.statusText);
+    // eslint-disable-next-line no-console -- diagnostic anti-bot Grailed
+    console.log('GRAILED_ERROR_BODY', body.slice(0, 1000));
     throw new Error(`Grailed HTTP ${res.status}`);
   }
 
