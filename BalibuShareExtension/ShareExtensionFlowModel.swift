@@ -33,6 +33,9 @@ final class ShareFlowModel: ObservableObject {
     /// Aperçu de l’image recadrée sur l’écran de confirmation.
     @Published private(set) var confirmPreviewImage: UIImage?
 
+    /// Résultat de la programmation de la notification locale après enregistrement.
+    @Published private(set) var notificationScheduleOutcome: ShareNotificationScheduleOutcome?
+
     private let linkResolver: ShareLinkResolving
 
     init(extensionContext: NSExtensionContext?, linkResolver: ShareLinkResolving = CompositeShareLinkResolver()) {
@@ -107,7 +110,14 @@ final class ShareFlowModel: ObservableObject {
         do {
             try ShareExtensionStorage.saveImport(payload: payload, imageData: data)
             confirmPreviewImage = cropped
-            phase = .confirmReady
+            notificationScheduleOutcome = nil
+            Task {
+                let outcome = await ShareExtensionNotificationScheduler.scheduleResultsReady(importId: importId)
+                await MainActor.run {
+                    notificationScheduleOutcome = outcome
+                    phase = .confirmReady
+                }
+            }
         } catch {
             phase = .error("Enregistrement impossible : \(error.localizedDescription)")
         }

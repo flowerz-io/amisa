@@ -12,6 +12,8 @@ import Combine
 struct HomeView: View {
     @EnvironmentObject private var router: Router
     @StateObject private var viewModel: HomeViewModel
+    @AppStorage("balibu.notification.educationCompleted") private var notificationEducationCompleted = false
+    @State private var showNotificationOnboarding = false
 
     init(searchHistoryService: SearchHistoryService) {
         _viewModel = StateObject(wrappedValue: HomeViewModel(searchHistoryService: searchHistoryService))
@@ -30,6 +32,27 @@ struct HomeView: View {
         .background(DesignTokens.backgroundColor)
         .navigationTitle("Balibu")
         .navigationBarTitleDisplayMode(.large)
+        .sheet(isPresented: $showNotificationOnboarding, onDismiss: {
+            if !notificationEducationCompleted {
+                notificationEducationCompleted = true
+            }
+        }) {
+            NotificationOnboardingSheet(educationCompleted: $notificationEducationCompleted)
+        }
+        .onAppear {
+            Task {
+                await NotificationManager.shared.refreshAuthorizationStatus()
+                let status = await NotificationManager.shared.currentAuthorizationStatus()
+                await MainActor.run {
+                    guard !notificationEducationCompleted else { return }
+                    if status == .authorized || status == .provisional || status == .ephemeral {
+                        notificationEducationCompleted = true
+                        return
+                    }
+                    showNotificationOnboarding = true
+                }
+            }
+        }
     }
 
     private var headerSection: some View {

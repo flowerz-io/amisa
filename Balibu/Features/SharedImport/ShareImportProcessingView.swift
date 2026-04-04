@@ -58,6 +58,7 @@ struct ShareImportProcessingView: View {
             viewModel.startAnalysisFromPreparedFile { session in
                 router.replaceShareImportWithResults(session: session)
                 ShareStorageService.shared.markPendingShareImportConsumed(id: payload.id)
+                NotificationManager.shared.cancelShareResultsNotification(importId: payload.id)
             }
         }
     }

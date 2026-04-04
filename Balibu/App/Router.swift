@@ -47,6 +47,13 @@ final class Router: ObservableObject {
         navigateToShareImportProcessing(payload: payload)
     }
 
+    /// Tap sur la notification locale : réinitialise la pile puis lance le traitement du pending.
+    func processPendingShareImportFromNotification() {
+        guard let payload = ShareStorageService.shared.peekPendingShareImportPayload() else { return }
+        path = NavigationPath()
+        navigateToShareImportProcessing(payload: payload)
+    }
+
     /// Deep links `balibu://` (optionnel ; l’import principal passe par `peekPendingShareImportPayload`).
     func handleIncomingURL(_ url: URL) {
         guard url.scheme?.lowercased() == "balibu" else { return }

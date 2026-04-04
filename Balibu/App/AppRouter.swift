@@ -18,6 +18,7 @@ enum AppRoute: Hashable {
 
 struct AppRouter: View {
     @ObservedObject var router: Router
+    let appDelegate: BalibuAppDelegate
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -39,6 +40,8 @@ struct AppRouter: View {
                 }
             }
             .onAppear {
+                appDelegate.router = router
+                Task { await NotificationManager.shared.refreshAuthorizationStatus() }
                 router.processPendingShareImportIfNeeded()
                 if router.path.isEmpty {
                     checkPendingLegacySharedPayload()

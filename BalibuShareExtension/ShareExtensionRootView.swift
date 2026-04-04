@@ -91,40 +91,19 @@ struct ShareExtensionRootView: View {
             }
 
         case .confirmReady:
-            VStack(spacing: 24) {
-                if let preview = model.confirmPreviewImage {
-                    Image(uiImage: preview)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 96, height: 96)
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .strokeBorder(Color.secondary.opacity(0.2), lineWidth: 1)
-                        )
+            Group {
+                if model.notificationScheduleOutcome == nil {
+                    VStack(spacing: 16) {
+                        ProgressView()
+                        Text(String(localized: "Préparation…"))
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    confirmReadyContent(model: model)
                 }
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 48))
-                    .foregroundStyle(.secondary)
-                Text(String(localized: "Recherche enregistrée"))
-                    .font(.title2.weight(.semibold))
-                Text(String(localized: "Ouvre Balibu pour voir les résultats."))
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
-
-                Button {
-                    model.finishAndDismissExtension()
-                } label: {
-                    Text(String(localized: "Terminé"))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                }
-                .buttonStyle(.borderedProminent)
             }
-            .padding()
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
         case .error(let message):
             VStack(spacing: 16) {
@@ -138,6 +117,59 @@ struct ShareExtensionRootView: View {
                     .padding(.horizontal)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    @ViewBuilder
+    private func confirmReadyContent(model: ShareFlowModel) -> some View {
+        VStack(spacing: 24) {
+            if let preview = model.confirmPreviewImage {
+                Image(uiImage: preview)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 96, height: 96)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .strokeBorder(Color.secondary.opacity(0.2), lineWidth: 1)
+                    )
+            }
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 48))
+                .foregroundStyle(.secondary)
+            Text(String(localized: "Recherche enregistrée"))
+                .font(.title2.weight(.semibold))
+
+            notificationSupplementText(for: model.notificationScheduleOutcome)
+                .font(.body)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+
+            Button {
+                model.finishAndDismissExtension()
+            } label: {
+                Text(String(localized: "Terminé"))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+            }
+            .buttonStyle(.borderedProminent)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    @ViewBuilder
+    private func notificationSupplementText(for outcome: ShareNotificationScheduleOutcome?) -> some View {
+        switch outcome {
+        case .scheduled:
+            Text(String(localized: "Tu recevras une notification pour ouvrir les résultats. Tu peux aussi ouvrir Balibu à tout moment."))
+        case .denied:
+            Text(String(localized: "Les notifications sont désactivées : tu ne recevras pas de raccourci ici. Ouvre Balibu manuellement pour lancer la recherche — ton analyse est déjà enregistrée. Les futures alertes pour de nouvelles annonces ne fonctionneront pas non plus."))
+        case .failed(let message):
+            Text(String(localized: "La notification n’a pas pu être planifiée (\(message)). Ouvre Balibu pour lancer la recherche — ton analyse est enregistrée."))
+        case .none:
+            EmptyView()
         }
     }
 }
