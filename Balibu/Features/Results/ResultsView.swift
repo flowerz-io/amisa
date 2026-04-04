@@ -1,7 +1,7 @@
 //
 //  ResultsView.swift
 //
-//  Liste résultats : hero, barre filtres, grille ; bannières sticky au scroll.
+//  Liste résultats : hero, barre filtres, grille ; bannière sticky au scroll.
 //
 
 import SwiftUI
@@ -47,30 +47,16 @@ struct ResultsView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 if !viewModel.showStickyHeader {
-                    HStack(spacing: 4) {
-                        favoriteToolbarButton
-                        Button {
-                            showDetailsSheet = true
-                        } label: {
-                            Image(systemName: "info.circle")
-                                .foregroundStyle(Color.primary)
-                        }
-                        .accessibilityLabel(String(localized: "Détails de l’analyse"))
+                    Button {
+                        toggleFavorite()
+                    } label: {
+                        Image(systemName: isFavorite ? "heart.fill" : "heart")
+                            .foregroundStyle(isFavorite ? Color.red : Color.primary)
                     }
+                    .accessibilityLabel(String(localized: "Favori"))
                 }
             }
         }
-    }
-
-    @ViewBuilder
-    private var favoriteToolbarButton: some View {
-        Button {
-            toggleFavorite()
-        } label: {
-            Image(systemName: isFavorite ? "heart.fill" : "heart")
-                .foregroundStyle(isFavorite ? Color.red : Color.primary)
-        }
-        .accessibilityLabel(String(localized: "Favori"))
     }
 
     private func toggleFavorite() {
@@ -82,7 +68,7 @@ struct ResultsView: View {
     private func loadedContent(session: SearchSession) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: DesignTokens.spacingM) {
-                heroImage(session: session)
+                heroSection(session: session)
 
                 if !viewModel.showStickyHeader {
                     ResultsFiltersBar(
@@ -156,7 +142,9 @@ struct ResultsView: View {
         }
         .fullScreenCover(isPresented: $showImageFullscreen) {
             NavigationStack {
-                ResultsImageFullscreenViewer(image: session.sourceImage)
+                if let img = session.sourceImage {
+                    ResultsImageFullscreenViewer(image: img, session: session)
+                }
             }
         }
         .sheet(isPresented: $showDetailsSheet) {
@@ -199,28 +187,61 @@ struct ResultsView: View {
         }
     }
 
-    private func heroImage(session: SearchSession) -> some View {
-        Group {
-            if let image = session.sourceImage {
-                Image(uiImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(maxHeight: 220)
-                    .clipShape(RoundedRectangle(cornerRadius: DesignTokens.radiusM, style: .continuous))
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        showImageFullscreen = true
+    @ViewBuilder
+    private func heroSection(session: SearchSession) -> some View {
+        if session.isTextOnlySearch {
+            textQueryHero(session: session)
+        } else if let image = session.sourceImage {
+            Image(uiImage: image)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(maxHeight: 220)
+                .clipShape(RoundedRectangle(cornerRadius: DesignTokens.radiusM, style: .continuous))
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    showImageFullscreen = true
+                }
+                .background(
+                    GeometryReader { geo in
+                        Color.clear.preference(
+                            key: HeroVisibilityPreferenceKey.self,
+                            value: geo.frame(in: .named("resultsScroll")).minY
+                        )
                     }
-                    .background(
-                        GeometryReader { geo in
-                            Color.clear.preference(
-                                key: HeroVisibilityPreferenceKey.self,
-                                value: geo.frame(in: .named("resultsScroll")).minY
-                            )
-                        }
-                    )
-            }
+                )
+        } else {
+            // Session image sans fichier local (rare) : afficher la requête.
+            textQueryHero(session: session)
         }
+    }
+
+    private func textQueryHero(session: SearchSession) -> some View {
+        VStack(alignment: .leading, spacing: DesignTokens.spacingS) {
+            Label {
+                Text(session.searchQuery)
+                    .font(DesignTokens.headline)
+                    .foregroundStyle(Color.primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } icon: {
+                Image(systemName: "text.magnifyingglass")
+                    .foregroundStyle(Color.secondary)
+            }
+            Text(String(localized: "Recherche texte sur Vinted"))
+                .font(DesignTokens.caption)
+                .foregroundStyle(Color.secondary)
+        }
+        .padding(DesignTokens.spacingM)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(DesignTokens.surfaceSecondary)
+        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.radiusM, style: .continuous))
+        .background(
+            GeometryReader { geo in
+                Color.clear.preference(
+                    key: HeroVisibilityPreferenceKey.self,
+                    value: geo.frame(in: .named("resultsScroll")).minY
+                )
+            }
+        )
     }
 
     private func stickyHeaderStack(session: SearchSession) -> some View {
@@ -229,8 +250,7 @@ struct ResultsView: View {
                 thumbnail: session.sourceImage,
                 isFavorite: isFavorite,
                 onFavoriteTap: { toggleFavorite() },
-                onImageTap: { showImageFullscreen = true },
-                onInfoTap: { showDetailsSheet = true }
+                onThumbnailTap: session.sourceImage != nil ? { showImageFullscreen = true } : nil
             )
             ResultsFiltersBar(
                 showFilterSheet: $showFilterSheet,
@@ -244,10 +264,24 @@ struct ResultsView: View {
         }
         .padding(.top, 4)
         .background {
-            Rectangle()
-                .fill(.thinMaterial)
-                .ignoresSafeArea(edges: .top)
+            stickyHeaderBackground
         }
+    }
+
+    /// Bannière légère : pas de « liquid glass » fort — matériau discret + léger voile.
+    private var stickyHeaderBackground: some View {
+        ZStack {
+            Rectangle()
+                .fill(.ultraThinMaterial)
+            Color(UIColor.systemBackground).opacity(0.5)
+        }
+        .frame(maxWidth: .infinity)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(Color(UIColor.separator))
+                .frame(height: 0.5)
+        }
+        .ignoresSafeArea(edges: .top)
     }
 
     private func filterPlaceholderSheet(title: String, message: String, isPresented: Binding<Bool>) -> some View {
@@ -307,34 +341,51 @@ struct ResultsView: View {
 // MARK: - Plein écran image
 
 private struct ResultsImageFullscreenViewer: View {
-    let image: UIImage?
+    let image: UIImage
+    let session: SearchSession
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
+    @State private var showDetails = false
 
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
-            if let image {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFit()
-                    .padding()
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        dismiss()
-                    }
-            }
+            (colorScheme == .dark ? Color.black : Color.white)
+                .ignoresSafeArea()
+
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFit()
+                .padding()
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button(String(localized: "Fermer")) {
-                    dismiss()
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    showDetails = true
+                } label: {
+                    Image(systemName: "info.circle")
+                        .font(.body)
+                    .foregroundStyle(colorScheme == .dark ? .white : .primary)
                 }
-                .foregroundStyle(.white)
+                .accessibilityLabel(String(localized: "Détails de l’analyse"))
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title3)
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(colorScheme == .dark ? .white : .primary)
+                }
+                .accessibilityLabel(String(localized: "Fermer"))
             }
         }
         .toolbarBackground(.visible, for: .navigationBar)
-        .toolbarBackground(Color.black.opacity(0.35), for: .navigationBar)
+        .toolbarBackground(Color(UIColor.systemBackground).opacity(0.35), for: .navigationBar)
+        .sheet(isPresented: $showDetails) {
+            ResultsDetailsSheet(session: session)
+        }
     }
 }
 

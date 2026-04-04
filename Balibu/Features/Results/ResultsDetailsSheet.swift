@@ -15,12 +15,27 @@ struct ResultsDetailsSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: DesignTokens.spacingL) {
+                    section(title: String(localized: "Type de recherche")) {
+                        Text(session.isTextOnlySearch
+                             ? String(localized: "Recherche texte (Vinted)")
+                             : String(localized: "Analyse d’image"))
+                            .font(DesignTokens.body)
+                            .foregroundStyle(Color.primary)
+                    }
+
                     if let image = session.sourceImage {
                         Image(uiImage: image)
                             .resizable()
                             .aspectRatio(contentMode: .fit)
                             .frame(maxHeight: 160)
                             .clipShape(RoundedRectangle(cornerRadius: DesignTokens.radiusM, style: .continuous))
+                    }
+
+                    if session.isTextOnlySearch, session.attributes == nil {
+                        Text(String(localized: "Aucun attribut issu de la vision : les résultats suivent uniquement ta requête texte."))
+                            .font(DesignTokens.caption)
+                            .foregroundStyle(Color.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
 
                     if !session.generatedQueries.isEmpty {

@@ -35,6 +35,16 @@ struct SettingsView: View {
             }
 
             Section {
+                NavigationLink {
+                    howItWorksDetail
+                } label: {
+                    Label(String(localized: "Comment ça marche"), systemImage: "questionmark.circle")
+                }
+            } header: {
+                Text(String(localized: "Aide"))
+            }
+
+            Section {
                 HStack {
                     Text(String(localized: "Version"))
                     Spacer()
@@ -83,6 +93,46 @@ struct SettingsView: View {
         .background(DesignTokens.backgroundColor)
         .navigationTitle(String(localized: "À propos"))
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var howItWorksDetail: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: DesignTokens.spacingL) {
+                Text(String(localized: "Trois étapes"))
+                    .font(DesignTokens.headlineFont)
+                    .foregroundStyle(DesignTokens.textPrimary)
+
+                VStack(alignment: .leading, spacing: DesignTokens.spacingM) {
+                    howItWorksStep(number: 1, text: String(localized: "Repère une pièce dans une app ou sur le web."))
+                    howItWorksStep(number: 2, text: String(localized: "Partage vers Balibu ou importe une photo depuis l’accueil."))
+                    howItWorksStep(number: 3, text: String(localized: "Balibu analyse l’image et propose des annonces similaires sur Vinted. Tu peux aussi lancer une recherche directement par mot-clé."))
+                }
+                .padding(DesignTokens.spacingM)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(DesignTokens.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: DesignTokens.cornerRadiusM, style: .continuous))
+            }
+            .padding(DesignTokens.spacingL)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(DesignTokens.backgroundColor)
+        .navigationTitle(String(localized: "Comment ça marche"))
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func howItWorksStep(number: Int, text: String) -> some View {
+        HStack(alignment: .top, spacing: DesignTokens.spacingM) {
+            Text("\(number)")
+                .font(.system(.caption, design: .monospaced).weight(.semibold))
+                .foregroundStyle(DesignTokens.textSecondary)
+                .frame(width: 22, height: 22, alignment: .center)
+                .background(DesignTokens.accentMuted)
+                .clipShape(Circle())
+
+            Text(text)
+                .font(DesignTokens.bodyFont)
+                .foregroundStyle(DesignTokens.textPrimary)
+        }
     }
 }
 

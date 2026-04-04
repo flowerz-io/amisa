@@ -8,6 +8,12 @@
 import Foundation
 import UIKit
 
+/// Origine de la session : analyse d’image ou requête texte seule (même pagination Vinted ensuite).
+enum SearchSessionMode: String, Codable, Hashable {
+    case imageAnalysis
+    case textQuery
+}
+
 /// Session de recherche complète pour l'historique local.
 struct SearchSession: Identifiable, Equatable, Hashable {
     let id: UUID
@@ -20,6 +26,7 @@ struct SearchSession: Identifiable, Equatable, Hashable {
     let createdAt: Date
     /// La recherche Vinted initiale n’a pas pu être chargée (vision OK).
     var vintedSearchFailed: Bool
+    let mode: SearchSessionMode
 
     init(
         id: UUID = UUID(),
@@ -30,7 +37,8 @@ struct SearchSession: Identifiable, Equatable, Hashable {
         attributes: FashionVisionResult?,
         listings: [MarketplaceListing],
         createdAt: Date = Date(),
-        vintedSearchFailed: Bool = false
+        vintedSearchFailed: Bool = false,
+        mode: SearchSessionMode = .imageAnalysis
     ) {
         self.id = id
         self.imageFileName = imageFileName
@@ -41,7 +49,11 @@ struct SearchSession: Identifiable, Equatable, Hashable {
         self.listings = listings
         self.createdAt = createdAt
         self.vintedSearchFailed = vintedSearchFailed
+        self.mode = mode
     }
+
+    /// Recherche lancée uniquement depuis du texte (pas d’image source).
+    var isTextOnlySearch: Bool { mode == .textQuery }
 
     /// Requête affichée (alias).
     var displayQuery: String? { searchQuery }
@@ -107,7 +119,8 @@ extension SearchSession {
                 itemTypeCanonical: "boots"
             ),
             listings: MarketplaceListing.mockListings,
-            createdAt: Date()
+            createdAt: Date(),
+            mode: .imageAnalysis
         )
     }
 }
@@ -115,7 +128,7 @@ extension SearchSession {
 extension SearchSession: Codable {
     enum CodingKeys: String, CodingKey {
         case id, imageFileName, thumbnailImageURL, searchQuery, generatedQueries, attributes, listings, createdAt,
-             vintedSearchFailed
+             vintedSearchFailed, mode
     }
 
     init(from decoder: Decoder) throws {
@@ -130,6 +143,7 @@ extension SearchSession: Codable {
         let listings = try c.decode([MarketplaceListing].self, forKey: .listings)
         let createdAt = try c.decode(Date.self, forKey: .createdAt)
         let vintedSearchFailed = try c.decodeIfPresent(Bool.self, forKey: .vintedSearchFailed) ?? false
+        let mode = try c.decodeIfPresent(SearchSessionMode.self, forKey: .mode) ?? .imageAnalysis
         self.init(
             id: id,
             imageFileName: imageFileName,
@@ -139,7 +153,8 @@ extension SearchSession: Codable {
             attributes: attributes,
             listings: listings,
             createdAt: createdAt,
-            vintedSearchFailed: vintedSearchFailed
+            vintedSearchFailed: vintedSearchFailed,
+            mode: mode
         )
     }
 
@@ -154,5 +169,6 @@ extension SearchSession: Codable {
         try c.encode(listings, forKey: .listings)
         try c.encode(createdAt, forKey: .createdAt)
         try c.encode(vintedSearchFailed, forKey: .vintedSearchFailed)
+        try c.encode(mode, forKey: .mode)
     }
 }

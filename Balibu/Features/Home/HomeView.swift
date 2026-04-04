@@ -16,6 +16,7 @@ struct HomeView: View {
     @AppStorage("balibu.notification.educationCompleted") private var notificationEducationCompleted = false
     @State private var showNotificationOnboarding = false
     @State private var manualSearchQuery = ""
+    @State private var textSearchAlert: String?
 
     init(searchHistoryService: SearchHistoryService) {
         _viewModel = StateObject(wrappedValue: HomeViewModel(searchHistoryService: searchHistoryService))
@@ -26,7 +27,7 @@ struct HomeView: View {
             VStack(spacing: DesignTokens.spacingL) {
                 searchAndImportBar
                 hintLine
-                compactHowItWorks
+                recentFavoritesStrip
                 recentHistorySection
             }
             .padding(DesignTokens.spacingL)
@@ -55,9 +56,17 @@ struct HomeView: View {
                 }
             }
         }
+        .alert(String(localized: "Recherche"), isPresented: Binding(
+            get: { textSearchAlert != nil },
+            set: { if !$0 { textSearchAlert = nil } }
+        )) {
+            Button(String(localized: "OK"), role: .cancel) { textSearchAlert = nil }
+        } message: {
+            Text(textSearchAlert ?? "")
+        }
     }
 
-    /// Barre recherche (saisie réservée à une évolution texte) + import image.
+    /// Barre recherche texte + import image.
     private var searchAndImportBar: some View {
         HStack(spacing: DesignTokens.spacingS) {
             HStack(spacing: DesignTokens.spacingS) {
@@ -67,7 +76,15 @@ struct HomeView: View {
                     .textFieldStyle(.plain)
                     .submitLabel(.search)
                     .onSubmit {
-                        manualSearchQuery = ""
+                        Task {
+                            do {
+                                let session = try await viewModel.submitTextSearch(query: manualSearchQuery)
+                                manualSearchQuery = ""
+                                router.navigateToResults(session: session)
+                            } catch {
+                                textSearchAlert = error.localizedDescription
+                            }
+                        }
                     }
             }
             .padding(.horizontal, DesignTokens.spacingM)
@@ -104,41 +121,45 @@ struct HomeView: View {
     }
 
     private var hintLine: some View {
-        Text(String(localized: "L’analyse et les résultats se basent sur une photo : importe une image ou utilise Partager depuis une autre app."))
+        Text(String(localized: "Saisis un mot-clé pour chercher sur Vinted, ou importe une photo pour une analyse visuelle. Tu peux aussi utiliser Partager depuis une autre app."))
             .font(DesignTokens.captionFont)
             .foregroundColor(DesignTokens.textSecondary)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var compactHowItWorks: some View {
-        VStack(alignment: .leading, spacing: DesignTokens.spacingS) {
-            Text(String(localized: "Comment ça marche"))
-                .font(DesignTokens.headlineFont)
-                .foregroundColor(DesignTokens.textPrimary)
-
-            VStack(alignment: .leading, spacing: DesignTokens.spacingS) {
-                flowStep(number: 1, text: String(localized: "Repère une pièce dans une app"))
-                flowStep(number: 2, text: String(localized: "Partage → Balibu ou importe une photo ici"))
-                flowStep(number: 3, text: String(localized: "Analyse et annonces similaires"))
+    private var recentFavoritesStrip: some View {
+        let records = Array(FavoriteSearchService.shared.allRecords().prefix(3))
+        return Group {
+            if !records.isEmpty {
+                VStack(alignment: .leading, spacing: DesignTokens.spacingS) {
+                    Text(String(localized: "Favoris récents"))
+                        .font(DesignTokens.headlineFont)
+                        .foregroundColor(DesignTokens.textPrimary)
+                    ForEach(records) { record in
+                        Button {
+                            router.navigateToResultsFromFavorite(session: record.toSearchSession())
+                        } label: {
+                            HStack {
+                                Image(systemName: "heart.fill")
+                                    .foregroundStyle(.red.opacity(0.85))
+                                    .font(.caption)
+                                Text(record.searchQuery)
+                                    .font(DesignTokens.bodyFont)
+                                    .foregroundColor(DesignTokens.textPrimary)
+                                    .lineLimit(1)
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption2)
+                                    .foregroundColor(DesignTokens.textSecondary)
+                            }
+                            .padding(DesignTokens.spacingM)
+                            .background(DesignTokens.cardBackground)
+                            .clipShape(RoundedRectangle(cornerRadius: DesignTokens.cornerRadiusM, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
             }
-            .padding(DesignTokens.spacingM)
-            .background(DesignTokens.cardBackground)
-            .cornerRadius(DesignTokens.cornerRadiusM)
-        }
-    }
-
-    private func flowStep(number: Int, text: String) -> some View {
-        HStack(alignment: .top, spacing: DesignTokens.spacingM) {
-            Text("\(number)")
-                .font(.system(.caption, design: .monospaced).weight(.semibold))
-                .foregroundColor(DesignTokens.textSecondary)
-                .frame(width: 20, height: 20, alignment: .center)
-                .background(DesignTokens.accentMuted)
-                .clipShape(Circle())
-
-            Text(text)
-                .font(DesignTokens.bodyFont)
-                .foregroundColor(DesignTokens.textPrimary)
         }
     }
 
@@ -148,7 +169,7 @@ struct HomeView: View {
                 EmptyStateView(
                     icon: "clock.arrow.circlepath",
                     title: String(localized: "Aucune recherche récente"),
-                    message: String(localized: "Importe une image ou partage depuis une autre app.")
+                    message: String(localized: "Lance une recherche texte ou importe une image.")
                 )
             } else {
                 VStack(alignment: .leading, spacing: DesignTokens.spacingM) {
@@ -227,6 +248,14 @@ struct HistoryRowView: View {
                 .aspectRatio(contentMode: .fill)
                 .frame(width: 48, height: 48)
                 .clipShape(RoundedRectangle(cornerRadius: DesignTokens.cornerRadiusS))
+        } else if session.isTextOnlySearch {
+            RoundedRectangle(cornerRadius: DesignTokens.cornerRadiusS)
+                .fill(DesignTokens.accentMuted)
+                .frame(width: 48, height: 48)
+                .overlay {
+                    Image(systemName: "text.magnifyingglass")
+                        .foregroundColor(DesignTokens.textSecondary)
+                }
         } else {
             RoundedRectangle(cornerRadius: DesignTokens.cornerRadiusS)
                 .fill(DesignTokens.accentMuted)
