@@ -1,7 +1,9 @@
 import 'dotenv/config';
 
+import { existsSync } from 'node:fs';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import { chromium } from 'playwright';
 import {
   visionProviderName,
   logVisionProviderDiagnostic,
@@ -12,6 +14,10 @@ import { vintedListingsRoute } from './routes/vinted-listings.js';
 import { grailedListingsRoute } from './routes/grailed-listings.js';
 
 logVisionProviderDiagnostic();
+const grailedBrowserPath = chromium.executablePath();
+console.log(
+  `[GRAILED_BROWSER_READY] ${existsSync(grailedBrowserPath) ? 'yes' : 'no'} path=${grailedBrowserPath}`
+);
 
 const app = Fastify({ logger: true });
 
