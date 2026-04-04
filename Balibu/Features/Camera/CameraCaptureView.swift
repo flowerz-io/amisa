@@ -17,30 +17,23 @@ struct CameraCaptureView: View {
 
     @Environment(\.dismiss) private var dismiss
 
+    /// Même opacité qu’avant pour le ruban récents (fond unifié zone basse).
+    private let bottomPanelOpacity: CGFloat = 0.38
+
     var body: some View {
-        ZStack {
+        ZStack(alignment: .bottom) {
             previewStack
                 .ignoresSafeArea()
 
-            VStack(spacing: 0) {
+            VStack {
                 topBar
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
-
-                Spacer(minLength: 0)
-
-                if viewModel.uiState == .ready {
-                    zoomBadge
-                        .padding(.bottom, 8)
-                }
-
-                Spacer(minLength: 0)
-
-                recentPhotosSection
-
-                bottomControls
-                    .padding(.bottom, 20)
+                Spacer()
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+
+            bottomPanel
         }
         .background(Color.black)
         .onAppear {
@@ -50,6 +43,40 @@ struct CameraCaptureView: View {
         .onDisappear {
             viewModel.onDisappear()
         }
+    }
+
+    /// Zone basse unique : zoom → Récents → obturateur + switch (fond noir semi-transparent pleine largeur).
+    private var bottomPanel: some View {
+        VStack(spacing: 0) {
+            if viewModel.uiState == .ready {
+                zoomBadge
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, 8)
+            }
+
+            Text(String(localized: "Récents"))
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(.white.opacity(0.5))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 12)
+                .padding(.bottom, 4)
+
+            RecentPhotosStrip(library: recentLibrary) { asset in
+                selectFromLibrary(asset)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 8)
+
+            bottomControls
+        }
+        .padding(.top, 12)
+        .padding(.bottom, 12)
+        .frame(maxWidth: .infinity)
+        .background(
+            Color.black.opacity(bottomPanelOpacity)
+                .ignoresSafeArea(edges: .bottom)
+        )
     }
 
     private var previewStack: some View {
@@ -118,26 +145,6 @@ struct CameraCaptureView: View {
         Text("\(String(format: "%.1f", viewModel.zoomDisplay))×")
             .font(.system(.subheadline, design: .rounded).weight(.medium))
             .foregroundStyle(.white.opacity(0.9))
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(Color.black.opacity(0.35))
-            .clipShape(Capsule())
-    }
-
-    private var recentPhotosSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(String(localized: "Récents"))
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(.white.opacity(0.5))
-                .padding(.horizontal, 12)
-
-            RecentPhotosStrip(library: recentLibrary) { asset in
-                selectFromLibrary(asset)
-            }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 10)
-            .background(Color.black.opacity(0.38))
-        }
     }
 
     private var bottomControls: some View {
