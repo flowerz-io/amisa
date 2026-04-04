@@ -22,7 +22,9 @@ final class CameraPreviewUIView: UIView {
     func configure(session: AVCaptureSession, mirrored: Bool) {
         videoPreviewLayer.session = session
         videoPreviewLayer.videoGravity = .resizeAspectFill
+
         if let conn = videoPreviewLayer.connection, conn.isVideoMirroringSupported {
+            conn.automaticallyAdjustsVideoMirroring = false
             conn.isVideoMirrored = mirrored
         }
     }
