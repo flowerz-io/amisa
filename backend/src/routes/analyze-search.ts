@@ -26,6 +26,11 @@ const visionProvider =
 
 /** Limite côté appli (après décodage base64). Les clients ciblent ~500 Ko ; marge pour proxies. */
 const MAX_IMAGE_BYTES = 6 * 1024 * 1024;
+const MAX_PAGES_PER_PROVIDER = Math.max(1, Math.floor(Number(process.env.MARKETPLACE_MAX_PAGES ?? 40)));
+const MAX_TOTAL_PER_PROVIDER =
+  Number(process.env.MARKETPLACE_MAX_TOTAL_PER_PROVIDER ?? 0) > 0
+    ? Math.floor(Number(process.env.MARKETPLACE_MAX_TOTAL_PER_PROVIDER))
+    : Number.POSITIVE_INFINITY;
 
 function vintedItemsToListings(items: VintedSearchItem[]): MarketplaceListingDTO[] {
   return items.map((item, index) => {
@@ -45,20 +50,6 @@ function vintedItemsToListings(items: VintedSearchItem[]): MarketplaceListingDTO
       condition: item.condition,
     };
   });
-}
-
-/** Vinted puis Grailed en alternance pour que la grille ne soit pas « tout Vinted » en premier bloc. */
-function interleaveVintedGrailed(
-  vinted: MarketplaceListingDTO[],
-  grailed: MarketplaceListingDTO[]
-): MarketplaceListingDTO[] {
-  const out: MarketplaceListingDTO[] = [];
-  const n = Math.max(vinted.length, grailed.length);
-  for (let i = 0; i < n; i++) {
-    if (i < vinted.length) out.push(vinted[i]);
-    if (i < grailed.length) out.push(grailed[i]);
-  }
-  return out;
 }
 
 function countBySource(listings: MarketplaceListingDTO[]): Record<string, number> {
@@ -87,6 +78,54 @@ function grailedItemsToListings(items: GrailedSearchItem[]): MarketplaceListingD
       size: item.size,
     };
   });
+}
+
+async function fetchProviderPages<T>(
+  provider: 'VINTED' | 'GRAILED',
+  perPage: number,
+  fetchPage: (page: number) => Promise<T[]>
+): Promise<{ items: T[]; failed: boolean }> {
+  const out: T[] = [];
+  let failed = false;
+
+  for (let page = 1; page <= MAX_PAGES_PER_PROVIDER; page++) {
+    let pageItems: T[] = [];
+    try {
+      pageItems = await fetchPage(page);
+    } catch (err) {
+      failed = true;
+      // eslint-disable-next-line no-console -- diagnostic pagination provider
+      console.error(`[${provider}_PAGE_${page}_FAILED]`, err);
+      break;
+    }
+
+    if (page === 1) {
+      // eslint-disable-next-line no-console -- diagnostic pagination provider
+      console.log(`[${provider}_PAGE_1_COUNT]`, pageItems.length);
+    } else if (page === 2) {
+      // eslint-disable-next-line no-console -- diagnostic pagination provider
+      console.log(`[${provider}_PAGE_2_COUNT]`, pageItems.length);
+    } else {
+      // eslint-disable-next-line no-console -- diagnostic pagination provider
+      console.log(`[${provider}_PAGE_N_COUNT]`, { page, count: pageItems.length });
+    }
+
+    if (pageItems.length === 0) break;
+    out.push(...pageItems);
+
+    if (out.length >= MAX_TOTAL_PER_PROVIDER) {
+      // eslint-disable-next-line no-console -- diagnostic pagination provider
+      console.log(`[${provider}_TOTAL_CAP_REACHED]`, {
+        cap: MAX_TOTAL_PER_PROVIDER,
+        collected: out.length,
+      });
+      break;
+    }
+
+    if (pageItems.length < perPage) break;
+  }
+
+  return { items: out, failed };
 }
 
 export async function analyzeSearchRoute(app: FastifyInstance) {
@@ -201,47 +240,51 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
       VINTED_MAX_TOTAL_LISTINGS_HINT,
     });
 
-    let vintedItems: VintedSearchItem[] = [];
-    let vintedSearchFailed = false;
-    try {
-      vintedItems = await searchVintedByText(trimmedPrimary);
-    } catch (vintedErr) {
-      vintedSearchFailed = true;
-      request.log.error(vintedErr, 'Vinted catalog fetch/parse failed');
-      // eslint-disable-next-line no-console -- erreur métier
-      console.error('[VINTED_SEARCH_FAILED]', vintedErr);
-    }
+    const vintedPaged = await fetchProviderPages<VintedSearchItem>(
+      'VINTED',
+      VINTED_MAX_PER_PAGE,
+      (page) => searchVintedByText(trimmedPrimary, { page })
+    );
+    const grailedPaged = await fetchProviderPages<GrailedSearchItem>(
+      'GRAILED',
+      GRAILED_MAX_PER_PAGE,
+      (page) => searchGrailedByText(trimmedPrimary, { page })
+    );
 
-    let grailedItems: GrailedSearchItem[] = [];
-    let grailedSearchFailed = false;
-    try {
-      grailedItems = await searchGrailedByText(trimmedPrimary);
-    } catch (grailedErr) {
-      grailedSearchFailed = true;
-      request.log.error(grailedErr, 'Grailed catalog fetch/parse failed');
-      // eslint-disable-next-line no-console -- erreur métier
-      console.error('[GRAILED_SEARCH_FAILED]', grailedErr);
-    }
+    const vintedItems = vintedPaged.items;
+    const grailedItems = grailedPaged.items;
+    const vintedSearchFailed = vintedPaged.failed;
+    const grailedSearchFailed = grailedPaged.failed;
 
-    const vintedDto = vintedItemsToListings(vintedItems);
-    const grailedDto = grailedItemsToListings(grailedItems);
-    const listings = interleaveVintedGrailed(vintedDto, grailedDto);
+    const vintedListings = vintedItemsToListings(vintedItems);
+    const grailedListings = grailedItemsToListings(grailedItems);
+    const merged = [...vintedListings, ...grailedListings];
 
     // eslint-disable-next-line no-console -- diagnostic fusion marketplaces
-    console.log('[VINTED_PAGE_1_COUNT]', vintedItems.length);
+    console.log('VINTED_COUNT', vintedListings.length);
     // eslint-disable-next-line no-console -- diagnostic fusion marketplaces
-    console.log('[GRAILED_PAGE_1_COUNT]', grailedItems.length);
+    console.log('GRAILED_COUNT', grailedListings.length);
     // eslint-disable-next-line no-console -- diagnostic fusion marketplaces
-    console.log('[MERGED_COUNT]', listings.length);
+    console.log('FINAL_COUNT', merged.length);
     // eslint-disable-next-line no-console -- diagnostic fusion marketplaces
-    console.log('[LISTINGS_BY_SOURCE]', JSON.stringify(countBySource(listings)));
+    console.log(
+      'BY_SOURCE',
+      merged.reduce<Record<string, number>>((acc, x) => {
+        acc[x.source] = (acc[x.source] || 0) + 1;
+        return acc;
+      }, {})
+    );
     // eslint-disable-next-line no-console -- diagnostic fusion marketplaces
-    console.log('[FINAL_LISTINGS_COUNT]', listings.length);
+    console.log('[MERGED_COUNT]', merged.length);
+    // eslint-disable-next-line no-console -- diagnostic fusion marketplaces
+    console.log('[FINAL_LISTINGS_COUNT]', merged.length);
+    // eslint-disable-next-line no-console -- diagnostic fusion marketplaces
+    console.log('[LISTINGS_BY_SOURCE]', JSON.stringify(countBySource(merged)));
 
     const response: AnalyzeSearchResponse = {
       visionResult,
       generatedQueries,
-      listings,
+      listings: merged,
       ...(vintedSearchFailed ? { vintedSearchFailed: true } : {}),
       ...(grailedSearchFailed ? { grailedSearchFailed: true } : {}),
       ...(isDebug && {
