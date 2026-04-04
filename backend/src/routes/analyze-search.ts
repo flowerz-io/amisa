@@ -10,69 +10,16 @@ import {
 } from '../services/vinted-text-search.js';
 import { searchGrailedByTextBrowser } from '../services/grailed-browser-search.js';
 import type { MarketplaceListingDTO } from '../api/types.js';
+import type { SearchRankingContextDTO } from '../api/types.js';
 import { visionProviderName, isDebug } from '../config.js';
-import {
-  VINTED_MAX_PER_PAGE,
-  VINTED_MAX_TOTAL_LISTINGS_HINT,
-} from '../marketplace-limits.js';
+import { rankAcrossSources } from '../services/marketplace-ranking.js';
 
 const visionProvider =
   visionProviderName === 'openai' ? openaiVisionProvider : mockVisionProvider;
 
 /** Limite côté appli (après décodage base64). Les clients ciblent ~500 Ko ; marge pour proxies. */
 const MAX_IMAGE_BYTES = 6 * 1024 * 1024;
-const MAX_PAGES_PER_PROVIDER = Math.max(1, Math.floor(Number(process.env.MARKETPLACE_MAX_PAGES ?? 40)));
-const MAX_TOTAL_PER_PROVIDER =
-  Number(process.env.MARKETPLACE_MAX_TOTAL_PER_PROVIDER ?? 0) > 0
-    ? Math.floor(Number(process.env.MARKETPLACE_MAX_TOTAL_PER_PROVIDER))
-    : Number.POSITIVE_INFINITY;
-
-const STOPWORDS = new Set([
-  'de', 'des', 'du', 'la', 'le', 'les', 'et', 'or', 'the', 'a', 'an', 'for', 'with',
-]);
-
-function normalize(s: string | undefined): string {
-  return (s ?? '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function tokenize(s: string | undefined): string[] {
-  const n = normalize(s);
-  if (!n) return [];
-  return n.split(' ').filter((x) => x.length >= 3 && !STOPWORDS.has(x));
-}
-
-function containsPhrase(haystack: string, phrase: string): boolean {
-  const p = normalize(phrase);
-  return !!p && haystack.includes(p);
-}
-
-function parseRelativeAgeDays(raw: string | undefined): number | undefined {
-  if (!raw) return undefined;
-  const t = normalize(raw);
-  if (!t) return undefined;
-  if (t.includes('just now') || t.includes('today')) return 0;
-  if (t.includes('yesterday')) return 1;
-
-  const m = t.match(/(\d+)\s+(minute|hour|day|week|month|year)s?\s+ago/);
-  if (!m) return undefined;
-  const n = parseInt(m[1], 10);
-  if (!Number.isFinite(n)) return undefined;
-  switch (m[2]) {
-    case 'minute': return 0;
-    case 'hour': return 0;
-    case 'day': return n;
-    case 'week': return n * 7;
-    case 'month': return n * 30;
-    case 'year': return n * 365;
-    default: return undefined;
-  }
-}
+const INITIAL_PER_PROVIDER = Math.max(1, Math.floor(Number(process.env.INITIAL_PER_PROVIDER ?? 20)));
 
 function countBySource(listings: MarketplaceListingDTO[]): Record<string, number> {
   const acc: Record<string, number> = {};
@@ -103,148 +50,12 @@ function vintedItemsToListings(items: VintedSearchItem[]): MarketplaceListingDTO
   });
 }
 
-type RankingContext = {
-  primaryQuery: string;
-  probableBrand?: string;
-  dominantColor?: string;
-  category?: string;
-  subcategory?: string;
-  dominantItem?: string;
-  inferredModel?: string;
-  itemTypeCanonical?: string;
-};
-
-function scoreListing(listing: MarketplaceListingDTO, ctx: RankingContext): { score: number; recencyDays?: number } {
-  const titleNorm = normalize(listing.title);
-  const brandNorm = normalize(listing.brand);
-  const haystack = `${titleNorm} ${brandNorm}`.trim();
-  let score = 0;
-
-  // 1) Marque exacte
-  const targetBrand = normalize(ctx.probableBrand);
-  if (targetBrand) {
-    if (brandNorm === targetBrand) score += 40;
-    else if (containsPhrase(haystack, targetBrand)) score += 22;
-  }
-
-  // 2) Modèle / type
-  const modelCandidates = [ctx.inferredModel, ctx.itemTypeCanonical, ctx.dominantItem, ctx.subcategory]
-    .map(normalize)
-    .filter(Boolean);
-  let modelHits = 0;
-  for (const phrase of modelCandidates) {
-    if (containsPhrase(haystack, phrase)) modelHits += 1;
-  }
-  score += Math.min(modelHits * 12, 30);
-
-  // 3) Couleur
-  const color = normalize(ctx.dominantColor);
-  if (color && containsPhrase(haystack, color)) score += 10;
-
-  // 4) Mots-clés principaux query
-  const keywords = tokenize(ctx.primaryQuery);
-  let keywordHits = 0;
-  for (const kw of keywords) {
-    if (containsPhrase(haystack, kw)) keywordHits += 1;
-  }
-  score += Math.min(keywordHits * 4, 28);
-
-  // 5) Catégorie / sous-catégorie
-  const category = normalize(ctx.category);
-  const subcategory = normalize(ctx.subcategory);
-  if (category && containsPhrase(haystack, category)) score += 8;
-  if (subcategory && containsPhrase(haystack, subcategory)) score += 10;
-
-  // 6) Bonus tous mots clés
-  if (keywords.length > 0 && keywordHits === keywords.length) score += 12;
-
-  // 7) Bonus léger récence
-  const recencyDays = parseRelativeAgeDays(listing.publishedAtRelative);
-  if (recencyDays !== undefined) {
-    if (recencyDays <= 7) score += 6;
-    else if (recencyDays <= 30) score += 3;
-    else if (recencyDays <= 90) score += 1;
-  }
-
-  return { score, recencyDays };
-}
-
-function rankAcrossSources(listings: MarketplaceListingDTO[], ctx: RankingContext): MarketplaceListingDTO[] {
-  const ranked = listings.map((listing, index) => {
-    const { score, recencyDays } = scoreListing(listing, ctx);
-    return { listing, score, recencyDays, index };
-  });
-
-  ranked.sort((a, b) => {
-    if (b.score !== a.score) return b.score - a.score;
-    const aDays = a.recencyDays ?? Number.POSITIVE_INFINITY;
-    const bDays = b.recencyDays ?? Number.POSITIVE_INFINITY;
-    if (aDays !== bDays) return aDays - bDays;
-    return a.index - b.index;
-  });
-
-  console.log(
-    '[RANKED_TOP5]',
-    ranked.slice(0, 5).map((x) => ({
-      source: x.listing.source,
-      title: x.listing.title,
-      score: x.score,
-      recencyDays: x.recencyDays,
-      publishedAtRelative: x.listing.publishedAtRelative,
-    }))
-  );
-
-  return ranked.map((x) => x.listing);
-}
-
-async function fetchProviderPages<T>(
-  provider: 'VINTED',
-  perPage: number,
-  fetchPage: (page: number) => Promise<T[]>
-): Promise<{ items: T[]; failed: boolean }> {
-  const out: T[] = [];
-  let failed = false;
-
-  for (let page = 1; page <= MAX_PAGES_PER_PROVIDER; page++) {
-    let pageItems: T[] = [];
-    try {
-      pageItems = await fetchPage(page);
-    } catch (err) {
-      failed = true;
-      console.error(`[${provider}_PAGE_${page}_FAILED]`, err);
-      break;
-    }
-
-    if (page === 1) {
-      console.log(`[${provider}_PAGE_1_COUNT]`, pageItems.length);
-    } else if (page === 2) {
-      console.log(`[${provider}_PAGE_2_COUNT]`, pageItems.length);
-    } else {
-      console.log(`[${provider}_PAGE_N_COUNT]`, { page, count: pageItems.length });
-    }
-
-    if (pageItems.length === 0) break;
-    out.push(...pageItems);
-
-    if (out.length >= MAX_TOTAL_PER_PROVIDER) {
-      console.log(`[${provider}_TOTAL_CAP_REACHED]`, {
-        cap: MAX_TOTAL_PER_PROVIDER,
-        collected: out.length,
-      });
-      break;
-    }
-
-    if (pageItems.length < perPage) break;
-  }
-
-  return { items: out, failed };
-}
-
 export async function analyzeSearchRoute(app: FastifyInstance) {
   app.post<{
     Body: AnalyzeSearchRequest;
     Reply: AnalyzeSearchResponse;
   }>('/analyze-search', async (request, reply) => {
+    const startedAt = Date.now();
     const body = request.body;
 
     console.log('[ANALYZE_REQUEST_RECEIVED]');
@@ -326,24 +137,10 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
       'fashion item';
 
     const trimmedPrimary = String(primaryQuery).trim();
-    const vintedSearchUrl = buildVintedSearchUrl(trimmedPrimary);
+    const vintedSearchUrl = buildVintedSearchUrl(trimmedPrimary, 1);
     console.log('[ANALYZE_PRIMARY_QUERY]', trimmedPrimary);
     console.log('[VINTED_SEARCH_URL]', vintedSearchUrl);
-    console.log('[MARKETPLACE_LIMITS]', { VINTED_MAX_PER_PAGE, VINTED_MAX_TOTAL_LISTINGS_HINT });
-
-    const vintedPaged = await fetchProviderPages<VintedSearchItem>(
-      'VINTED',
-      VINTED_MAX_PER_PAGE,
-      (page) => searchVintedByText(trimmedPrimary, { page })
-    );
-    const vintedItems = vintedPaged.items;
-    const vintedSearchFailed = vintedPaged.failed;
-
-    const grailedListings = await searchGrailedByTextBrowser(trimmedPrimary);
-    const vintedListings = vintedItemsToListings(vintedItems);
-    const merged = [...vintedListings, ...grailedListings];
-
-    const ranked = rankAcrossSources(merged, {
+    const rankingContext: SearchRankingContextDTO = {
       primaryQuery: trimmedPrimary,
       probableBrand: visionResult.probableBrand,
       dominantColor: visionResult.dominantColorPrecise ?? visionResult.color,
@@ -352,26 +149,64 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
       dominantItem: visionResult.dominantItem,
       inferredModel: visionResult.inferredModel,
       itemTypeCanonical: visionResult.itemTypeCanonical,
-    });
+    };
 
-    console.log('VINTED_COUNT', vintedListings.length);
-    console.log('GRAILED_COUNT', grailedListings.length);
+    let vintedSearchFailed = false;
+    let vintedItems: VintedSearchItem[] = [];
+    try {
+      vintedItems = await searchVintedByText(trimmedPrimary, { page: 1, limit: INITIAL_PER_PROVIDER });
+    } catch (err) {
+      vintedSearchFailed = true;
+      request.log.error(err, 'Vinted initial fetch failed');
+    }
+    const vintedListings = vintedItemsToListings(vintedItems);
+    const vintedHasMore = vintedItems.length >= INITIAL_PER_PROVIDER;
+    const vintedStopReason = vintedHasMore ? 'initial_batch_reached' : 'provider_exhausted_on_page_1';
+    console.log('VINTED_INITIAL_COUNT', vintedListings.length);
+    console.log('CURRENT_VINTED_PAGE', 1);
+    console.log('TOTAL_LOADED_VINTED', vintedListings.length);
+    console.log('VINTED_STOP_REASON', vintedStopReason);
+
+    let grailedListings: MarketplaceListingDTO[] = [];
+    try {
+      grailedListings = await searchGrailedByTextBrowser(trimmedPrimary, { page: 1, limit: INITIAL_PER_PROVIDER });
+    } catch (err) {
+      request.log.error(err, 'Grailed initial fetch failed');
+      grailedListings = [];
+    }
+    const grailedHasMore = grailedListings.length >= INITIAL_PER_PROVIDER;
+    const grailedStopReason = grailedHasMore ? 'initial_batch_reached' : 'provider_exhausted_on_page_1';
+    console.log('GRAILED_INITIAL_COUNT', grailedListings.length);
+    console.log('CURRENT_GRAILED_PAGE', 1);
+    console.log('TOTAL_LOADED_GRAILED', grailedListings.length);
+    console.log('GRAILED_STOP_REASON', grailedStopReason);
+
+    const mergedInitial = [...vintedListings, ...grailedListings];
+    const ranked = rankAcrossSources(mergedInitial, rankingContext);
+    console.log('INITIAL_MERGED_COUNT', ranked.length);
     console.log('FINAL_COUNT', ranked.length);
-    console.log(
-      'BY_SOURCE',
-      ranked.reduce<Record<string, number>>((acc, x) => {
-        acc[x.source] = (acc[x.source] || 0) + 1;
-        return acc;
-      }, {})
-    );
-    console.log('[MERGED_COUNT]', ranked.length);
-    console.log('[FINAL_LISTINGS_COUNT]', ranked.length);
-    console.log('[LISTINGS_BY_SOURCE]', JSON.stringify(countBySource(ranked)));
+    console.log('BY_SOURCE', JSON.stringify(countBySource(ranked)));
+    console.log('INITIAL_RESPONSE_TIME_MS', Date.now() - startedAt);
 
     const response: AnalyzeSearchResponse = {
       visionResult,
       generatedQueries,
       listings: ranked,
+      pagination: {
+        primaryQuery: trimmedPrimary,
+        batchSizePerProvider: 50,
+        vinted: {
+          nextPage: 2,
+          hasMore: vintedHasMore,
+          loadedCount: vintedListings.length,
+        },
+        grailed: {
+          nextPage: 2,
+          hasMore: grailedHasMore,
+          loadedCount: grailedListings.length,
+        },
+      },
+      rankingContext,
       ...(vintedSearchFailed ? { vintedSearchFailed: true } : {}),
       ...(isDebug && {
         debug: {

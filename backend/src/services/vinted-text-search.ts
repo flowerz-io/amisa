@@ -84,6 +84,8 @@ function extractSizeFromTitle(title: string): string | undefined {
 export type VintedSearchOptions = {
   /** Page catalogue Vinted (1-based). */
   page?: number;
+  /** Nombre max d'items à extraire pour cette page. */
+  limit?: number;
 };
 
 /**
@@ -101,7 +103,7 @@ export async function searchVintedByText(
   }
 
   const page = Math.max(1, Math.floor(options?.page ?? 1));
-  const maxPerPage = VINTED_MAX_PER_PAGE;
+  const maxPerPage = Math.max(1, Math.min(VINTED_MAX_PER_PAGE, Math.floor(options?.limit ?? VINTED_MAX_PER_PAGE)));
   const url = buildVintedSearchUrl(q, page);
   // eslint-disable-next-line no-console -- diagnostic recherche
   console.log('[VINTED_FETCH]', url);

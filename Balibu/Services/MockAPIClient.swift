@@ -56,6 +56,18 @@ struct MockAPIClient: APIClientProtocol {
         ]
         return VintedListingsResponse(listings: extra, page: page, hasMore: page < 4)
     }
+
+    func fetchSearchMore(request: SearchMoreRequest) async throws -> SearchMoreResponse {
+        try await Task.sleep(nanoseconds: UInt64(delaySeconds * 500_000_000))
+        return SearchMoreResponse(
+            listings: [],
+            vintedListings: [],
+            grailedListings: [],
+            pagination: request.pagination,
+            hasMoreVinted: false,
+            hasMoreGrailed: false
+        )
+    }
 }
 
 // MARK: - Mock response
@@ -83,7 +95,23 @@ extension AnalyzeSearchResponse {
                 "Maison Margiela tabi boots black",
                 "black leather split toe boots"
             ],
-            listings: MarketplaceListingDTO.mockListings
+            listings: MarketplaceListingDTO.mockListings,
+            pagination: SearchPaginationStateDTO(
+                primaryQuery: "Maison Margiela tabi boots black",
+                batchSizePerProvider: 50,
+                vinted: ProviderPaginationStateDTO(nextPage: 2, hasMore: true, loadedCount: 1),
+                grailed: ProviderPaginationStateDTO(nextPage: 2, hasMore: true, loadedCount: 1)
+            ),
+            rankingContext: SearchRankingContextDTO(
+                primaryQuery: "Maison Margiela tabi boots black",
+                probableBrand: "Maison Margiela",
+                dominantColor: "black",
+                category: "footwear",
+                subcategory: "ankle boots",
+                dominantItem: "black leather ankle boots",
+                inferredModel: "Tabi",
+                itemTypeCanonical: "boots"
+            )
         )
     }
 }

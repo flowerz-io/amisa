@@ -12,6 +12,7 @@ import { analyzeSearchRoute } from './routes/analyze-search.js';
 import { resolveSharedUrlRoute } from './routes/resolve-shared-url.js';
 import { vintedListingsRoute } from './routes/vinted-listings.js';
 import { grailedListingsRoute } from './routes/grailed-listings.js';
+import { searchMoreRoute } from './routes/search-more.js';
 
 logVisionProviderDiagnostic();
 const grailedBrowserPath = chromium.executablePath();
@@ -27,6 +28,7 @@ app.register(analyzeSearchRoute, { prefix: '/' });
 app.register(resolveSharedUrlRoute, { prefix: '/' });
 app.register(vintedListingsRoute, { prefix: '/' });
 app.register(grailedListingsRoute, { prefix: '/' });
+app.register(searchMoreRoute, { prefix: '/' });
 
 const port = parseInt(process.env.PORT ?? '3000', 10);
 await app.listen({ port, host: '0.0.0.0' });

@@ -18,38 +18,54 @@ enum ResultsViewState: Equatable {
 final class ResultsViewModel: ObservableObject {
     @Published var state: ResultsViewState
     @Published var displayedListings: [MarketplaceListing]
+    @Published private(set) var allListings: [MarketplaceListing]
     @Published var isLoadingMore: Bool = false
     @Published var hasMoreResults: Bool
+    @Published var hasMoreVinted: Bool = false
+    @Published var hasMoreGrailed: Bool = false
     @Published var showStickyHeader: Bool = false
-    /// Dernière page Vinted déjà chargée avec succès (la page 1 vient de `analyze-search` ou du bootstrap favori).
+    /// Historique debug : page Vinted courante (legacy + nouveau flow).
     @Published private(set) var currentPage: Int
     /// Liste vide au chargement mais requête Vinted disponible (favori) : première page à charger.
     private(set) var needsInitialListingsBootstrap: Bool = false
 
     private var nextPageToFetch: Int
     private let paginationSearchText: String
+    private var paginationState: SearchPaginationStateDTO?
+    private var rankingContext: SearchRankingContextDTO?
     private let apiClient: any APIClientProtocol
     private var didRunBootstrap: Bool = false
-
-    /// Plafond affichage (aligné doc backend `VINTED_MAX_TOTAL_LISTINGS`).
-    private static let maxListingsToDisplay = 100
 
     init(session: SearchSession, apiClient: any APIClientProtocol = APIConfig.apiClient) {
         self.apiClient = apiClient
         self.paginationSearchText = session.vintedPaginationQuery
-        self.displayedListings = session.listings
+        self.displayedListings = Self.sortByRelevance(session.listings)
+        self.allListings = Self.sortByRelevance(session.listings)
+        self.paginationState = session.paginationState
+        self.rankingContext = session.rankingContext
 
-        if session.listings.isEmpty {
+        if let paginationState = session.paginationState {
+            self.currentPage = max(1, paginationState.vinted.nextPage - 1)
+            self.nextPageToFetch = paginationState.vinted.nextPage
+            self.hasMoreVinted = paginationState.vinted.hasMore
+            self.hasMoreGrailed = paginationState.grailed.hasMore
+            self.hasMoreResults = paginationState.vinted.hasMore || paginationState.grailed.hasMore
+            self.state = .loaded(session)
+        } else if session.listings.isEmpty {
             let q = session.vintedPaginationQuery.trimmingCharacters(in: .whitespacesAndNewlines)
             if q.isEmpty {
                 self.nextPageToFetch = 2
                 self.currentPage = 1
                 self.hasMoreResults = false
+                self.hasMoreVinted = false
+                self.hasMoreGrailed = false
                 self.state = .empty
             } else {
                 self.nextPageToFetch = 2
                 self.currentPage = 0
                 self.hasMoreResults = true
+                self.hasMoreVinted = true
+                self.hasMoreGrailed = false
                 self.needsInitialListingsBootstrap = true
                 self.state = .loaded(session)
             }
@@ -58,8 +74,10 @@ final class ResultsViewModel: ObservableObject {
             self.currentPage = 1
             let q = session.vintedPaginationQuery.trimmingCharacters(in: .whitespacesAndNewlines)
             let vintedOnFirstLoad = session.listings.filter { $0.source == "Vinted" }.count
-            /// Pagination = uniquement Vinted : tant qu’il y a au moins une annonce Vinted dans la session initiale, on tente les pages suivantes (évite le blocage quand Vinted a moins de 10 entrées mais Grailed remplit la grille).
-            self.hasMoreResults = !q.isEmpty && vintedOnFirstLoad > 0
+            let more = !q.isEmpty && vintedOnFirstLoad > 0
+            self.hasMoreResults = more
+            self.hasMoreVinted = more
+            self.hasMoreGrailed = false
             self.state = .loaded(session)
         }
 
@@ -83,12 +101,17 @@ final class ResultsViewModel: ObservableObject {
                 page: 1
             )
             let newItems = response.listings.map { MarketplaceListing.from($0) }
-            displayedListings = newItems
+            allListings = newItems
+            displayedListings = Self.sortByRelevance(allListings)
             currentPage = response.page
             nextPageToFetch = 2
-            hasMoreResults = response.hasMore && displayedListings.count < Self.maxListingsToDisplay
+            hasMoreResults = response.hasMore
+            hasMoreVinted = response.hasMore
+            hasMoreGrailed = false
         } catch {
             hasMoreResults = false
+            hasMoreVinted = false
+            hasMoreGrailed = false
         }
         logPaginationState(context: "bootstrap_done")
     }
@@ -102,25 +125,48 @@ final class ResultsViewModel: ObservableObject {
         guard case .loaded = state else { return }
         guard hasMoreResults, !isLoadingMore else { return }
         guard !paginationSearchText.isEmpty else { return }
-        guard displayedListings.count < Self.maxListingsToDisplay else { return }
         guard let idx = displayedListings.firstIndex(where: { $0.id == currentItem.id }) else { return }
 
         let threshold = max(0, displayedListings.count / 2 - 1)
         guard idx >= threshold else { return }
 
-        Task { await loadNextPage() }
+        Task { await loadNextBatch() }
     }
 
-    private func loadNextPage() async {
+    private func loadNextBatch() async {
         guard !isLoadingMore, hasMoreResults else { return }
-        guard displayedListings.count < Self.maxListingsToDisplay else {
-            hasMoreResults = false
-            logPaginationState(context: "cap_reached")
-            return
-        }
-
         isLoadingMore = true
         defer { isLoadingMore = false }
+
+        if let paginationState, let rankingContext {
+            do {
+                let response = try await apiClient.fetchSearchMore(
+                    request: SearchMoreRequest(
+                        primaryQuery: paginationState.primaryQuery,
+                        batchSizePerProvider: paginationState.batchSizePerProvider,
+                        pagination: paginationState,
+                        rankingContext: rankingContext
+                    )
+                )
+                let newItems = response.listings.map { MarketplaceListing.from($0) }
+                allListings = Self.mergeUnique(existing: allListings, new: newItems)
+                allListings = Self.sortByRelevance(allListings)
+                displayedListings = allListings
+
+                self.paginationState = response.pagination
+                currentPage = max(1, response.pagination.vinted.nextPage - 1)
+                nextPageToFetch = response.pagination.vinted.nextPage
+                hasMoreVinted = response.hasMoreVinted
+                hasMoreGrailed = response.hasMoreGrailed
+                hasMoreResults = response.hasMoreVinted || response.hasMoreGrailed
+            } catch {
+                hasMoreResults = false
+                hasMoreVinted = false
+                hasMoreGrailed = false
+            }
+            logPaginationState(context: "loadNextBatch_searchMore_done")
+            return
+        }
 
         do {
             let response = try await apiClient.fetchVintedListingsPage(
@@ -128,18 +174,19 @@ final class ResultsViewModel: ObservableObject {
                 page: nextPageToFetch
             )
             let newItems = response.listings.map { MarketplaceListing.from($0) }
-            displayedListings = Self.mergeUnique(existing: displayedListings, new: newItems)
+            allListings = Self.mergeUnique(existing: allListings, new: newItems)
+            displayedListings = Self.sortByRelevance(allListings)
             currentPage = response.page
             nextPageToFetch += 1
-            var more = response.hasMore
-            if displayedListings.count >= Self.maxListingsToDisplay {
-                more = false
-            }
-            hasMoreResults = more
+            hasMoreResults = response.hasMore
+            hasMoreVinted = response.hasMore
+            hasMoreGrailed = false
         } catch {
             hasMoreResults = false
+            hasMoreVinted = false
+            hasMoreGrailed = false
         }
-        logPaginationState(context: "loadNextPage_done")
+        logPaginationState(context: "loadNextBatch_legacy_done")
     }
 
     private static func mergeUnique(existing: [MarketplaceListing], new: [MarketplaceListing]) -> [MarketplaceListing] {
@@ -156,11 +203,17 @@ final class ResultsViewModel: ObservableObject {
         return out
     }
 
+    private static func sortByRelevance(_ listings: [MarketplaceListing]) -> [MarketplaceListing] {
+        listings.sorted { lhs, rhs in
+            (lhs.relevanceScore ?? 0) > (rhs.relevanceScore ?? 0)
+        }
+    }
+
     private func logPaginationState(context: String) {
-        let vinted = displayedListings.filter { $0.source == "Vinted" }.count
-        let grailed = displayedListings.filter { $0.source == "Grailed" }.count
+        let vinted = allListings.filter { $0.source == "Vinted" }.count
+        let grailed = allListings.filter { $0.source == "Grailed" }.count
         print(
-            "[RESULTS_VM] \(context) currentPage=\(currentPage) nextPageToFetch=\(nextPageToFetch) hasMore=\(hasMoreResults) isLoadingMore=\(isLoadingMore) displayed=\(displayedListings.count) vinted=\(vinted) grailed=\(grailed) cap=\(Self.maxListingsToDisplay)"
+            "[RESULTS_VM] \(context) currentPage=\(currentPage) hasMore=\(hasMoreResults) hasMoreVinted=\(hasMoreVinted) hasMoreGrailed=\(hasMoreGrailed) isLoadingMore=\(isLoadingMore) displayedListings.count=\(displayedListings.count) allListings.count=\(allListings.count) vinted=\(vinted) grailed=\(grailed)"
         )
     }
 }

@@ -23,6 +23,7 @@ struct MarketplaceListingDTO: Decodable {
     let size: String?
     let condition: String?
     let publishedAtRelative: String?
+    let relevanceScore: Double?
 
     init(
         id: String,
@@ -36,7 +37,8 @@ struct MarketplaceListingDTO: Decodable {
         brand: String?,
         size: String?,
         condition: String?,
-        publishedAtRelative: String? = nil
+        publishedAtRelative: String? = nil,
+        relevanceScore: Double? = nil
     ) {
         self.id = id
         self.source = source
@@ -50,6 +52,7 @@ struct MarketplaceListingDTO: Decodable {
         self.size = size
         self.condition = condition
         self.publishedAtRelative = publishedAtRelative
+        self.relevanceScore = relevanceScore
     }
 }
 
@@ -69,6 +72,7 @@ struct MarketplaceListing: Identifiable, Codable, Equatable, Hashable {
     let size: String?
     let condition: String?
     let publishedAtRelative: String?
+    let relevanceScore: Double?
 
     /// Libellé badge (Vinted, Grailed, …) ; jamais vide côté UI.
     var sourceDisplayLabel: String {
@@ -100,7 +104,8 @@ extension MarketplaceListing {
             brand: dto.brand,
             size: dto.size,
             condition: dto.condition,
-            publishedAtRelative: dto.publishedAtRelative
+            publishedAtRelative: dto.publishedAtRelative,
+            relevanceScore: dto.relevanceScore
         )
     }
 }
@@ -121,7 +126,8 @@ extension MarketplaceListing {
             brand: "Maison Margiela",
             size: "42",
             condition: "Very Good",
-            publishedAtRelative: "3 days ago"
+            publishedAtRelative: "3 days ago",
+            relevanceScore: 95
         ),
         MarketplaceListing(
             id: "gr-2",
@@ -135,7 +141,8 @@ extension MarketplaceListing {
             brand: nil,
             size: "41",
             condition: "Good",
-            publishedAtRelative: nil
+            publishedAtRelative: nil,
+            relevanceScore: 80
         ),
     ]
 }

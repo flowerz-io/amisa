@@ -15,6 +15,8 @@ protocol APIClientProtocol: Sendable {
     func analyzeAndSearch(imageData: Data) async throws -> AnalyzeSearchResponse
     /// Pages suivantes Vinted (page ≥ 2). La page 1 vient de `analyze-search`.
     func fetchVintedListingsPage(searchText: String, page: Int) async throws -> VintedListingsResponse
+    /// Pagination multi-providers sans ré-analyse vision.
+    func fetchSearchMore(request: SearchMoreRequest) async throws -> SearchMoreResponse
 }
 
 // MARK: - Implémentation réelle
@@ -120,6 +122,28 @@ actor APIClient: APIClientProtocol {
             throw APIError.unknown(statusCode: httpResponse.statusCode)
         }
     }
+
+    func fetchSearchMore(request body: SearchMoreRequest) async throws -> SearchMoreResponse {
+        let url = baseURL.appending(path: "search-more")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(body)
+
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        switch httpResponse.statusCode {
+        case 200:
+            return try decoder.decode(SearchMoreResponse.self, from: data)
+        case 400, 502:
+            throw APIError.searchMoreFailed
+        default:
+            throw APIError.unknown(statusCode: httpResponse.statusCode)
+        }
+    }
 }
 
 // MARK: - Error Response
@@ -141,6 +165,7 @@ enum APIError: LocalizedError {
     case payloadTooLarge
     case openAIError
     case vintedSearchFailed
+    case searchMoreFailed
     case unknown(statusCode: Int)
 
     var errorDescription: String? {
@@ -163,6 +188,8 @@ enum APIError: LocalizedError {
             return "L’analyse automatique n’a pas pu aboutir. Réessaie dans quelques instants."
         case .vintedSearchFailed:
             return "Impossible de charger les annonces Vinted pour le moment."
+        case .searchMoreFailed:
+            return "Impossible de charger davantage d’annonces pour le moment."
         case .unknown(let code):
             return "Erreur (\(code))"
         }

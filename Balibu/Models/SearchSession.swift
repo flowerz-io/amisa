@@ -26,6 +26,8 @@ struct SearchSession: Identifiable, Equatable, Hashable {
     let createdAt: Date
     /// La recherche Vinted initiale n’a pas pu être chargée (vision OK).
     var vintedSearchFailed: Bool
+    var paginationState: SearchPaginationStateDTO?
+    var rankingContext: SearchRankingContextDTO?
     let mode: SearchSessionMode
 
     init(
@@ -38,6 +40,8 @@ struct SearchSession: Identifiable, Equatable, Hashable {
         listings: [MarketplaceListing],
         createdAt: Date = Date(),
         vintedSearchFailed: Bool = false,
+        paginationState: SearchPaginationStateDTO? = nil,
+        rankingContext: SearchRankingContextDTO? = nil,
         mode: SearchSessionMode = .imageAnalysis
     ) {
         self.id = id
@@ -49,6 +53,8 @@ struct SearchSession: Identifiable, Equatable, Hashable {
         self.listings = listings
         self.createdAt = createdAt
         self.vintedSearchFailed = vintedSearchFailed
+        self.paginationState = paginationState
+        self.rankingContext = rankingContext
         self.mode = mode
     }
 
@@ -128,7 +134,7 @@ extension SearchSession {
 extension SearchSession: Codable {
     enum CodingKeys: String, CodingKey {
         case id, imageFileName, thumbnailImageURL, searchQuery, generatedQueries, attributes, listings, createdAt,
-             vintedSearchFailed, mode
+             vintedSearchFailed, paginationState, rankingContext, mode
     }
 
     init(from decoder: Decoder) throws {
@@ -143,6 +149,8 @@ extension SearchSession: Codable {
         let listings = try c.decode([MarketplaceListing].self, forKey: .listings)
         let createdAt = try c.decode(Date.self, forKey: .createdAt)
         let vintedSearchFailed = try c.decodeIfPresent(Bool.self, forKey: .vintedSearchFailed) ?? false
+        let paginationState = try c.decodeIfPresent(SearchPaginationStateDTO.self, forKey: .paginationState)
+        let rankingContext = try c.decodeIfPresent(SearchRankingContextDTO.self, forKey: .rankingContext)
         let mode = try c.decodeIfPresent(SearchSessionMode.self, forKey: .mode) ?? .imageAnalysis
         self.init(
             id: id,
@@ -154,6 +162,8 @@ extension SearchSession: Codable {
             listings: listings,
             createdAt: createdAt,
             vintedSearchFailed: vintedSearchFailed,
+            paginationState: paginationState,
+            rankingContext: rankingContext,
             mode: mode
         )
     }
@@ -169,6 +179,8 @@ extension SearchSession: Codable {
         try c.encode(listings, forKey: .listings)
         try c.encode(createdAt, forKey: .createdAt)
         try c.encode(vintedSearchFailed, forKey: .vintedSearchFailed)
+        try c.encodeIfPresent(paginationState, forKey: .paginationState)
+        try c.encodeIfPresent(rankingContext, forKey: .rankingContext)
         try c.encode(mode, forKey: .mode)
     }
 }

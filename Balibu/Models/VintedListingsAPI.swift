@@ -17,3 +17,45 @@ struct VintedListingsResponse: Decodable {
     let page: Int
     let hasMore: Bool
 }
+
+// MARK: - /search-more (pagination multi-providers)
+
+struct SearchRankingContextDTO: Codable, Hashable {
+    let primaryQuery: String
+    let probableBrand: String?
+    let dominantColor: String?
+    let category: String?
+    let subcategory: String?
+    let dominantItem: String?
+    let inferredModel: String?
+    let itemTypeCanonical: String?
+}
+
+struct ProviderPaginationStateDTO: Codable, Hashable {
+    let nextPage: Int
+    let hasMore: Bool
+    let loadedCount: Int
+}
+
+struct SearchPaginationStateDTO: Codable, Hashable {
+    let primaryQuery: String
+    let batchSizePerProvider: Int
+    let vinted: ProviderPaginationStateDTO
+    let grailed: ProviderPaginationStateDTO
+}
+
+struct SearchMoreRequest: Encodable {
+    let primaryQuery: String
+    let batchSizePerProvider: Int?
+    let pagination: SearchPaginationStateDTO
+    let rankingContext: SearchRankingContextDTO
+}
+
+struct SearchMoreResponse: Decodable {
+    let listings: [MarketplaceListingDTO]
+    let vintedListings: [MarketplaceListingDTO]
+    let grailedListings: [MarketplaceListingDTO]
+    let pagination: SearchPaginationStateDTO
+    let hasMoreVinted: Bool
+    let hasMoreGrailed: Bool
+}

@@ -48,12 +48,40 @@ export interface MarketplaceListingDTO {
   condition?: string;
   /** Ancienneté publication brute Grailed (ex: "3 days ago") */
   publishedAtRelative?: string;
+  /** Score de pertinence cross-provider (debug/tri client). */
+  relevanceScore?: number;
+}
+
+export interface SearchRankingContextDTO {
+  primaryQuery: string;
+  probableBrand?: string;
+  dominantColor?: string;
+  category?: string;
+  subcategory?: string;
+  dominantItem?: string;
+  inferredModel?: string;
+  itemTypeCanonical?: string;
+}
+
+export interface ProviderPaginationStateDTO {
+  nextPage: number;
+  hasMore: boolean;
+  loadedCount: number;
+}
+
+export interface SearchPaginationStateDTO {
+  primaryQuery: string;
+  batchSizePerProvider: number;
+  vinted: ProviderPaginationStateDTO;
+  grailed: ProviderPaginationStateDTO;
 }
 
 export interface AnalyzeSearchResponse {
   visionResult: FashionVisionResult;
   generatedQueries: string[];
   listings: MarketplaceListingDTO[];
+  pagination: SearchPaginationStateDTO;
+  rankingContext: SearchRankingContextDTO;
   /** True si le flux vision a réussi mais le catalogue Vinted n’a pas pu être chargé. */
   vintedSearchFailed?: boolean;
   /** True si le catalogue Grailed n’a pas pu être chargé (Vinted peut avoir réussi). */
@@ -65,6 +93,23 @@ export interface AnalyzeSearchResponse {
     normalizedVisionResult: FashionVisionResult;
     generatedSearchQueries: string[];
   };
+}
+
+/** POST /search-more — pagination providers sans ré-analyse vision */
+export interface SearchMoreRequest {
+  primaryQuery: string;
+  batchSizePerProvider?: number;
+  pagination: SearchPaginationStateDTO;
+  rankingContext: SearchRankingContextDTO;
+}
+
+export interface SearchMoreResponse {
+  listings: MarketplaceListingDTO[];
+  vintedListings: MarketplaceListingDTO[];
+  grailedListings: MarketplaceListingDTO[];
+  pagination: SearchPaginationStateDTO;
+  hasMoreVinted: boolean;
+  hasMoreGrailed: boolean;
 }
 
 /** POST /vinted-listings — pagination sans ré-analyse vision */

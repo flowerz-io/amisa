@@ -1,9 +1,7 @@
 import { chromium } from 'playwright';
 import type { MarketplaceListingDTO } from '../api/types.js';
 
-const ITEMS_PER_PAGE = 20;
-const MAX_PAGES = Math.max(1, Math.floor(Number(process.env.GRAILED_BROWSER_MAX_PAGES ?? 12)));
-const MAX_TOTAL = Math.max(ITEMS_PER_PAGE, Math.floor(Number(process.env.GRAILED_BROWSER_MAX_TOTAL ?? 240)));
+const DEFAULT_LIMIT = 20;
 
 function parsePrice(raw: string): { price: number; currency: string } {
   const text = (raw ?? '').trim();
@@ -21,9 +19,14 @@ function buildPageUrl(query: string, page: number): string {
   return `${base}&page=${page}`;
 }
 
-export async function searchGrailedByTextBrowser(query: string): Promise<MarketplaceListingDTO[]> {
+export async function searchGrailedByTextBrowser(
+  query: string,
+  options?: { page?: number; limit?: number }
+): Promise<MarketplaceListingDTO[]> {
   const q = query.trim();
   if (!q) return [];
+  const pageNumber = Math.max(1, Math.floor(options?.page ?? 1));
+  const limit = Math.max(1, Math.floor(options?.limit ?? DEFAULT_LIMIT));
 
   let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
   try {
@@ -39,28 +42,21 @@ export async function searchGrailedByTextBrowser(query: string): Promise<Marketp
     });
     const page = await context.newPage();
 
-    const all: MarketplaceListingDTO[] = [];
-    const seen = new Set<string>();
+    const url = buildPageUrl(q, pageNumber);
+    console.log('GRAILED_BROWSER_URL', url);
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
 
-    for (let pageNumber = 1; pageNumber <= MAX_PAGES; pageNumber++) {
-      const url = buildPageUrl(q, pageNumber);
-      console.log('GRAILED_BROWSER_URL', url);
-      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
+    const foundGrid = await page
+      .waitForSelector('a[href*="/listings/"]', { timeout: 15000 })
+      .then(() => true)
+      .catch(() => false);
+    if (!foundGrid) {
+      throw new Error('Grailed listing grid not found (possible anti-bot/challenge)');
+    }
 
-      const foundGrid = await page
-        .waitForSelector('a[href*="/listings/"]', { timeout: 15000 })
-        .then(() => true)
-        .catch(() => false);
-      if (!foundGrid) {
-        if (pageNumber === 1) {
-          throw new Error('Grailed listing grid not found (possible anti-bot/challenge)');
-        }
-        break;
-      }
-
-      const pageItems = await page.$$eval(
-        'div[class*="UserItem_root"]',
-        (nodes, maxItems) => {
+    const pageItems = await page.$$eval(
+      'div[class*="UserItem_root"]',
+      (nodes, maxItems) => {
           const parsePriceInPage = (raw: string): { price: number; currency: string } => {
             const txt = (raw ?? '').trim();
             const currency = txt.includes('€') ? 'EUR' : txt.includes('£') ? 'GBP' : 'USD';
@@ -164,53 +160,45 @@ export async function searchGrailedByTextBrowser(query: string): Promise<Marketp
 
           return out;
         },
-        ITEMS_PER_PAGE
-      );
+      limit
+    );
 
-      console.log(`[GRAILED_BROWSER_PAGE_${pageNumber}_COUNT]`, pageItems.length);
-      if (pageItems.length === 0) break;
+    const normalized: MarketplaceListingDTO[] = [];
+    const seen = new Set<string>();
+    for (let idx = 0; idx < pageItems.length; idx++) {
+      const it = pageItems[idx];
+      const listingUrl = it.listingUrl?.trim() ?? '';
+      if (!listingUrl || seen.has(listingUrl)) continue;
+      seen.add(listingUrl);
 
-      for (let idx = 0; idx < pageItems.length; idx++) {
-        const it = pageItems[idx];
-        const listingUrl = it.listingUrl?.trim() ?? '';
-        if (!listingUrl || seen.has(listingUrl)) continue;
-        seen.add(listingUrl);
-
-        if (it.publishedAtRelative) {
-          console.log('[GRAILED_DATE_FOUND]', {
-            listingUrl,
-            raw: it.publishedAtRelative,
-          });
-        } else {
-          console.log('[GRAILED_DATE_ABSENT]', { listingUrl });
-        }
-
-        const parsed = parsePrice(String(it.price ?? 0));
-        const price = Number.isFinite(it.price) ? Number(it.price) : parsed.price;
-        const currency = it.currency?.trim() || parsed.currency || 'USD';
-        all.push({
-          id: it.id || `grailed-${all.length}`,
-          source: 'Grailed',
-          title: it.title?.trim() || 'Grailed listing',
-          price: Number.isFinite(price) ? price : 0,
-          currency,
-          imageUrl: it.imageUrl?.trim(),
-          thumbnailUrl: it.thumbnailUrl?.trim() || it.imageUrl?.trim(),
-          listingUrl,
-          ...(it.brand ? { brand: it.brand } : {}),
-          ...(it.size ? { size: it.size } : {}),
-          ...(it.condition ? { condition: it.condition } : {}),
-          ...(it.publishedAtRelative ? { publishedAtRelative: it.publishedAtRelative } : {}),
-        });
+      if (it.publishedAtRelative) {
+        console.log('[GRAILED_DATE_FOUND]', { listingUrl, raw: it.publishedAtRelative });
+      } else {
+        console.log('[GRAILED_DATE_ABSENT]', { listingUrl });
       }
 
-      if (all.length >= MAX_TOTAL) break;
-      if (pageItems.length < ITEMS_PER_PAGE) break;
+      const parsed = parsePrice(String(it.price ?? 0));
+      const price = Number.isFinite(it.price) ? Number(it.price) : parsed.price;
+      const currency = it.currency?.trim() || parsed.currency || 'USD';
+      normalized.push({
+        id: it.id || `grailed-${idx}`,
+        source: 'Grailed',
+        title: it.title?.trim() || 'Grailed listing',
+        price: Number.isFinite(price) ? price : 0,
+        currency,
+        imageUrl: it.imageUrl?.trim(),
+        thumbnailUrl: it.thumbnailUrl?.trim() || it.imageUrl?.trim(),
+        listingUrl,
+        ...(it.brand ? { brand: it.brand } : {}),
+        ...(it.size ? { size: it.size } : {}),
+        ...(it.condition ? { condition: it.condition } : {}),
+        ...(it.publishedAtRelative ? { publishedAtRelative: it.publishedAtRelative } : {}),
+      });
     }
 
     console.log('GRAILED_BROWSER_OK');
-    console.log('GRAILED_BROWSER_COUNT', all.length);
-    return all.slice(0, MAX_TOTAL);
+    console.log('GRAILED_BROWSER_COUNT', normalized.length);
+    return normalized;
   } catch (err) {
     console.error('GRAILED_BROWSER_FAILED', err);
     return [];
