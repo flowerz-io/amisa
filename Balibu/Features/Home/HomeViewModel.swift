@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import PhotosUI
 import Combine
 
 enum TextSearchError: LocalizedError {
@@ -23,21 +22,16 @@ enum TextSearchError: LocalizedError {
 @MainActor
 final class HomeViewModel: ObservableObject {
     @Published var recentSessions: [SearchSession] = []
-    @Published var presentPhotoPicker = false
-    @Published var selectedItems: [PhotosPickerItem] = []
     @Published var textSearchError: String?
 
     private let searchHistoryService: SearchHistoryService
-    private let imagePersistence: ImagePersistenceService
     private let apiClient: any APIClientProtocol
 
     init(
         searchHistoryService: SearchHistoryService,
-        imagePersistence: ImagePersistenceService = .shared,
         apiClient: any APIClientProtocol = APIConfig.apiClient
     ) {
         self.searchHistoryService = searchHistoryService
-        self.imagePersistence = imagePersistence
         self.apiClient = apiClient
         loadRecentSessions()
     }
@@ -71,27 +65,5 @@ final class HomeViewModel: ObservableObject {
         searchHistoryService.addSession(session)
         loadRecentSessions()
         return session
-    }
-
-    func onPhotoSelected(completion: @escaping (SharedImagePayload?) -> Void) {
-        guard let item = selectedItems.first else {
-            completion(nil)
-            return
-        }
-
-        Task {
-            if let data = try? await item.loadTransferable(type: Data.self),
-               !data.isEmpty,
-               let fileName = imagePersistence.saveImage(data) {
-                let payload = SharedImagePayload(imageFileName: fileName)
-                await MainActor.run {
-                    completion(payload)
-                }
-            } else {
-                await MainActor.run {
-                    completion(nil)
-                }
-            }
-        }
     }
 }

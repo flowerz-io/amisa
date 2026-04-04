@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import PhotosUI
 import Combine
 import UIKit
 
@@ -17,6 +16,7 @@ struct HomeView: View {
     @State private var showNotificationOnboarding = false
     @State private var manualSearchQuery = ""
     @State private var textSearchAlert: String?
+    @State private var showCameraCapture = false
 
     init(searchHistoryService: SearchHistoryService) {
         _viewModel = StateObject(wrappedValue: HomeViewModel(searchHistoryService: searchHistoryService))
@@ -33,8 +33,7 @@ struct HomeView: View {
             .padding(DesignTokens.spacingL)
         }
         .background(DesignTokens.backgroundColor)
-        .navigationTitle(String(localized: "Balibu"))
-        .navigationBarTitleDisplayMode(.large)
+        .toolbar(.hidden, for: .navigationBar)
         .sheet(isPresented: $showNotificationOnboarding, onDismiss: {
             if !notificationEducationCompleted {
                 notificationEducationCompleted = true
@@ -63,6 +62,12 @@ struct HomeView: View {
             Button(String(localized: "OK"), role: .cancel) { textSearchAlert = nil }
         } message: {
             Text(textSearchAlert ?? "")
+        }
+        .fullScreenCover(isPresented: $showCameraCapture) {
+            CameraCaptureView { payload in
+                showCameraCapture = false
+                router.navigateToSharedImportReview(payload: payload)
+            }
         }
     }
 
@@ -93,9 +98,9 @@ struct HomeView: View {
             .clipShape(RoundedRectangle(cornerRadius: DesignTokens.cornerRadiusM, style: .continuous))
 
             Button {
-                viewModel.presentPhotoPicker = true
+                showCameraCapture = true
             } label: {
-                Image(systemName: "photo.badge.plus")
+                Image(systemName: "camera.viewfinder")
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(Color.accentColor)
                     .frame(width: 48, height: 48)
@@ -103,20 +108,7 @@ struct HomeView: View {
                     .clipShape(RoundedRectangle(cornerRadius: DesignTokens.cornerRadiusM, style: .continuous))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(String(localized: "Importer une image"))
-        }
-        .photosPicker(
-            isPresented: $viewModel.presentPhotoPicker,
-            selection: $viewModel.selectedItems,
-            maxSelectionCount: 1,
-            matching: .images
-        )
-        .onChange(of: viewModel.selectedItems) { _, _ in
-            viewModel.onPhotoSelected { payload in
-                if let payload {
-                    router.navigateToSharedImportReview(payload: payload)
-                }
-            }
+            .accessibilityLabel(String(localized: "Caméra et photothèque"))
         }
     }
 
