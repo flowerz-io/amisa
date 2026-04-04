@@ -14,8 +14,8 @@ struct ListingCardView: View {
     /// Ratio portrait produit (largeur : hauteur)
     private static let imageAspectRatio: CGFloat = 3.0 / 4.0
 
-    /// Hauteur minimale du bloc texte pour aligner les cartes en grille
-    private static let textBlockMinHeight: CGFloat = 92
+    /// Hauteur fixe du bloc texte pour garantir des cartes homogènes cross-source
+    private static let textBlockHeight: CGFloat = 92
 
     var body: some View {
         Button {
@@ -54,7 +54,8 @@ struct ListingCardView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .padding(DesignTokens.spacingS)
-                .frame(maxWidth: .infinity, minHeight: Self.textBlockMinHeight, alignment: .topLeading)
+                .frame(height: Self.textBlockHeight, alignment: .topLeading)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(DesignTokens.cardFill)

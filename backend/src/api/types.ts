@@ -46,6 +46,8 @@ export interface MarketplaceListingDTO {
   brand?: string;
   size?: string;
   condition?: string;
+  /** Ancienneté publication brute Grailed (ex: "3 days ago") */
+  publishedAtRelative?: string;
 }
 
 export interface AnalyzeSearchResponse {

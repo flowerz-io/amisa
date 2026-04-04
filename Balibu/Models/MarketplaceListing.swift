@@ -22,6 +22,35 @@ struct MarketplaceListingDTO: Decodable {
     let brand: String?
     let size: String?
     let condition: String?
+    let publishedAtRelative: String?
+
+    init(
+        id: String,
+        source: String,
+        title: String,
+        price: Double,
+        currency: String?,
+        imageUrl: String?,
+        thumbnailUrl: String?,
+        listingUrl: String?,
+        brand: String?,
+        size: String?,
+        condition: String?,
+        publishedAtRelative: String? = nil
+    ) {
+        self.id = id
+        self.source = source
+        self.title = title
+        self.price = price
+        self.currency = currency
+        self.imageUrl = imageUrl
+        self.thumbnailUrl = thumbnailUrl
+        self.listingUrl = listingUrl
+        self.brand = brand
+        self.size = size
+        self.condition = condition
+        self.publishedAtRelative = publishedAtRelative
+    }
 }
 
 // MARK: - Modèle domaine
@@ -39,6 +68,7 @@ struct MarketplaceListing: Identifiable, Codable, Equatable, Hashable {
     let brand: String?
     let size: String?
     let condition: String?
+    let publishedAtRelative: String?
 
     /// Libellé badge (Vinted, Grailed, …) ; jamais vide côté UI.
     var sourceDisplayLabel: String {
@@ -69,7 +99,8 @@ extension MarketplaceListing {
             source: dto.source,
             brand: dto.brand,
             size: dto.size,
-            condition: dto.condition
+            condition: dto.condition,
+            publishedAtRelative: dto.publishedAtRelative
         )
     }
 }
@@ -89,7 +120,8 @@ extension MarketplaceListing {
             source: "Grailed",
             brand: "Maison Margiela",
             size: "42",
-            condition: "Very Good"
+            condition: "Very Good",
+            publishedAtRelative: "3 days ago"
         ),
         MarketplaceListing(
             id: "gr-2",
@@ -102,7 +134,8 @@ extension MarketplaceListing {
             source: "Vinted",
             brand: nil,
             size: "41",
-            condition: "Good"
+            condition: "Good",
+            publishedAtRelative: nil
         ),
     ]
 }

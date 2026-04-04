@@ -27,6 +27,62 @@ const MAX_TOTAL_PER_PROVIDER =
     ? Math.floor(Number(process.env.MARKETPLACE_MAX_TOTAL_PER_PROVIDER))
     : Number.POSITIVE_INFINITY;
 
+const STOPWORDS = new Set([
+  'de', 'des', 'du', 'la', 'le', 'les', 'et', 'or', 'the', 'a', 'an', 'for', 'with',
+]);
+
+function normalize(s: string | undefined): string {
+  return (s ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function tokenize(s: string | undefined): string[] {
+  const n = normalize(s);
+  if (!n) return [];
+  return n.split(' ').filter((x) => x.length >= 3 && !STOPWORDS.has(x));
+}
+
+function containsPhrase(haystack: string, phrase: string): boolean {
+  const p = normalize(phrase);
+  return !!p && haystack.includes(p);
+}
+
+function parseRelativeAgeDays(raw: string | undefined): number | undefined {
+  if (!raw) return undefined;
+  const t = normalize(raw);
+  if (!t) return undefined;
+  if (t.includes('just now') || t.includes('today')) return 0;
+  if (t.includes('yesterday')) return 1;
+
+  const m = t.match(/(\d+)\s+(minute|hour|day|week|month|year)s?\s+ago/);
+  if (!m) return undefined;
+  const n = parseInt(m[1], 10);
+  if (!Number.isFinite(n)) return undefined;
+  switch (m[2]) {
+    case 'minute': return 0;
+    case 'hour': return 0;
+    case 'day': return n;
+    case 'week': return n * 7;
+    case 'month': return n * 30;
+    case 'year': return n * 365;
+    default: return undefined;
+  }
+}
+
+function countBySource(listings: MarketplaceListingDTO[]): Record<string, number> {
+  const acc: Record<string, number> = {};
+  for (const l of listings) {
+    const s = (l.source ?? '').trim() || '(unknown)';
+    acc[s] = (acc[s] ?? 0) + 1;
+  }
+  return acc;
+}
+
 function vintedItemsToListings(items: VintedSearchItem[]): MarketplaceListingDTO[] {
   return items.map((item, index) => {
     const idMatch = item.listingUrl.match(/\/items\/(\d+)/);
@@ -47,13 +103,98 @@ function vintedItemsToListings(items: VintedSearchItem[]): MarketplaceListingDTO
   });
 }
 
-function countBySource(listings: MarketplaceListingDTO[]): Record<string, number> {
-  const acc: Record<string, number> = {};
-  for (const l of listings) {
-    const s = (l.source ?? '').trim() || '(unknown)';
-    acc[s] = (acc[s] ?? 0) + 1;
+type RankingContext = {
+  primaryQuery: string;
+  probableBrand?: string;
+  dominantColor?: string;
+  category?: string;
+  subcategory?: string;
+  dominantItem?: string;
+  inferredModel?: string;
+  itemTypeCanonical?: string;
+};
+
+function scoreListing(listing: MarketplaceListingDTO, ctx: RankingContext): { score: number; recencyDays?: number } {
+  const titleNorm = normalize(listing.title);
+  const brandNorm = normalize(listing.brand);
+  const haystack = `${titleNorm} ${brandNorm}`.trim();
+  let score = 0;
+
+  // 1) Marque exacte
+  const targetBrand = normalize(ctx.probableBrand);
+  if (targetBrand) {
+    if (brandNorm === targetBrand) score += 40;
+    else if (containsPhrase(haystack, targetBrand)) score += 22;
   }
-  return acc;
+
+  // 2) Modèle / type
+  const modelCandidates = [ctx.inferredModel, ctx.itemTypeCanonical, ctx.dominantItem, ctx.subcategory]
+    .map(normalize)
+    .filter(Boolean);
+  let modelHits = 0;
+  for (const phrase of modelCandidates) {
+    if (containsPhrase(haystack, phrase)) modelHits += 1;
+  }
+  score += Math.min(modelHits * 12, 30);
+
+  // 3) Couleur
+  const color = normalize(ctx.dominantColor);
+  if (color && containsPhrase(haystack, color)) score += 10;
+
+  // 4) Mots-clés principaux query
+  const keywords = tokenize(ctx.primaryQuery);
+  let keywordHits = 0;
+  for (const kw of keywords) {
+    if (containsPhrase(haystack, kw)) keywordHits += 1;
+  }
+  score += Math.min(keywordHits * 4, 28);
+
+  // 5) Catégorie / sous-catégorie
+  const category = normalize(ctx.category);
+  const subcategory = normalize(ctx.subcategory);
+  if (category && containsPhrase(haystack, category)) score += 8;
+  if (subcategory && containsPhrase(haystack, subcategory)) score += 10;
+
+  // 6) Bonus tous mots clés
+  if (keywords.length > 0 && keywordHits === keywords.length) score += 12;
+
+  // 7) Bonus léger récence
+  const recencyDays = parseRelativeAgeDays(listing.publishedAtRelative);
+  if (recencyDays !== undefined) {
+    if (recencyDays <= 7) score += 6;
+    else if (recencyDays <= 30) score += 3;
+    else if (recencyDays <= 90) score += 1;
+  }
+
+  return { score, recencyDays };
+}
+
+function rankAcrossSources(listings: MarketplaceListingDTO[], ctx: RankingContext): MarketplaceListingDTO[] {
+  const ranked = listings.map((listing, index) => {
+    const { score, recencyDays } = scoreListing(listing, ctx);
+    return { listing, score, recencyDays, index };
+  });
+
+  ranked.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    const aDays = a.recencyDays ?? Number.POSITIVE_INFINITY;
+    const bDays = b.recencyDays ?? Number.POSITIVE_INFINITY;
+    if (aDays !== bDays) return aDays - bDays;
+    return a.index - b.index;
+  });
+
+  console.log(
+    '[RANKED_TOP5]',
+    ranked.slice(0, 5).map((x) => ({
+      source: x.listing.source,
+      title: x.listing.title,
+      score: x.score,
+      recencyDays: x.recencyDays,
+      publishedAtRelative: x.listing.publishedAtRelative,
+    }))
+  );
+
+  return ranked.map((x) => x.listing);
 }
 
 async function fetchProviderPages<T>(
@@ -70,19 +211,15 @@ async function fetchProviderPages<T>(
       pageItems = await fetchPage(page);
     } catch (err) {
       failed = true;
-      // eslint-disable-next-line no-console -- diagnostic pagination provider
       console.error(`[${provider}_PAGE_${page}_FAILED]`, err);
       break;
     }
 
     if (page === 1) {
-      // eslint-disable-next-line no-console -- diagnostic pagination provider
       console.log(`[${provider}_PAGE_1_COUNT]`, pageItems.length);
     } else if (page === 2) {
-      // eslint-disable-next-line no-console -- diagnostic pagination provider
       console.log(`[${provider}_PAGE_2_COUNT]`, pageItems.length);
     } else {
-      // eslint-disable-next-line no-console -- diagnostic pagination provider
       console.log(`[${provider}_PAGE_N_COUNT]`, { page, count: pageItems.length });
     }
 
@@ -90,7 +227,6 @@ async function fetchProviderPages<T>(
     out.push(...pageItems);
 
     if (out.length >= MAX_TOTAL_PER_PROVIDER) {
-      // eslint-disable-next-line no-console -- diagnostic pagination provider
       console.log(`[${provider}_TOTAL_CAP_REACHED]`, {
         cap: MAX_TOTAL_PER_PROVIDER,
         collected: out.length,
@@ -111,7 +247,6 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
   }>('/analyze-search', async (request, reply) => {
     const body = request.body;
 
-    // eslint-disable-next-line no-console -- traçage strict
     console.log('[ANALYZE_REQUEST_RECEIVED]');
 
     if (!body?.imageBase64 || typeof body.imageBase64 !== 'string') {
@@ -128,7 +263,6 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
     }
 
     if (imageBuffer.length > MAX_IMAGE_BYTES) {
-      // eslint-disable-next-line no-console -- diagnostic taille
       console.warn('[PAYLOAD_TOO_LARGE]', imageBuffer.length);
       return reply.status(413).send({
         error: 'payload_too_large',
@@ -136,7 +270,6 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
       } as unknown as AnalyzeSearchResponse);
     }
 
-    // eslint-disable-next-line no-console -- traçage strict
     console.log(`[VISION_PROVIDER_USED] ${visionProviderName}`);
 
     let visionResult: import('../api/types.js').FashionVisionResult;
@@ -148,7 +281,6 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
       rawOutput = analyzed.rawOutput;
     } catch (err) {
       request.log.error(err, 'Vision provider failed');
-      // eslint-disable-next-line no-console -- diagnostic OpenAI
       console.error('[OPENAI_VISION_FAILED]', err);
       return reply.status(502).send({
         error: 'openai_error',
@@ -156,15 +288,11 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
       } as unknown as AnalyzeSearchResponse);
     }
 
-    // eslint-disable-next-line no-console -- traçage strict
     console.log('[RAW_VISION_OUTPUT]', rawOutput ?? '(none)');
-
-    // eslint-disable-next-line no-console -- traçage strict
     console.log('[NORMALIZED_VISION_RESULT]', JSON.stringify(visionResult));
 
     const category = visionResult.category?.trim();
     if (!category) {
-      // eslint-disable-next-line no-console -- filtre métier
       console.log('[ANALYSIS_REJECTED_NON_FASHION]');
       return reply.status(422).send({
         error: 'non_fashion',
@@ -177,7 +305,6 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
       (confidence !== undefined && confidence < 0.6) ||
       (sourceConfidence !== undefined && sourceConfidence < 0.6)
     ) {
-      // eslint-disable-next-line no-console -- filtre qualité
       console.log(
         '[ANALYSIS_REJECTED_LOW_CONFIDENCE]',
         JSON.stringify({ confidence, sourceConfidence })
@@ -189,8 +316,6 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
     }
 
     const generatedQueries = generateSearchQueriesFromVision(visionResult, 3);
-
-    // eslint-disable-next-line no-console -- traçage strict
     console.log('[GENERATED_SEARCH_QUERIES]', JSON.stringify(generatedQueries));
 
     const primaryQuery =
@@ -202,12 +327,8 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
 
     const trimmedPrimary = String(primaryQuery).trim();
     const vintedSearchUrl = buildVintedSearchUrl(trimmedPrimary);
-    // eslint-disable-next-line no-console -- diagnostic fusion marketplaces
     console.log('[ANALYZE_PRIMARY_QUERY]', trimmedPrimary);
-    // eslint-disable-next-line no-console -- diagnostic fusion marketplaces
     console.log('[VINTED_SEARCH_URL]', vintedSearchUrl);
-    // eslint-disable-next-line no-console -- diagnostic fusion marketplaces
-    // eslint-disable-next-line no-console -- diagnostic fusion marketplaces
     console.log('[MARKETPLACE_LIMITS]', { VINTED_MAX_PER_PAGE, VINTED_MAX_TOTAL_LISTINGS_HINT });
 
     const vintedPaged = await fetchProviderPages<VintedSearchItem>(
@@ -217,36 +338,40 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
     );
     const vintedItems = vintedPaged.items;
     const vintedSearchFailed = vintedPaged.failed;
-    const grailedListings = await searchGrailedByTextBrowser(trimmedPrimary);
 
+    const grailedListings = await searchGrailedByTextBrowser(trimmedPrimary);
     const vintedListings = vintedItemsToListings(vintedItems);
     const merged = [...vintedListings, ...grailedListings];
 
-    // eslint-disable-next-line no-console -- diagnostic fusion marketplaces
+    const ranked = rankAcrossSources(merged, {
+      primaryQuery: trimmedPrimary,
+      probableBrand: visionResult.probableBrand,
+      dominantColor: visionResult.dominantColorPrecise ?? visionResult.color,
+      category: visionResult.category,
+      subcategory: visionResult.subcategory,
+      dominantItem: visionResult.dominantItem,
+      inferredModel: visionResult.inferredModel,
+      itemTypeCanonical: visionResult.itemTypeCanonical,
+    });
+
     console.log('VINTED_COUNT', vintedListings.length);
-    // eslint-disable-next-line no-console -- diagnostic fusion marketplaces
     console.log('GRAILED_COUNT', grailedListings.length);
-    // eslint-disable-next-line no-console -- diagnostic fusion marketplaces
-    console.log('FINAL_COUNT', merged.length);
-    // eslint-disable-next-line no-console -- diagnostic fusion marketplaces
+    console.log('FINAL_COUNT', ranked.length);
     console.log(
       'BY_SOURCE',
-      merged.reduce<Record<string, number>>((acc, x) => {
+      ranked.reduce<Record<string, number>>((acc, x) => {
         acc[x.source] = (acc[x.source] || 0) + 1;
         return acc;
       }, {})
     );
-    // eslint-disable-next-line no-console -- diagnostic fusion marketplaces
-    console.log('[MERGED_COUNT]', merged.length);
-    // eslint-disable-next-line no-console -- diagnostic fusion marketplaces
-    console.log('[FINAL_LISTINGS_COUNT]', merged.length);
-    // eslint-disable-next-line no-console -- diagnostic fusion marketplaces
-    console.log('[LISTINGS_BY_SOURCE]', JSON.stringify(countBySource(merged)));
+    console.log('[MERGED_COUNT]', ranked.length);
+    console.log('[FINAL_LISTINGS_COUNT]', ranked.length);
+    console.log('[LISTINGS_BY_SOURCE]', JSON.stringify(countBySource(ranked)));
 
     const response: AnalyzeSearchResponse = {
       visionResult,
       generatedQueries,
-      listings: merged,
+      listings: ranked,
       ...(vintedSearchFailed ? { vintedSearchFailed: true } : {}),
       ...(isDebug && {
         debug: {
