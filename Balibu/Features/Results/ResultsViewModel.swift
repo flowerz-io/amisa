@@ -21,31 +21,72 @@ final class ResultsViewModel: ObservableObject {
     @Published var isLoadingMore: Bool = false
     @Published var hasMoreResults: Bool
     @Published var showStickyHeader: Bool = false
-    /// Dernière page Vinted déjà chargée avec succès (la page 1 vient de `analyze-search`).
+    /// Dernière page Vinted déjà chargée avec succès (la page 1 vient de `analyze-search` ou du bootstrap favori).
     @Published private(set) var currentPage: Int
+    /// Liste vide au chargement mais requête Vinted disponible (favori) : première page à charger.
+    private(set) var needsInitialListingsBootstrap: Bool = false
 
     private var nextPageToFetch: Int
     private let paginationSearchText: String
     private let apiClient: any APIClientProtocol
+    private var didRunBootstrap: Bool = false
 
     init(session: SearchSession, apiClient: any APIClientProtocol = APIConfig.apiClient) {
         self.apiClient = apiClient
         self.paginationSearchText = session.vintedPaginationQuery
         self.displayedListings = session.listings
-        self.nextPageToFetch = 2
-        self.currentPage = 1
-        let canPaginate = !session.vintedPaginationQuery.isEmpty && session.listings.count >= 10
-        self.hasMoreResults = canPaginate
 
         if session.listings.isEmpty {
-            self.state = .empty
+            let q = session.vintedPaginationQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+            if q.isEmpty {
+                self.nextPageToFetch = 2
+                self.currentPage = 1
+                self.hasMoreResults = false
+                self.state = .empty
+            } else {
+                self.nextPageToFetch = 2
+                self.currentPage = 0
+                self.hasMoreResults = true
+                self.needsInitialListingsBootstrap = true
+                self.state = .loaded(session)
+            }
         } else {
+            self.nextPageToFetch = 2
+            self.currentPage = 1
+            let canPaginate = !session.vintedPaginationQuery.isEmpty && session.listings.count >= 10
+            self.hasMoreResults = canPaginate
             self.state = .loaded(session)
         }
     }
 
+    /// Favori sans annonces : recharge la page 1 Vinted avec la même logique que la pagination existante.
+    func bootstrapInitialListingsIfNeeded() async {
+        guard needsInitialListingsBootstrap, !didRunBootstrap else { return }
+        guard case .loaded = state else { return }
+        didRunBootstrap = true
+        needsInitialListingsBootstrap = false
+        guard !paginationSearchText.isEmpty else { return }
+
+        isLoadingMore = true
+        defer { isLoadingMore = false }
+
+        do {
+            let response = try await apiClient.fetchVintedListingsPage(
+                searchText: paginationSearchText,
+                page: 1
+            )
+            let newItems = response.listings.map { MarketplaceListing.from($0) }
+            displayedListings = newItems
+            currentPage = response.page
+            nextPageToFetch = 2
+            hasMoreResults = response.hasMore
+        } catch {
+            hasMoreResults = false
+        }
+    }
+
     func updateHeroVisibility(minY: CGFloat) {
-        showStickyHeader = minY < -24
+        showStickyHeader = minY < -36
     }
 
     /// Chargement anticipé : vers ~50 % de la liste (ex. 5ᵉ carte sur 10).

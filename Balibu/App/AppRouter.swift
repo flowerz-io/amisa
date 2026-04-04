@@ -22,35 +22,59 @@ struct AppRouter: View {
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
-        NavigationStack(path: $router.path) {
-            HomeView(searchHistoryService: .shared)
-                .environmentObject(router)
-            .navigationDestination(for: AppRoute.self) { route in
-                switch route {
-                case .home:
-                    EmptyView()
-                case .sharedImportReview(let payload):
-                    SharedImportReviewView(payload: payload)
-                case .shareImportProcessing(let payload):
-                    ShareImportProcessingView(payload: payload)
-                case .results(let session):
-                    ResultsView(session: session)
-                case .searchHistory:
-                    SearchHistoryView()
-                }
+        TabView(selection: $router.selectedTab) {
+            NavigationStack(path: $router.path) {
+                HomeView(searchHistoryService: .shared)
+                    .environmentObject(router)
+                    .navigationDestination(for: AppRoute.self) { route in
+                        switch route {
+                        case .home:
+                            EmptyView()
+                        case .sharedImportReview(let payload):
+                            SharedImportReviewView(payload: payload)
+                        case .shareImportProcessing(let payload):
+                            ShareImportProcessingView(payload: payload)
+                        case .results(let session):
+                            ResultsView(session: session)
+                        case .searchHistory:
+                            SearchHistoryView()
+                        }
+                    }
             }
-            .onAppear {
-                appDelegate.router = router
-                Task { await NotificationManager.shared.refreshAuthorizationStatus() }
+            .tabItem {
+                Label(String(localized: "Accueil"), systemImage: "house.fill")
+            }
+            .tag(0)
+
+            NavigationStack {
+                FavoritesView()
+                    .environmentObject(router)
+            }
+            .tabItem {
+                Label(String(localized: "Favoris"), systemImage: "heart.fill")
+            }
+            .tag(1)
+
+            NavigationStack {
+                SettingsView()
+            }
+            .tabItem {
+                Label(String(localized: "Réglages"), systemImage: "gearshape.fill")
+            }
+            .tag(2)
+        }
+        .tint(.accentColor)
+        .onAppear {
+            appDelegate.router = router
+            Task { await NotificationManager.shared.refreshAuthorizationStatus() }
+            router.processPendingShareImportIfNeeded()
+            if router.path.isEmpty {
+                checkPendingLegacySharedPayload()
+            }
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
                 router.processPendingShareImportIfNeeded()
-                if router.path.isEmpty {
-                    checkPendingLegacySharedPayload()
-                }
-            }
-            .onChange(of: scenePhase) { _, newPhase in
-                if newPhase == .active {
-                    router.processPendingShareImportIfNeeded()
-                }
             }
         }
     }

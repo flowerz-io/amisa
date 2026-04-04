@@ -8,12 +8,14 @@
 import SwiftUI
 import PhotosUI
 import Combine
+import UIKit
 
 struct HomeView: View {
     @EnvironmentObject private var router: Router
     @StateObject private var viewModel: HomeViewModel
     @AppStorage("balibu.notification.educationCompleted") private var notificationEducationCompleted = false
     @State private var showNotificationOnboarding = false
+    @State private var manualSearchQuery = ""
 
     init(searchHistoryService: SearchHistoryService) {
         _viewModel = StateObject(wrappedValue: HomeViewModel(searchHistoryService: searchHistoryService))
@@ -21,16 +23,16 @@ struct HomeView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: DesignTokens.spacingXL) {
-                headerSection
-                shareFlowSection
-                importFromPhotosSection
+            VStack(spacing: DesignTokens.spacingL) {
+                searchAndImportBar
+                hintLine
+                compactHowItWorks
                 recentHistorySection
             }
             .padding(DesignTokens.spacingL)
         }
         .background(DesignTokens.backgroundColor)
-        .navigationTitle("Balibu")
+        .navigationTitle(String(localized: "Balibu"))
         .navigationBarTitleDisplayMode(.large)
         .sheet(isPresented: $showNotificationOnboarding, onDismiss: {
             if !notificationEducationCompleted {
@@ -55,29 +57,69 @@ struct HomeView: View {
         }
     }
 
-    private var headerSection: some View {
-        VStack(alignment: .leading, spacing: DesignTokens.spacingS) {
-            Text("Find similar pieces")
-                .font(DesignTokens.titleFont)
-                .foregroundColor(DesignTokens.textPrimary)
+    /// Barre recherche (saisie réservée à une évolution texte) + import image.
+    private var searchAndImportBar: some View {
+        HStack(spacing: DesignTokens.spacingS) {
+            HStack(spacing: DesignTokens.spacingS) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(DesignTokens.textSecondary)
+                TextField(String(localized: "Rechercher une pièce…"), text: $manualSearchQuery)
+                    .textFieldStyle(.plain)
+                    .submitLabel(.search)
+                    .onSubmit {
+                        manualSearchQuery = ""
+                    }
+            }
+            .padding(.horizontal, DesignTokens.spacingM)
+            .padding(.vertical, DesignTokens.spacingS)
+            .background(DesignTokens.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: DesignTokens.cornerRadiusM, style: .continuous))
 
-            Text("Share an outfit from Instagram, Pinterest or any app to find resale matches.")
-                .font(DesignTokens.bodyFont)
-                .foregroundColor(DesignTokens.textSecondary)
+            Button {
+                viewModel.presentPhotoPicker = true
+            } label: {
+                Image(systemName: "photo.badge.plus")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(Color.accentColor)
+                    .frame(width: 48, height: 48)
+                    .background(DesignTokens.cardBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: DesignTokens.cornerRadiusM, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(String(localized: "Importer une image"))
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .photosPicker(
+            isPresented: $viewModel.presentPhotoPicker,
+            selection: $viewModel.selectedItems,
+            maxSelectionCount: 1,
+            matching: .images
+        )
+        .onChange(of: viewModel.selectedItems) { _, _ in
+            viewModel.onPhotoSelected { payload in
+                if let payload {
+                    router.navigateToSharedImportReview(payload: payload)
+                }
+            }
+        }
     }
 
-    private var shareFlowSection: some View {
-        VStack(alignment: .leading, spacing: DesignTokens.spacingM) {
-            Text("How it works")
+    private var hintLine: some View {
+        Text(String(localized: "L’analyse et les résultats se basent sur une photo : importe une image ou utilise Partager depuis une autre app."))
+            .font(DesignTokens.captionFont)
+            .foregroundColor(DesignTokens.textSecondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var compactHowItWorks: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.spacingS) {
+            Text(String(localized: "Comment ça marche"))
                 .font(DesignTokens.headlineFont)
                 .foregroundColor(DesignTokens.textPrimary)
 
             VStack(alignment: .leading, spacing: DesignTokens.spacingS) {
-                flowStep(number: 1, text: "See a piece you like in any app")
-                flowStep(number: 2, text: "Tap Share → Choose Balibu")
-                flowStep(number: 3, text: "We analyze and find resale matches")
+                flowStep(number: 1, text: String(localized: "Repère une pièce dans une app"))
+                flowStep(number: 2, text: String(localized: "Partage → Balibu ou importe une photo ici"))
+                flowStep(number: 3, text: String(localized: "Analyse et annonces similaires"))
             }
             .padding(DesignTokens.spacingM)
             .background(DesignTokens.cardBackground)
@@ -100,50 +142,17 @@ struct HomeView: View {
         }
     }
 
-    private var importFromPhotosSection: some View {
-        Button {
-            viewModel.presentPhotoPicker = true
-        } label: {
-            HStack(spacing: DesignTokens.spacingM) {
-                Image(systemName: "photo.on.rectangle.angled")
-                    .font(.title2)
-
-                Text("Import from Photos")
-                    .font(DesignTokens.headlineFont)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(DesignTokens.spacingL)
-            .background(DesignTokens.cardBackground)
-            .foregroundColor(DesignTokens.textPrimary)
-            .cornerRadius(DesignTokens.cornerRadiusM)
-        }
-        .buttonStyle(BalibuButtonStyle())
-        .photosPicker(
-            isPresented: $viewModel.presentPhotoPicker,
-            selection: $viewModel.selectedItems,
-            maxSelectionCount: 1,
-            matching: .images
-        )
-        .onChange(of: viewModel.selectedItems) { _, _ in
-            viewModel.onPhotoSelected { payload in
-                if let payload {
-                    router.navigateToSharedImportReview(payload: payload)
-                }
-            }
-        }
-    }
-
     private var recentHistorySection: some View {
         Group {
             if viewModel.recentSessions.isEmpty {
                 EmptyStateView(
                     icon: "clock.arrow.circlepath",
-                    title: "No searches yet",
-                    message: "Share an image to get started."
+                    title: String(localized: "Aucune recherche récente"),
+                    message: String(localized: "Importe une image ou partage depuis une autre app.")
                 )
             } else {
                 VStack(alignment: .leading, spacing: DesignTokens.spacingM) {
-                    Text("Recent searches")
+                    Text(String(localized: "Recherches récentes"))
                         .font(DesignTokens.headlineFont)
                         .foregroundColor(DesignTokens.textPrimary)
 
@@ -154,7 +163,7 @@ struct HomeView: View {
                     }
 
                     if viewModel.recentSessions.count >= 3 {
-                        Button("See all") {
+                        Button(String(localized: "Voir tout")) {
                             router.navigateToSearchHistory()
                         }
                         .font(DesignTokens.captionFont)
@@ -175,23 +184,7 @@ struct HistoryRowView: View {
     var body: some View {
         Button(action: onTap) {
         HStack(spacing: DesignTokens.spacingM) {
-            if let thumbnailURL = session.thumbnailImageURL,
-               let data = try? Data(contentsOf: thumbnailURL),
-               let uiImage = UIImage(data: data) {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 48, height: 48)
-                    .clipShape(RoundedRectangle(cornerRadius: DesignTokens.cornerRadiusS))
-            } else {
-                RoundedRectangle(cornerRadius: DesignTokens.cornerRadiusS)
-                    .fill(DesignTokens.accentMuted)
-                    .frame(width: 48, height: 48)
-                    .overlay {
-                        Image(systemName: "photo")
-                            .foregroundColor(DesignTokens.textSecondary)
-                    }
-            }
+            historyThumbnail
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(session.displayQuery ?? "Search")
@@ -215,6 +208,34 @@ struct HistoryRowView: View {
         .cornerRadius(DesignTokens.cornerRadiusM)
         }
         .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private var historyThumbnail: some View {
+        if let thumbnailURL = session.thumbnailImageURL,
+           let data = try? Data(contentsOf: thumbnailURL),
+           let uiImage = UIImage(data: data) {
+            Image(uiImage: uiImage)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(width: 48, height: 48)
+                .clipShape(RoundedRectangle(cornerRadius: DesignTokens.cornerRadiusS))
+        } else if let name = session.imageFileName,
+                  let ui = ImagePersistenceService.shared.loadUIImage(fileName: name) {
+            Image(uiImage: ui)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(width: 48, height: 48)
+                .clipShape(RoundedRectangle(cornerRadius: DesignTokens.cornerRadiusS))
+        } else {
+            RoundedRectangle(cornerRadius: DesignTokens.cornerRadiusS)
+                .fill(DesignTokens.accentMuted)
+                .frame(width: 48, height: 48)
+                .overlay {
+                    Image(systemName: "photo")
+                        .foregroundColor(DesignTokens.textSecondary)
+                }
+        }
     }
 }
 

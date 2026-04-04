@@ -11,13 +11,17 @@ import Combine
 @MainActor
 final class Router: ObservableObject {
     @Published var path = NavigationPath()
+    /// Onglet principal (0 = Accueil) — les flows de résultats s’y empilent.
+    @Published var selectedTab: Int = 0
 
     func navigateToSharedImportReview(payload: SharedImportPayload) {
+        selectedTab = 0
         path.append(AppRoute.sharedImportReview(payload: payload))
     }
 
     /// Import Share Extension terminé : analyse puis résultats (remplace l’écran de traitement).
     func navigateToShareImportProcessing(payload: SharedImportPayload) {
+        selectedTab = 0
         path.append(AppRoute.shareImportProcessing(payload: payload))
     }
 
@@ -29,10 +33,18 @@ final class Router: ObservableObject {
     }
 
     func navigateToResults(session: SearchSession) {
+        selectedTab = 0
+        path.append(AppRoute.results(session: session))
+    }
+
+    /// Ouvre les résultats depuis l’onglet Favoris (ou autre) en revenant sur l’accueil.
+    func navigateToResultsFromFavorite(session: SearchSession) {
+        selectedTab = 0
         path.append(AppRoute.results(session: session))
     }
 
     func navigateToSearchHistory() {
+        selectedTab = 0
         path.append(AppRoute.searchHistory)
     }
 
@@ -50,6 +62,7 @@ final class Router: ObservableObject {
     /// Tap sur la notification locale : réinitialise la pile puis lance le traitement du pending.
     func processPendingShareImportFromNotification() {
         guard let payload = ShareStorageService.shared.peekPendingShareImportPayload() else { return }
+        selectedTab = 0
         path = NavigationPath()
         navigateToShareImportProcessing(payload: payload)
     }

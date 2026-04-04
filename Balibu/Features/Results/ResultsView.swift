@@ -10,11 +10,13 @@ struct ResultsView: View {
     @StateObject private var viewModel: ResultsViewModel
 
     @State private var showDetailsSheet = false
+    @State private var showImageFullscreen = false
     @State private var showFilterSheet = false
     @State private var showSizeSheet = false
     @State private var showBrandSheet = false
     @State private var showConditionSheet = false
     @State private var showColorSheet = false
+    @State private var isFavorite = false
 
     private let listingGridColumns = [
         GridItem(.flexible(), spacing: DesignTokens.spacingM),
@@ -45,16 +47,35 @@ struct ResultsView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 if !viewModel.showStickyHeader {
-                    Button {
-                        showDetailsSheet = true
-                    } label: {
-                        Image(systemName: "info.circle")
-                            .foregroundStyle(Color.primary)
+                    HStack(spacing: 4) {
+                        favoriteToolbarButton
+                        Button {
+                            showDetailsSheet = true
+                        } label: {
+                            Image(systemName: "info.circle")
+                                .foregroundStyle(Color.primary)
+                        }
+                        .accessibilityLabel(String(localized: "Détails de l’analyse"))
                     }
-                    .accessibilityLabel(String(localized: "Détails de l’analyse"))
                 }
             }
         }
+    }
+
+    @ViewBuilder
+    private var favoriteToolbarButton: some View {
+        Button {
+            toggleFavorite()
+        } label: {
+            Image(systemName: isFavorite ? "heart.fill" : "heart")
+                .foregroundStyle(isFavorite ? Color.red : Color.primary)
+        }
+        .accessibilityLabel(String(localized: "Favori"))
+    }
+
+    private func toggleFavorite() {
+        guard case .loaded(let session) = viewModel.state else { return }
+        isFavorite = FavoriteSearchService.shared.toggle(session: session)
     }
 
     @ViewBuilder
@@ -91,6 +112,12 @@ struct ResultsView: View {
                     }
                 }
 
+                if viewModel.displayedListings.isEmpty, viewModel.isLoadingMore {
+                    ProgressView()
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, DesignTokens.spacingXL)
+                }
+
                 LazyVGrid(columns: listingGridColumns, spacing: DesignTokens.spacingM) {
                     ForEach(viewModel.displayedListings) { listing in
                         ListingCardView(listing: listing)
@@ -100,7 +127,7 @@ struct ResultsView: View {
                     }
                 }
 
-                if viewModel.isLoadingMore {
+                if viewModel.isLoadingMore, !viewModel.displayedListings.isEmpty {
                     ProgressView()
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, DesignTokens.spacingM)
@@ -117,10 +144,21 @@ struct ResultsView: View {
         .safeAreaInset(edge: .top, spacing: 0) {
             if viewModel.showStickyHeader {
                 stickyHeaderStack(session: session)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
+                    .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
-        .animation(.easeInOut(duration: 0.2), value: viewModel.showStickyHeader)
+        .animation(.easeInOut(duration: 0.22), value: viewModel.showStickyHeader)
+        .task {
+            await viewModel.bootstrapInitialListingsIfNeeded()
+        }
+        .onAppear {
+            isFavorite = FavoriteSearchService.shared.isFavorite(id: session.id)
+        }
+        .fullScreenCover(isPresented: $showImageFullscreen) {
+            NavigationStack {
+                ResultsImageFullscreenViewer(image: session.sourceImage)
+            }
+        }
         .sheet(isPresented: $showDetailsSheet) {
             ResultsDetailsSheet(session: session)
         }
@@ -167,8 +205,12 @@ struct ResultsView: View {
                 Image(uiImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(maxHeight: 200)
+                    .frame(maxHeight: 220)
                     .clipShape(RoundedRectangle(cornerRadius: DesignTokens.radiusM, style: .continuous))
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        showImageFullscreen = true
+                    }
                     .background(
                         GeometryReader { geo in
                             Color.clear.preference(
@@ -185,6 +227,9 @@ struct ResultsView: View {
         VStack(spacing: 0) {
             ResultsStickyBar(
                 thumbnail: session.sourceImage,
+                isFavorite: isFavorite,
+                onFavoriteTap: { toggleFavorite() },
+                onImageTap: { showImageFullscreen = true },
                 onInfoTap: { showDetailsSheet = true }
             )
             ResultsFiltersBar(
@@ -194,9 +239,10 @@ struct ResultsView: View {
                 showConditionSheet: $showConditionSheet,
                 showColorSheet: $showColorSheet
             )
-            .padding(.horizontal, DesignTokens.spacingS)
+            .padding(.horizontal, DesignTokens.spacingM)
             .padding(.bottom, DesignTokens.spacingXS)
         }
+        .padding(.top, 4)
         .background {
             Rectangle()
                 .fill(.thinMaterial)
@@ -255,6 +301,40 @@ struct ResultsView: View {
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+// MARK: - Plein écran image
+
+private struct ResultsImageFullscreenViewer: View {
+    let image: UIImage?
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .padding()
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        dismiss()
+                    }
+            }
+        }
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button(String(localized: "Fermer")) {
+                    dismiss()
+                }
+                .foregroundStyle(.white)
+            }
+        }
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarBackground(Color.black.opacity(0.35), for: .navigationBar)
     }
 }
 

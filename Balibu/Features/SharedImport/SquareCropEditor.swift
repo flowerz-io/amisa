@@ -42,7 +42,7 @@ final class SquareCropEditorViewController: UIViewController {
     private let sourceImage: UIImage
     private let scrollView = UIScrollView()
     private let imageView = UIImageView()
-    private let overlayView = CropDimmingOverlayView()
+    private let overlayView = ScanCropFrameOverlayView()
 
     private var cropSide: CGFloat = 280
     private var lastLaidOutSize: CGSize = .zero
@@ -208,40 +208,3 @@ extension SquareCropEditorViewController: UIScrollViewDelegate {
     }
 }
 
-// MARK: - Overlay (trou aligné sur le scrollView)
-
-private final class CropDimmingOverlayView: UIView {
-    private var holeFrame: CGRect = .zero
-    private var shapeLayer: CAShapeLayer?
-
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        backgroundColor = .clear
-        isUserInteractionEnabled = false
-    }
-
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-
-    func setCropHoleFrame(_ rect: CGRect) {
-        holeFrame = rect
-        setNeedsLayout()
-    }
-
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        let path = UIBezierPath(rect: bounds)
-        path.append(UIBezierPath(rect: holeFrame).reversing())
-
-        if shapeLayer == nil {
-            let layer = CAShapeLayer()
-            layer.fillColor = UIColor.black.withAlphaComponent(0.45).cgColor
-            layer.fillRule = .evenOdd
-            self.layer.addSublayer(layer)
-            shapeLayer = layer
-        }
-        shapeLayer?.path = path.cgPath
-        shapeLayer?.frame = bounds
-    }
-}
