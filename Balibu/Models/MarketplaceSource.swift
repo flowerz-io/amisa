@@ -18,7 +18,7 @@ enum MarketplaceSource {
             .replacingOccurrences(of: ".", with: " ")
             .replacingOccurrences(of: "'", with: " ")
             .replacingOccurrences(of: "’", with: " ")
-            .replacingOccurrences(of: "  ", with: " ")
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
     }
 
     /// Libellé badge : chaîne API ou nom canon pour les sources connues ; sinon texte tel quel.
@@ -57,5 +57,9 @@ enum MarketplaceSource {
         case "facebook marketplace", "facebookmarketplace": return "provider_facebookmarketplace"
         default: return nil
         }
+    }
+
+    static func providerLogoAssetName(for raw: String) -> String? {
+        logoAssetName(from: raw)
     }
 }

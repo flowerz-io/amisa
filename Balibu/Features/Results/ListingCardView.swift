@@ -173,40 +173,55 @@ private struct ProviderBadgeView: View {
 
     private static let badgeHeight: CGFloat = 26
     private static let maxLogoWidth: CGFloat = 72
+    private static let logoHeight: CGFloat = 14
 
     var body: some View {
+        let content = resolvedContent
         ZStack {
-            if let logo = logoImage {
-                logo
+            if let uiImage = content.logo {
+                Image(uiImage: uiImage)
                     .resizable()
                     .renderingMode(.original)
                     .interpolation(.high)
+                    .antialiased(true)
                     .scaledToFit()
-                    .frame(maxWidth: Self.maxLogoWidth, maxHeight: Self.badgeHeight - 8, alignment: .center)
+                    .frame(width: Self.maxLogoWidth, height: Self.logoHeight, alignment: .center)
                     .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
+                    .padding(.vertical, 6)
             } else {
-                Text(fallbackLabel)
+                Text(content.fallbackText)
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(Color.primary)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.85)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
             }
         }
         .frame(minHeight: Self.badgeHeight)
-        .background(.ultraThinMaterial, in: Capsule())
+        .background(
+            Color(uiColor: .systemBackground)
+                .opacity(0.78),
+            in: Capsule()
+        )
         .overlay(
             Capsule()
-                .strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5)
+                .strokeBorder(Color.primary.opacity(0.12), lineWidth: 0.5)
         )
-        .accessibilityLabel(fallbackLabel)
+        .accessibilityLabel(content.fallbackText)
     }
 
-    private var logoImage: Image? {
-        guard let assetName = MarketplaceSource.logoAssetName(from: source) else { return nil }
-        guard UIImage(named: assetName) != nil else { return nil }
-        return Image(assetName)
+    private var resolvedContent: (logo: UIImage?, fallbackText: String) {
+        let assetName = MarketplaceSource.providerLogoAssetName(for: source)
+        if let assetName,
+           let uiImage = UIImage(named: assetName),
+           uiImage.size.width > 0,
+           uiImage.size.height > 0 {
+            print("[PROVIDER_BADGE] source=\(source) asset=\(assetName) fallback=false")
+            return (uiImage, fallbackLabel)
+        }
+        print("[PROVIDER_BADGE] source=\(source) asset=\(assetName ?? "nil") fallback=true")
+        return (nil, fallbackLabel)
     }
 }
 
