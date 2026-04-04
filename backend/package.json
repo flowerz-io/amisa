@@ -7,8 +7,7 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "tsx watch src/index.ts",
-    "postinstall": "npx playwright install --with-deps chromium || npx playwright install chromium"
+    "dev": "tsx watch src/index.ts"
   },
   "dependencies": {
     "@fastify/cors": "^9.0.1",
