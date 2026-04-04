@@ -31,6 +31,9 @@ final class ResultsViewModel: ObservableObject {
     private let apiClient: any APIClientProtocol
     private var didRunBootstrap: Bool = false
 
+    /// Plafond affichage (aligné doc backend `VINTED_MAX_TOTAL_LISTINGS`).
+    private static let maxListingsToDisplay = 100
+
     init(session: SearchSession, apiClient: any APIClientProtocol = APIConfig.apiClient) {
         self.apiClient = apiClient
         self.paginationSearchText = session.vintedPaginationQuery
@@ -53,10 +56,14 @@ final class ResultsViewModel: ObservableObject {
         } else {
             self.nextPageToFetch = 2
             self.currentPage = 1
-            let canPaginate = !session.vintedPaginationQuery.isEmpty && session.listings.count >= 10
-            self.hasMoreResults = canPaginate
+            let q = session.vintedPaginationQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+            let vintedOnFirstLoad = session.listings.filter { $0.source == "Vinted" }.count
+            /// Pagination = uniquement Vinted : tant qu’il y a au moins une annonce Vinted dans la session initiale, on tente les pages suivantes (évite le blocage quand Vinted a moins de 10 entrées mais Grailed remplit la grille).
+            self.hasMoreResults = !q.isEmpty && vintedOnFirstLoad > 0
             self.state = .loaded(session)
         }
+
+        logPaginationState(context: "init")
     }
 
     /// Favori sans annonces : recharge la page 1 Vinted avec la même logique que la pagination existante.
@@ -79,10 +86,11 @@ final class ResultsViewModel: ObservableObject {
             displayedListings = newItems
             currentPage = response.page
             nextPageToFetch = 2
-            hasMoreResults = response.hasMore
+            hasMoreResults = response.hasMore && displayedListings.count < Self.maxListingsToDisplay
         } catch {
             hasMoreResults = false
         }
+        logPaginationState(context: "bootstrap_done")
     }
 
     func updateHeroVisibility(minY: CGFloat) {
@@ -94,6 +102,7 @@ final class ResultsViewModel: ObservableObject {
         guard case .loaded = state else { return }
         guard hasMoreResults, !isLoadingMore else { return }
         guard !paginationSearchText.isEmpty else { return }
+        guard displayedListings.count < Self.maxListingsToDisplay else { return }
         guard let idx = displayedListings.firstIndex(where: { $0.id == currentItem.id }) else { return }
 
         let threshold = max(0, displayedListings.count / 2 - 1)
@@ -104,6 +113,12 @@ final class ResultsViewModel: ObservableObject {
 
     private func loadNextPage() async {
         guard !isLoadingMore, hasMoreResults else { return }
+        guard displayedListings.count < Self.maxListingsToDisplay else {
+            hasMoreResults = false
+            logPaginationState(context: "cap_reached")
+            return
+        }
+
         isLoadingMore = true
         defer { isLoadingMore = false }
 
@@ -116,10 +131,15 @@ final class ResultsViewModel: ObservableObject {
             displayedListings = Self.mergeUnique(existing: displayedListings, new: newItems)
             currentPage = response.page
             nextPageToFetch += 1
-            hasMoreResults = response.hasMore
+            var more = response.hasMore
+            if displayedListings.count >= Self.maxListingsToDisplay {
+                more = false
+            }
+            hasMoreResults = more
         } catch {
             hasMoreResults = false
         }
+        logPaginationState(context: "loadNextPage_done")
     }
 
     private static func mergeUnique(existing: [MarketplaceListing], new: [MarketplaceListing]) -> [MarketplaceListing] {
@@ -134,5 +154,13 @@ final class ResultsViewModel: ObservableObject {
             }
         }
         return out
+    }
+
+    private func logPaginationState(context: String) {
+        let vinted = displayedListings.filter { $0.source == "Vinted" }.count
+        let grailed = displayedListings.filter { $0.source == "Grailed" }.count
+        print(
+            "[RESULTS_VM] \(context) currentPage=\(currentPage) nextPageToFetch=\(nextPageToFetch) hasMore=\(hasMoreResults) isLoadingMore=\(isLoadingMore) displayed=\(displayedListings.count) vinted=\(vinted) grailed=\(grailed) cap=\(Self.maxListingsToDisplay)"
+        )
     }
 }

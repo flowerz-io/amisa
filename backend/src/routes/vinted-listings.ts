@@ -2,8 +2,7 @@ import { FastifyInstance } from 'fastify';
 import type { VintedListingsRequest, VintedListingsResponse } from '../api/types.js';
 import { searchVintedByText, type VintedSearchItem } from '../services/vinted-text-search.js';
 import type { MarketplaceListingDTO } from '../api/types.js';
-
-const PER_PAGE = 10;
+import { VINTED_MAX_PER_PAGE } from '../marketplace-limits.js';
 
 function vintedItemsToListings(items: VintedSearchItem[]): MarketplaceListingDTO[] {
   return items.map((item, index) => {
@@ -53,7 +52,7 @@ export async function vintedListingsRoute(app: FastifyInstance) {
     try {
       const items = await searchVintedByText(searchText, { page });
       const listings = vintedItemsToListings(items);
-      const hasMore = items.length >= PER_PAGE;
+      const hasMore = items.length >= VINTED_MAX_PER_PAGE;
 
       const response: VintedListingsResponse = {
         listings,

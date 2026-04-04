@@ -1,7 +1,7 @@
 import * as cheerio from 'cheerio';
+import { VINTED_MAX_PER_PAGE } from '../marketplace-limits.js';
 
 const VINTED_ORIGIN = 'https://www.vinted.fr';
-const MAX_RESULTS = 10;
 
 const FETCH_HEADERS: Record<string, string> = {
   'User-Agent':
@@ -25,7 +25,8 @@ export type VintedSearchItem = {
 };
 
 export function buildVintedSearchUrl(searchText: string, page: number = 1): string {
-  const base = `https://www.vinted.fr/catalog?search_text=${encodeURIComponent(searchText.trim())}`;
+  const q = encodeURIComponent(searchText.trim());
+  const base = `${VINTED_ORIGIN}/catalog?search_text=${q}`;
   if (page <= 1) return base;
   return `${base}&page=${page}`;
 }
@@ -86,7 +87,7 @@ export type VintedSearchOptions = {
 };
 
 /**
- * Récupère jusqu'à 10 annonces par page depuis le catalogue Vinted (HTML serveur).
+ * Récupère jusqu'à VINTED_MAX_PER_PAGE annonces par page depuis le catalogue Vinted (HTML serveur).
  */
 export async function searchVintedByText(
   searchText: string,
@@ -100,6 +101,7 @@ export async function searchVintedByText(
   }
 
   const page = Math.max(1, Math.floor(options?.page ?? 1));
+  const maxPerPage = VINTED_MAX_PER_PAGE;
   const url = buildVintedSearchUrl(q, page);
   // eslint-disable-next-line no-console -- diagnostic recherche
   console.log('[VINTED_FETCH]', url);
@@ -116,7 +118,7 @@ export async function searchVintedByText(
   const items: VintedSearchItem[] = [];
 
   $('[data-testid="grid-item"]').each((_i, el) => {
-    if (items.length >= MAX_RESULTS) return false;
+    if (items.length >= maxPerPage) return false;
 
     const $root = $(el);
     const $link = $root.find('a.new-item-box__overlay[href*="/items/"]').first();
@@ -190,7 +192,7 @@ export async function searchVintedByText(
   });
 
   // eslint-disable-next-line no-console -- diagnostic recherche
-  console.log('[VINTED_PARSED_COUNT]', items.length);
+  console.log(`[VINTED_PAGE_${page}_COUNT]`, items.length);
 
   return items;
 }

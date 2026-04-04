@@ -1,7 +1,7 @@
 import * as cheerio from 'cheerio';
+import { GRAILED_MAX_PER_PAGE } from '../marketplace-limits.js';
 
 const GRAILED_ORIGIN = 'https://www.grailed.com';
-const MAX_RESULTS = 10;
 
 const FETCH_HEADERS: Record<string, string> = {
   'User-Agent':
@@ -64,7 +64,7 @@ export type GrailedSearchOptions = {
 };
 
 /**
- * Récupère jusqu'à 10 annonces depuis la page shop Grailed (HTML).
+ * Récupère jusqu'à GRAILED_MAX_PER_PAGE annonces depuis la page shop Grailed (HTML).
  * Sélecteurs basés sur des fragments de classe stables (contains), pas des hash CSS.
  */
 export async function searchGrailedByText(
@@ -79,6 +79,7 @@ export async function searchGrailedByText(
   }
 
   const page = Math.max(1, Math.floor(options?.page ?? 1));
+  const maxPerPage = GRAILED_MAX_PER_PAGE;
   const url = buildGrailedSearchUrl(q, page);
   // eslint-disable-next-line no-console -- diagnostic recherche
   console.log('[GRAILED_FETCH]', url);
@@ -95,7 +96,7 @@ export async function searchGrailedByText(
   const items: GrailedSearchItem[] = [];
 
   $('div[class*="UserItem_root"]').each((_i, el) => {
-    if (items.length >= MAX_RESULTS) return false;
+    if (items.length >= maxPerPage) return false;
 
     const $card = $(el);
 
@@ -134,7 +135,7 @@ export async function searchGrailedByText(
   });
 
   // eslint-disable-next-line no-console -- diagnostic recherche
-  console.log('[GRAILED_PARSED_COUNT]', items.length);
+  console.log(`[GRAILED_PAGE_${page}_COUNT]`, items.length);
 
   return items;
 }

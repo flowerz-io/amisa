@@ -15,6 +15,11 @@ import {
 } from '../services/grailed-text-search.js';
 import type { MarketplaceListingDTO } from '../api/types.js';
 import { visionProviderName, isDebug } from '../config.js';
+import {
+  GRAILED_MAX_PER_PAGE,
+  VINTED_MAX_PER_PAGE,
+  VINTED_MAX_TOTAL_LISTINGS_HINT,
+} from '../marketplace-limits.js';
 
 const visionProvider =
   visionProviderName === 'openai' ? openaiVisionProvider : mockVisionProvider;
@@ -40,6 +45,29 @@ function vintedItemsToListings(items: VintedSearchItem[]): MarketplaceListingDTO
       condition: item.condition,
     };
   });
+}
+
+/** Vinted puis Grailed en alternance pour que la grille ne soit pas « tout Vinted » en premier bloc. */
+function interleaveVintedGrailed(
+  vinted: MarketplaceListingDTO[],
+  grailed: MarketplaceListingDTO[]
+): MarketplaceListingDTO[] {
+  const out: MarketplaceListingDTO[] = [];
+  const n = Math.max(vinted.length, grailed.length);
+  for (let i = 0; i < n; i++) {
+    if (i < vinted.length) out.push(vinted[i]);
+    if (i < grailed.length) out.push(grailed[i]);
+  }
+  return out;
+}
+
+function countBySource(listings: MarketplaceListingDTO[]): Record<string, number> {
+  const acc: Record<string, number> = {};
+  for (const l of listings) {
+    const s = (l.source ?? '').trim() || '(unknown)';
+    acc[s] = (acc[s] ?? 0) + 1;
+  }
+  return acc;
 }
 
 function grailedItemsToListings(items: GrailedSearchItem[]): MarketplaceListingDTO[] {
@@ -160,12 +188,18 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
     const trimmedPrimary = String(primaryQuery).trim();
     const vintedSearchUrl = buildVintedSearchUrl(trimmedPrimary);
     const grailedSearchUrl = buildGrailedSearchUrl(trimmedPrimary);
-    // eslint-disable-next-line no-console -- traçage recherche Vinted
-    console.log('[VINTED_PRIMARY_QUERY]', trimmedPrimary);
-    // eslint-disable-next-line no-console -- traçage recherche Vinted
+    // eslint-disable-next-line no-console -- diagnostic fusion marketplaces
+    console.log('[ANALYZE_PRIMARY_QUERY]', trimmedPrimary);
+    // eslint-disable-next-line no-console -- diagnostic fusion marketplaces
     console.log('[VINTED_SEARCH_URL]', vintedSearchUrl);
-    // eslint-disable-next-line no-console -- traçage recherche Grailed
+    // eslint-disable-next-line no-console -- diagnostic fusion marketplaces
     console.log('[GRAILED_SEARCH_URL]', grailedSearchUrl);
+    // eslint-disable-next-line no-console -- diagnostic fusion marketplaces
+    console.log('[MARKETPLACE_LIMITS]', {
+      VINTED_MAX_PER_PAGE,
+      GRAILED_MAX_PER_PAGE,
+      VINTED_MAX_TOTAL_LISTINGS_HINT,
+    });
 
     let vintedItems: VintedSearchItem[] = [];
     let vintedSearchFailed = false;
@@ -189,12 +223,20 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
       console.error('[GRAILED_SEARCH_FAILED]', grailedErr);
     }
 
-    const listings = [
-      ...vintedItemsToListings(vintedItems),
-      ...grailedItemsToListings(grailedItems),
-    ];
-    // eslint-disable-next-line no-console -- traçage strict
-    console.log('[LISTINGS_COUNT]', listings.length);
+    const vintedDto = vintedItemsToListings(vintedItems);
+    const grailedDto = grailedItemsToListings(grailedItems);
+    const listings = interleaveVintedGrailed(vintedDto, grailedDto);
+
+    // eslint-disable-next-line no-console -- diagnostic fusion marketplaces
+    console.log('[VINTED_PAGE_1_COUNT]', vintedItems.length);
+    // eslint-disable-next-line no-console -- diagnostic fusion marketplaces
+    console.log('[GRAILED_PAGE_1_COUNT]', grailedItems.length);
+    // eslint-disable-next-line no-console -- diagnostic fusion marketplaces
+    console.log('[MERGED_COUNT]', listings.length);
+    // eslint-disable-next-line no-console -- diagnostic fusion marketplaces
+    console.log('[LISTINGS_BY_SOURCE]', JSON.stringify(countBySource(listings)));
+    // eslint-disable-next-line no-console -- diagnostic fusion marketplaces
+    console.log('[FINAL_LISTINGS_COUNT]', listings.length);
 
     const response: AnalyzeSearchResponse = {
       visionResult,
@@ -211,9 +253,6 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
         },
       }),
     };
-
-    // eslint-disable-next-line no-console -- traçage strict
-    console.log('[FINAL_RESPONSE_JSON]', JSON.stringify(response));
 
     return reply.send(response);
   });

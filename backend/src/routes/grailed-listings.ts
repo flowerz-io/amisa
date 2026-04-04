@@ -2,8 +2,7 @@ import { FastifyInstance } from 'fastify';
 import type { GrailedListingsRequest, GrailedListingsResponse } from '../api/types.js';
 import { searchGrailedByText, type GrailedSearchItem } from '../services/grailed-text-search.js';
 import type { MarketplaceListingDTO } from '../api/types.js';
-
-const PER_PAGE = 10;
+import { GRAILED_MAX_PER_PAGE } from '../marketplace-limits.js';
 
 function grailedItemsToListings(items: GrailedSearchItem[]): MarketplaceListingDTO[] {
   return items.map((item, index) => {
@@ -52,7 +51,7 @@ export async function grailedListingsRoute(app: FastifyInstance) {
     try {
       const items = await searchGrailedByText(searchText, { page });
       const listings = grailedItemsToListings(items);
-      const hasMore = items.length >= PER_PAGE;
+      const hasMore = items.length >= GRAILED_MAX_PER_PAGE;
 
       const response: GrailedListingsResponse = {
         listings,
