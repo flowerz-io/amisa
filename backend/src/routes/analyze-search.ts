@@ -8,15 +8,10 @@ import {
   searchVintedByText,
   type VintedSearchItem,
 } from '../services/vinted-text-search.js';
-import {
-  buildGrailedSearchUrl,
-  searchGrailedByText,
-  type GrailedSearchItem,
-} from '../services/grailed-text-search.js';
+import { searchGrailedByTextBrowser } from '../services/grailed-browser-search.js';
 import type { MarketplaceListingDTO } from '../api/types.js';
 import { visionProviderName, isDebug } from '../config.js';
 import {
-  GRAILED_MAX_PER_PAGE,
   VINTED_MAX_PER_PAGE,
   VINTED_MAX_TOTAL_LISTINGS_HINT,
 } from '../marketplace-limits.js';
@@ -61,27 +56,8 @@ function countBySource(listings: MarketplaceListingDTO[]): Record<string, number
   return acc;
 }
 
-function grailedItemsToListings(items: GrailedSearchItem[]): MarketplaceListingDTO[] {
-  return items.map((item, index) => {
-    const idMatch = item.listingUrl.match(/\/listings\/(\d+)/);
-    const id = idMatch?.[1] ?? `grailed-${index}`;
-    return {
-      id,
-      source: 'Grailed',
-      title: item.title,
-      price: item.price ?? 0,
-      currency: item.currency ?? 'USD',
-      imageUrl: item.imageUrl,
-      thumbnailUrl: item.imageUrl,
-      listingUrl: item.listingUrl,
-      ...(item.brand ? { brand: item.brand } : {}),
-      size: item.size,
-    };
-  });
-}
-
 async function fetchProviderPages<T>(
-  provider: 'VINTED' | 'GRAILED',
+  provider: 'VINTED',
   perPage: number,
   fetchPage: (page: number) => Promise<T[]>
 ): Promise<{ items: T[]; failed: boolean }> {
@@ -226,38 +202,24 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
 
     const trimmedPrimary = String(primaryQuery).trim();
     const vintedSearchUrl = buildVintedSearchUrl(trimmedPrimary);
-    const grailedSearchUrl = buildGrailedSearchUrl(trimmedPrimary);
     // eslint-disable-next-line no-console -- diagnostic fusion marketplaces
     console.log('[ANALYZE_PRIMARY_QUERY]', trimmedPrimary);
     // eslint-disable-next-line no-console -- diagnostic fusion marketplaces
     console.log('[VINTED_SEARCH_URL]', vintedSearchUrl);
     // eslint-disable-next-line no-console -- diagnostic fusion marketplaces
-    console.log('[GRAILED_SEARCH_URL]', grailedSearchUrl);
     // eslint-disable-next-line no-console -- diagnostic fusion marketplaces
-    console.log('[MARKETPLACE_LIMITS]', {
-      VINTED_MAX_PER_PAGE,
-      GRAILED_MAX_PER_PAGE,
-      VINTED_MAX_TOTAL_LISTINGS_HINT,
-    });
+    console.log('[MARKETPLACE_LIMITS]', { VINTED_MAX_PER_PAGE, VINTED_MAX_TOTAL_LISTINGS_HINT });
 
     const vintedPaged = await fetchProviderPages<VintedSearchItem>(
       'VINTED',
       VINTED_MAX_PER_PAGE,
       (page) => searchVintedByText(trimmedPrimary, { page })
     );
-    const grailedPaged = await fetchProviderPages<GrailedSearchItem>(
-      'GRAILED',
-      GRAILED_MAX_PER_PAGE,
-      (page) => searchGrailedByText(trimmedPrimary, { page })
-    );
-
     const vintedItems = vintedPaged.items;
-    const grailedItems = grailedPaged.items;
     const vintedSearchFailed = vintedPaged.failed;
-    const grailedSearchFailed = grailedPaged.failed;
+    const grailedListings = await searchGrailedByTextBrowser(trimmedPrimary);
 
     const vintedListings = vintedItemsToListings(vintedItems);
-    const grailedListings = grailedItemsToListings(grailedItems);
     const merged = [...vintedListings, ...grailedListings];
 
     // eslint-disable-next-line no-console -- diagnostic fusion marketplaces
@@ -286,7 +248,6 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
       generatedQueries,
       listings: merged,
       ...(vintedSearchFailed ? { vintedSearchFailed: true } : {}),
-      ...(grailedSearchFailed ? { grailedSearchFailed: true } : {}),
       ...(isDebug && {
         debug: {
           visionProvider: visionProviderName,
