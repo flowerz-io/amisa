@@ -167,8 +167,8 @@ private struct ListingCardImageContainerView: View {
                 logoHeight: logoHeight,
                 logoMaxWidth: logoMaxWidth
             )
-            .padding(logoPadding)
-            .zIndex(1)
+            .padding(.top, logoPadding)
+            .padding(.trailing, logoPadding)
         }
     }
 }
@@ -228,12 +228,10 @@ private struct ProviderLogoOverlay: View {
         } else {
             Text(fallbackLabel)
                 .font(.caption2.weight(.semibold))
-                .foregroundStyle(Color.primary)
+                .foregroundStyle(.white)
                 .lineLimit(1)
                 .minimumScaleFactor(0.85)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(.ultraThinMaterial, in: Capsule())
+                .shadow(color: .black.opacity(0.55), radius: 2, x: 0, y: 1)
                 .accessibilityLabel(fallbackLabel)
         }
     }

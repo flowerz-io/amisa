@@ -13,13 +13,20 @@ import type { MarketplaceListingDTO } from '../api/types.js';
 import type { SearchRankingContextDTO } from '../api/types.js';
 import { visionProviderName, isDebug } from '../config.js';
 import { rankAcrossSources } from '../services/marketplace-ranking.js';
+import { INITIAL_RETURN_PER_PROVIDER, NEXT_BATCH_PER_PROVIDER } from '../marketplace-limits.js';
 
 const visionProvider =
   visionProviderName === 'openai' ? openaiVisionProvider : mockVisionProvider;
 
 /** Limite côté appli (après décodage base64). Les clients ciblent ~500 Ko ; marge pour proxies. */
 const MAX_IMAGE_BYTES = 6 * 1024 * 1024;
-const INITIAL_PER_PROVIDER = Math.max(1, Math.floor(Number(process.env.INITIAL_PER_PROVIDER ?? 20)));
+function extractHttpStatus(err: unknown): number | undefined {
+  if (err instanceof Error) {
+    const m = err.message.match(/HTTP\s+(\d{3})/i);
+    if (m) return parseInt(m[1], 10);
+  }
+  return undefined;
+}
 
 function countBySource(listings: MarketplaceListingDTO[]): Record<string, number> {
   const acc: Record<string, number> = {};
@@ -154,13 +161,17 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
     let vintedSearchFailed = false;
     let vintedItems: VintedSearchItem[] = [];
     try {
-      vintedItems = await searchVintedByText(trimmedPrimary, { page: 1, limit: INITIAL_PER_PROVIDER });
+      vintedItems = await searchVintedByText(trimmedPrimary, { page: 1, limit: INITIAL_RETURN_PER_PROVIDER });
     } catch (err) {
       vintedSearchFailed = true;
+      const status = extractHttpStatus(err);
+      if (status === 403) {
+        console.log('VINTED_BLOCKED', { page: 1, query: trimmedPrimary.slice(0, 120) });
+      }
       request.log.error(err, 'Vinted initial fetch failed');
     }
     const vintedListings = vintedItemsToListings(vintedItems);
-    const vintedHasMore = vintedItems.length >= INITIAL_PER_PROVIDER;
+    const vintedHasMore = vintedItems.length >= INITIAL_RETURN_PER_PROVIDER;
     const vintedStopReason = vintedHasMore ? 'initial_batch_reached' : 'provider_exhausted_on_page_1';
     console.log('VINTED_INITIAL_COUNT', vintedListings.length);
     console.log('CURRENT_VINTED_PAGE', 1);
@@ -169,12 +180,12 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
 
     let grailedListings: MarketplaceListingDTO[] = [];
     try {
-      grailedListings = await searchGrailedByTextBrowser(trimmedPrimary, { page: 1, limit: INITIAL_PER_PROVIDER });
+      grailedListings = await searchGrailedByTextBrowser(trimmedPrimary, { page: 1, limit: INITIAL_RETURN_PER_PROVIDER });
     } catch (err) {
       request.log.error(err, 'Grailed initial fetch failed');
       grailedListings = [];
     }
-    const grailedHasMore = grailedListings.length >= INITIAL_PER_PROVIDER;
+    const grailedHasMore = grailedListings.length >= INITIAL_RETURN_PER_PROVIDER;
     const grailedStopReason = grailedHasMore ? 'initial_batch_reached' : 'provider_exhausted_on_page_1';
     console.log('GRAILED_INITIAL_COUNT', grailedListings.length);
     console.log('CURRENT_GRAILED_PAGE', 1);
@@ -194,7 +205,7 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
       listings: ranked,
       pagination: {
         primaryQuery: trimmedPrimary,
-        batchSizePerProvider: 50,
+        batchSizePerProvider: NEXT_BATCH_PER_PROVIDER,
         vinted: {
           nextPage: 2,
           hasMore: vintedHasMore,
