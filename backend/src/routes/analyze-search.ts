@@ -22,6 +22,7 @@ import { visionProviderName, isDebug } from '../config.js';
 import { rankAcrossSources } from '../services/marketplace-ranking.js';
 import { INITIAL_RETURN_PER_PROVIDER, NEXT_BATCH_PER_PROVIDER } from '../marketplace-limits.js';
 import { isProviderEnabled, type ProviderKey } from '../providers-config.js';
+import { KNOWN_PROVIDERS, normalizeRequestedProviders } from '../provider-request.js';
 
 const visionProvider =
   visionProviderName === 'openai' ? openaiVisionProvider : mockVisionProvider;
@@ -43,32 +44,6 @@ function countBySource(listings: MarketplaceListingDTO[]): Record<string, number
     acc[s] = (acc[s] ?? 0) + 1;
   }
   return acc;
-}
-
-const KNOWN_PROVIDERS: ProviderKey[] = ['vinted', 'grailed', 'ebay', 'depop', 'leboncoin'];
-
-function normalizeProviderId(input: string): ProviderKey | null {
-  const t = input.trim().toLowerCase().replace(/[\s_-]+/g, '');
-  if (t === 'vinted') return 'vinted';
-  if (t === 'grailed') return 'grailed';
-  if (t === 'ebay') return 'ebay';
-  if (t === 'depop') return 'depop';
-  if (t === 'leboncoin') return 'leboncoin';
-  return null;
-}
-
-function normalizeRequestedProviders(input: unknown): ProviderKey[] {
-  if (!Array.isArray(input)) return KNOWN_PROVIDERS;
-  const out: ProviderKey[] = [];
-  const seen = new Set<ProviderKey>();
-  for (const raw of input) {
-    if (typeof raw !== 'string') continue;
-    const id = normalizeProviderId(raw);
-    if (!id || seen.has(id)) continue;
-    seen.add(id);
-    out.push(id);
-  }
-  return out.length > 0 ? out : KNOWN_PROVIDERS;
 }
 
 function vintedItemsToListings(items: VintedSearchItem[]): MarketplaceListingDTO[] {

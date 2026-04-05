@@ -109,6 +109,9 @@ actor APIClient: APIClientProtocol {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         let enabledProviders = ProviderSettingsStore.enabledProviderBackendKeysSnapshot()
+        #if DEBUG
+        print("[ANALYZE_TEXT_ENABLED_PROVIDERS]", enabledProviders)
+        #endif
         let body = AnalyzeSearchRequest(
             textQuery: query,
             enabledProviders: enabledProviders
@@ -164,6 +167,9 @@ actor APIClient: APIClientProtocol {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        #if DEBUG
+        print("[SEARCH_MORE_ENABLED_PROVIDERS]", body.enabledProviders)
+        #endif
         request.httpBody = try JSONEncoder().encode(body)
 
         let (data, response) = try await session.data(for: request)

@@ -20,6 +20,7 @@ import {
   VINTED_MAX_PER_PAGE,
 } from '../marketplace-limits.js';
 import { isProviderEnabled } from '../providers-config.js';
+import { normalizeRequestedProviders } from '../provider-request.js';
 
 const DEFAULT_BATCH_SIZE = NEXT_BATCH_PER_PROVIDER;
 
@@ -157,6 +158,10 @@ export async function searchMoreRoute(app: FastifyInstance) {
       } as unknown as SearchMoreResponse);
     }
 
+    const requestedProviders = normalizeRequestedProviders(body?.enabledProviders);
+    const requestedSet = new Set(requestedProviders);
+    console.log('[SEARCH_MORE_PROVIDERS_REQUESTED]', requestedProviders);
+
     const query = body.primaryQuery.trim();
     const batchSize = Math.max(1, Math.min(120, Math.floor(body.batchSizePerProvider ?? body.pagination.batchSizePerProvider ?? DEFAULT_BATCH_SIZE)));
     console.log('SEARCH_MORE_TRIGGERED', {
@@ -176,7 +181,10 @@ export async function searchMoreRoute(app: FastifyInstance) {
 
     const nextVinted: MarketplaceListingDTO[] = [];
     let vintedPage = Math.max(1, body.pagination.vinted.nextPage);
-    let hasMoreVinted = body.pagination.vinted.hasMore;
+    let hasMoreVinted = requestedSet.has('vinted') && body.pagination.vinted.hasMore;
+    if (!requestedSet.has('vinted')) {
+      console.log('[PROVIDER_DISABLED_BY_SETTINGS] provider=vinted search_more');
+    }
     let vintedStopReason = 'already_exhausted';
     let vintedPagesFetched = 0;
     if (hasMoreVinted) {
@@ -231,7 +239,11 @@ export async function searchMoreRoute(app: FastifyInstance) {
 
     const nextGrailed: MarketplaceListingDTO[] = [];
     let grailedPage = Math.max(1, body.pagination.grailed.nextPage);
-    let hasMoreGrailed = body.pagination.grailed.hasMore;
+    let hasMoreGrailed =
+      requestedSet.has('grailed') && isProviderEnabled('grailed') && body.pagination.grailed.hasMore;
+    if (!requestedSet.has('grailed')) {
+      console.log('[PROVIDER_DISABLED_BY_SETTINGS] provider=grailed search_more');
+    }
     let grailedStopReason = 'already_exhausted';
     let grailedPagesFetched = 0;
     if (hasMoreGrailed) {
@@ -280,10 +292,15 @@ export async function searchMoreRoute(app: FastifyInstance) {
     const nextEbay: MarketplaceListingDTO[] = [];
     const ebayState = body.pagination.ebay;
     let ebayPage = Math.max(1, ebayState?.nextPage ?? 2);
-    let hasMoreEbay = isProviderEnabled('ebay') && (ebayState?.hasMore ?? true);
+    let hasMoreEbay =
+      requestedSet.has('ebay') && isProviderEnabled('ebay') && (ebayState?.hasMore ?? true);
     let ebayStopReason = ebayState ? 'already_exhausted' : 'missing_pagination_state_assumed_has_more';
     let ebayPagesFetched = 0;
-    if (!isProviderEnabled('ebay')) {
+    if (!requestedSet.has('ebay')) {
+      console.log('[PROVIDER_DISABLED_BY_SETTINGS] provider=ebay search_more');
+      hasMoreEbay = false;
+      ebayStopReason = 'skipped_by_client_settings';
+    } else if (!isProviderEnabled('ebay')) {
       console.log('[EBAY_DISABLED] provider skipped');
       hasMoreEbay = false;
       ebayStopReason = 'provider_disabled';
@@ -365,10 +382,17 @@ export async function searchMoreRoute(app: FastifyInstance) {
     const nextLeboncoin: MarketplaceListingDTO[] = [];
     const leboncoinState = body.pagination.leboncoin;
     let leboncoinPage = Math.max(1, leboncoinState?.nextPage ?? 2);
-    let hasMoreLeboncoin = (leboncoinState?.hasMore ?? false) && isProviderEnabled('leboncoin');
+    let hasMoreLeboncoin =
+      requestedSet.has('leboncoin') &&
+      (leboncoinState?.hasMore ?? false) &&
+      isProviderEnabled('leboncoin');
     let leboncoinStopReason = leboncoinState ? 'already_exhausted' : 'missing_pagination_state';
     let leboncoinPagesFetched = 0;
-    if (!isProviderEnabled('leboncoin')) {
+    if (!requestedSet.has('leboncoin')) {
+      console.log('[PROVIDER_DISABLED_BY_SETTINGS] provider=leboncoin search_more');
+      hasMoreLeboncoin = false;
+      leboncoinStopReason = 'skipped_by_client_settings';
+    } else if (!isProviderEnabled('leboncoin')) {
       console.log('[LEBONCOIN_DISABLED] anti-bot challenge detected, provider skipped');
       hasMoreLeboncoin = false;
       leboncoinStopReason = 'provider_disabled';
@@ -422,10 +446,15 @@ export async function searchMoreRoute(app: FastifyInstance) {
     const nextDepop: MarketplaceListingDTO[] = [];
     const depopState = body.pagination.depop;
     let depopPage = Math.max(1, depopState?.nextPage ?? 2);
-    let hasMoreDepop = isProviderEnabled('depop') && (depopState?.hasMore ?? true);
+    let hasMoreDepop =
+      requestedSet.has('depop') && isProviderEnabled('depop') && (depopState?.hasMore ?? true);
     let depopStopReason = depopState ? 'already_exhausted' : 'missing_pagination_state_assumed_has_more';
     let depopPagesFetched = 0;
-    if (!isProviderEnabled('depop')) {
+    if (!requestedSet.has('depop')) {
+      console.log('[PROVIDER_DISABLED_BY_SETTINGS] provider=depop search_more');
+      hasMoreDepop = false;
+      depopStopReason = 'skipped_by_client_settings';
+    } else if (!isProviderEnabled('depop')) {
       console.log('[DEPOP_DISABLED] provider skipped');
       hasMoreDepop = false;
       depopStopReason = 'provider_disabled';

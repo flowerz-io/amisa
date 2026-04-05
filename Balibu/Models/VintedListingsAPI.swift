@@ -52,6 +52,8 @@ struct SearchMoreRequest: Encodable {
     let batchSizePerProvider: Int?
     let pagination: SearchPaginationStateDTO
     let rankingContext: SearchRankingContextDTO
+    /// Aligné sur `/analyze-search` : uniquement les providers activés dans Réglages.
+    let enabledProviders: [String]
 }
 
 struct SearchMoreResponse: Decodable {

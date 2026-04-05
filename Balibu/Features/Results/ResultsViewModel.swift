@@ -183,7 +183,8 @@ final class ResultsViewModel: ObservableObject {
                         primaryQuery: paginationState.primaryQuery,
                         batchSizePerProvider: paginationState.batchSizePerProvider,
                         pagination: paginationState,
-                        rankingContext: rankingContext
+                        rankingContext: rankingContext,
+                        enabledProviders: ProviderSettingsStore.enabledProviderBackendKeysSnapshot()
                     )
                 )
                 let newItems = response.listings.map { MarketplaceListing.from($0) }

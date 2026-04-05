@@ -112,6 +112,8 @@ export interface SearchMoreRequest {
   batchSizePerProvider?: number;
   pagination: SearchPaginationStateDTO;
   rankingContext: SearchRankingContextDTO;
+  /** Même logique que /analyze-search : providers à exécuter (sinon ou [] → tous). */
+  enabledProviders?: string[];
 }
 
 export interface SearchMoreResponse {

@@ -1,22 +1,21 @@
 //
-//  HomeView.swift
+//  SearchHomeView.swift
 //  Balibu
 //
-//  Created for Balibu MVP.
+//  Onglet « Rechercher » : barre de recherche + recherches texte récentes uniquement.
 //
 
 import SwiftUI
 import Combine
 import UIKit
 
-struct HomeView: View {
+struct SearchHomeView: View {
     @EnvironmentObject private var router: Router
     @StateObject private var viewModel: HomeViewModel
     @AppStorage("balibu.notification.educationCompleted") private var notificationEducationCompleted = false
     @State private var showNotificationOnboarding = false
     @State private var manualSearchQuery = ""
     @State private var textSearchAlert: String?
-    @State private var showCameraCapture = false
 
     init(searchHistoryService: SearchHistoryService) {
         _viewModel = StateObject(wrappedValue: HomeViewModel(searchHistoryService: searchHistoryService))
@@ -25,10 +24,9 @@ struct HomeView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: DesignTokens.spacingL) {
-                searchAndImportBar
+                searchBar
                 hintLine
-                recentFavoritesStrip
-                recentHistorySection
+                recentTextSearchesSection
             }
             .padding(DesignTokens.spacingL)
         }
@@ -41,7 +39,11 @@ struct HomeView: View {
         }) {
             NotificationOnboardingSheet(educationCompleted: $notificationEducationCompleted)
         }
+        .onChange(of: router.path.count) { _, _ in
+            viewModel.loadRecentSessions()
+        }
         .onAppear {
+            viewModel.loadRecentSessions()
             Task {
                 await NotificationManager.shared.refreshAuthorizationStatus()
                 let status = await NotificationManager.shared.currentAuthorizationStatus()
@@ -63,105 +65,47 @@ struct HomeView: View {
         } message: {
             Text(textSearchAlert ?? "")
         }
-        .fullScreenCover(isPresented: $showCameraCapture) {
-            CameraCaptureView { payload in
-                showCameraCapture = false
-                router.navigateToSharedImportReview(payload: payload)
-            }
-        }
     }
 
-    /// Barre recherche texte + import image.
-    private var searchAndImportBar: some View {
+    private var searchBar: some View {
         HStack(spacing: DesignTokens.spacingS) {
-            HStack(spacing: DesignTokens.spacingS) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(DesignTokens.textSecondary)
-                TextField(String(localized: "Rechercher une pièce…"), text: $manualSearchQuery)
-                    .textFieldStyle(.plain)
-                    .submitLabel(.search)
-                    .onSubmit {
-                        Task {
-                            do {
-                                let session = try await viewModel.submitTextSearch(query: manualSearchQuery)
-                                manualSearchQuery = ""
-                                router.navigateToResults(session: session)
-                            } catch {
-                                textSearchAlert = error.localizedDescription
-                            }
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(DesignTokens.textSecondary)
+            TextField(String(localized: "Rechercher une pièce…"), text: $manualSearchQuery)
+                .textFieldStyle(.plain)
+                .submitLabel(.search)
+                .onSubmit {
+                    Task {
+                        do {
+                            let session = try await viewModel.submitTextSearch(query: manualSearchQuery)
+                            manualSearchQuery = ""
+                            router.navigateToResults(session: session)
+                        } catch {
+                            textSearchAlert = error.localizedDescription
                         }
                     }
-            }
-            .padding(.horizontal, DesignTokens.spacingM)
-            .padding(.vertical, DesignTokens.spacingS)
-            .background(DesignTokens.cardBackground)
-            .clipShape(RoundedRectangle(cornerRadius: DesignTokens.cornerRadiusM, style: .continuous))
-
-            Button {
-                showCameraCapture = true
-            } label: {
-                Image(systemName: "camera.viewfinder")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(Color.accentColor)
-                    .frame(width: 48, height: 48)
-                    .background(DesignTokens.cardBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: DesignTokens.cornerRadiusM, style: .continuous))
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(String(localized: "Caméra et photothèque"))
+                }
         }
+        .padding(.horizontal, DesignTokens.spacingM)
+        .padding(.vertical, DesignTokens.spacingS)
+        .background(DesignTokens.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.cornerRadiusM, style: .continuous))
     }
 
     private var hintLine: some View {
-        Text(String(localized: "Saisis un mot-clé pour chercher sur les marketplaces activées, ou importe une photo pour une analyse visuelle. Tu peux aussi utiliser Partager depuis une autre app."))
+        Text(String(localized: "Saisis un mot-clé pour chercher sur les marketplaces activées dans Réglages. Utilise le bouton scan pour une analyse à partir d’une photo."))
             .font(DesignTokens.captionFont)
             .foregroundColor(DesignTokens.textSecondary)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var recentFavoritesStrip: some View {
-        let records = Array(FavoriteSearchService.shared.allRecords().prefix(3))
-        return Group {
-            if !records.isEmpty {
-                VStack(alignment: .leading, spacing: DesignTokens.spacingS) {
-                    Text(String(localized: "Favoris récents"))
-                        .font(DesignTokens.headlineFont)
-                        .foregroundColor(DesignTokens.textPrimary)
-                    ForEach(records) { record in
-                        Button {
-                            router.navigateToResultsFromFavorite(session: record.toSearchSession())
-                        } label: {
-                            HStack {
-                                Image(systemName: "heart.fill")
-                                    .foregroundStyle(.red.opacity(0.85))
-                                    .font(.caption)
-                                Text(record.searchQuery)
-                                    .font(DesignTokens.bodyFont)
-                                    .foregroundColor(DesignTokens.textPrimary)
-                                    .lineLimit(1)
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(.caption2)
-                                    .foregroundColor(DesignTokens.textSecondary)
-                            }
-                            .padding(DesignTokens.spacingM)
-                            .background(DesignTokens.cardBackground)
-                            .clipShape(RoundedRectangle(cornerRadius: DesignTokens.cornerRadiusM, style: .continuous))
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-            }
-        }
-    }
-
-    private var recentHistorySection: some View {
+    private var recentTextSearchesSection: some View {
         Group {
-            if viewModel.recentSessions.isEmpty {
+            if viewModel.recentTextOnlySessions.isEmpty {
                 EmptyStateView(
                     icon: "clock.arrow.circlepath",
-                    title: String(localized: "Aucune recherche récente"),
-                    message: String(localized: "Lance une recherche texte ou importe une image.")
+                    title: String(localized: "Aucune recherche texte récente"),
+                    message: String(localized: "Lance une recherche depuis la barre ci-dessus.")
                 )
             } else {
                 VStack(alignment: .leading, spacing: DesignTokens.spacingM) {
@@ -169,13 +113,13 @@ struct HomeView: View {
                         .font(DesignTokens.headlineFont)
                         .foregroundColor(DesignTokens.textPrimary)
 
-                    ForEach(viewModel.recentSessions) { session in
+                    ForEach(viewModel.recentTextOnlySessions) { session in
                         HistoryRowView(session: session, onTap: {
                             router.navigateToResults(session: session)
                         })
                     }
 
-                    if viewModel.recentSessions.count >= 3 {
+                    if viewModel.recentTextOnlySessions.count >= 3 {
                         Button(String(localized: "Voir tout")) {
                             router.navigateToSearchHistory()
                         }
@@ -188,7 +132,7 @@ struct HomeView: View {
     }
 }
 
-// MARK: - Supporting Views
+// MARK: - Réutilisé par l’historique texte (même style que l’ancienne Home)
 
 struct HistoryRowView: View {
     let session: SearchSession
@@ -196,29 +140,29 @@ struct HistoryRowView: View {
 
     var body: some View {
         Button(action: onTap) {
-        HStack(spacing: DesignTokens.spacingM) {
-            historyThumbnail
+            HStack(spacing: DesignTokens.spacingM) {
+                historyThumbnail
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(session.displayQuery ?? "Search")
-                    .font(DesignTokens.bodyFont)
-                    .foregroundColor(DesignTokens.textPrimary)
-                    .lineLimit(1)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(session.displayQuery ?? "Search")
+                        .font(DesignTokens.bodyFont)
+                        .foregroundColor(DesignTokens.textPrimary)
+                        .lineLimit(1)
 
-                Text(session.formattedDate)
-                    .font(DesignTokens.captionFont)
+                    Text(session.formattedDate)
+                        .font(DesignTokens.captionFont)
+                        .foregroundColor(DesignTokens.textSecondary)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.caption)
                     .foregroundColor(DesignTokens.textSecondary)
             }
-
-            Spacer()
-
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundColor(DesignTokens.textSecondary)
-        }
-        .padding(DesignTokens.spacingM)
-        .background(DesignTokens.cardBackground)
-        .cornerRadius(DesignTokens.cornerRadiusM)
+            .padding(DesignTokens.spacingM)
+            .background(DesignTokens.cardBackground)
+            .cornerRadius(DesignTokens.cornerRadiusM)
         }
         .buttonStyle(.plain)
     }
@@ -287,6 +231,7 @@ struct EmptyStateView: View {
 
 #Preview {
     NavigationStack {
-        HomeView(searchHistoryService: SearchHistoryService.shared)
+        SearchHomeView(searchHistoryService: SearchHistoryService.shared)
+            .environmentObject(Router())
     }
 }

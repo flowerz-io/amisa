@@ -22,6 +22,8 @@ enum TextSearchError: LocalizedError {
 @MainActor
 final class HomeViewModel: ObservableObject {
     @Published var recentSessions: [SearchSession] = []
+    /// Uniquement `mode == .textQuery` (onglet Rechercher).
+    @Published private(set) var recentTextOnlySessions: [SearchSession] = []
     @Published var textSearchError: String?
 
     private let searchHistoryService: SearchHistoryService
@@ -38,6 +40,11 @@ final class HomeViewModel: ObservableObject {
 
     func loadRecentSessions() {
         recentSessions = searchHistoryService.recentSessions(limit: 5)
+        recentTextOnlySessions = Array(
+            searchHistoryService.fetchSessions()
+                .filter { $0.mode == .textQuery }
+                .prefix(10)
+        )
     }
 
     /// Recherche texte : pipeline multi-providers via /analyze-search (sans image).

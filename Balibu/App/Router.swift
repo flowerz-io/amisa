@@ -11,7 +11,7 @@ import Combine
 @MainActor
 final class Router: ObservableObject {
     @Published var path = NavigationPath()
-    /// Onglet principal (0 = Accueil) — les flows de résultats s’y empilent.
+    /// Onglet principal (0 = Rechercher) — les flows de résultats s’y empilent.
     @Published var selectedTab: Int = 0
 
     func navigateToSharedImportReview(payload: SharedImportPayload) {
@@ -37,7 +37,7 @@ final class Router: ObservableObject {
         path.append(AppRoute.results(session: session))
     }
 
-    /// Ouvre les résultats depuis l’onglet Favoris (ou autre) en revenant sur l’accueil.
+    /// Ouvre les résultats depuis l’onglet Favoris (ou autre) en revenant sur l’onglet Rechercher.
     func navigateToResultsFromFavorite(session: SearchSession) {
         selectedTab = 0
         path.append(AppRoute.results(session: session))
