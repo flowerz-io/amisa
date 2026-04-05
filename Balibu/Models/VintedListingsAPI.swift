@@ -42,6 +42,9 @@ struct SearchPaginationStateDTO: Codable, Hashable {
     let batchSizePerProvider: Int
     let vinted: ProviderPaginationStateDTO
     let grailed: ProviderPaginationStateDTO
+    let ebay: ProviderPaginationStateDTO?
+    let leboncoin: ProviderPaginationStateDTO?
+    let depop: ProviderPaginationStateDTO?
 }
 
 struct SearchMoreRequest: Encodable {
@@ -55,7 +58,13 @@ struct SearchMoreResponse: Decodable {
     let listings: [MarketplaceListingDTO]
     let vintedListings: [MarketplaceListingDTO]
     let grailedListings: [MarketplaceListingDTO]
+    let ebayListings: [MarketplaceListingDTO]?
+    let leboncoinListings: [MarketplaceListingDTO]?
+    let depopListings: [MarketplaceListingDTO]?
     let pagination: SearchPaginationStateDTO
     let hasMoreVinted: Bool
     let hasMoreGrailed: Bool
+    let hasMoreEbay: Bool?
+    let hasMoreLeboncoin: Bool?
+    let hasMoreDepop: Bool?
 }

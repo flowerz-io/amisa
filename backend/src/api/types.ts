@@ -76,6 +76,7 @@ export interface SearchPaginationStateDTO {
   grailed: ProviderPaginationStateDTO;
   ebay?: ProviderPaginationStateDTO;
   leboncoin?: ProviderPaginationStateDTO;
+  depop?: ProviderPaginationStateDTO;
 }
 
 export interface AnalyzeSearchResponse {
@@ -92,6 +93,8 @@ export interface AnalyzeSearchResponse {
   ebaySearchFailed?: boolean;
   /** True si le catalogue Le Bon Coin n’a pas pu être chargé (les autres providers peuvent avoir réussi). */
   leboncoinSearchFailed?: boolean;
+  /** True si le catalogue Depop n’a pas pu être chargé (les autres providers peuvent avoir réussi). */
+  depopSearchFailed?: boolean;
   /** Présent uniquement quand DEBUG=1 ou NODE_ENV=development */
   debug?: {
     visionProvider: string;
@@ -115,11 +118,13 @@ export interface SearchMoreResponse {
   grailedListings: MarketplaceListingDTO[];
   ebayListings?: MarketplaceListingDTO[];
   leboncoinListings?: MarketplaceListingDTO[];
+  depopListings?: MarketplaceListingDTO[];
   pagination: SearchPaginationStateDTO;
   hasMoreVinted: boolean;
   hasMoreGrailed: boolean;
   hasMoreEbay?: boolean;
   hasMoreLeboncoin?: boolean;
+  hasMoreDepop?: boolean;
 }
 
 /** POST /vinted-listings — pagination sans ré-analyse vision */

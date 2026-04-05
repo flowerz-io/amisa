@@ -8,8 +8,10 @@ import { searchVintedByText, type VintedSearchItem } from '../services/vinted-te
 import { searchGrailedByTextBrowser } from '../services/grailed-browser-search.js';
 import { searchLeBonCoinByTextBrowser, type LeBonCoinSearchItem } from '../services/leboncoin-browser-search.js';
 import { searchEbayByText, type EbaySearchItem } from '../services/ebay-text-search.js';
+import { searchDepopByTextBrowser, type DepopSearchItem } from '../services/depop-browser-search.js';
 import { rankAcrossSources } from '../services/marketplace-ranking.js';
 import {
+  DEPOP_MAX_PER_PAGE,
   EBAY_MAX_PER_PAGE,
   GRAILED_MAX_PER_PAGE,
   LEBONCOIN_MAX_PER_PAGE,
@@ -88,6 +90,29 @@ function ebayItemsToListings(items: EbaySearchItem[]): MarketplaceListingDTO[] {
   });
 }
 
+function depopItemsToListings(items: DepopSearchItem[]): MarketplaceListingDTO[] {
+  return items.map((item, index) => {
+    const id =
+      item.providerItemId ??
+      item.listingUrl.match(/\/products\/([^/?#]+)/i)?.[1] ??
+      `depop-${index}`;
+    return {
+      id,
+      source: 'Depop',
+      title: item.title,
+      price: item.price ?? 0,
+      currency: item.currency ?? 'EUR',
+      imageUrl: item.imageUrl,
+      thumbnailUrl: item.thumbnailUrl ?? item.imageUrl,
+      listingUrl: item.listingUrl,
+      ...(item.brand ? { brand: item.brand } : {}),
+      ...(item.size ? { size: item.size } : {}),
+      ...(item.condition ? { condition: item.condition } : {}),
+      ...(item.publishedAtRelative ? { publishedAtRelative: item.publishedAtRelative } : {}),
+    };
+  });
+}
+
 function extractHttpStatus(err: unknown): number | undefined {
   if (err instanceof Error) {
     const m = err.message.match(/HTTP\s+(\d{3})/i);
@@ -141,10 +166,12 @@ export async function searchMoreRoute(app: FastifyInstance) {
       grailedNextPage: body.pagination.grailed.nextPage,
       ebayNextPage: body.pagination.ebay?.nextPage,
       leboncoinNextPage: body.pagination.leboncoin?.nextPage,
+      depopNextPage: body.pagination.depop?.nextPage,
       hasMoreVinted: body.pagination.vinted.hasMore,
       hasMoreGrailed: body.pagination.grailed.hasMore,
       hasMoreEbay: body.pagination.ebay?.hasMore,
       hasMoreLeboncoin: body.pagination.leboncoin?.hasMore,
+      hasMoreDepop: body.pagination.depop?.hasMore,
     });
 
     const nextVinted: MarketplaceListingDTO[] = [];
@@ -364,12 +391,76 @@ export async function searchMoreRoute(app: FastifyInstance) {
     }
     console.log('LEBONCOIN_STOP_REASON', leboncoinStopReason);
 
+    const nextDepop: MarketplaceListingDTO[] = [];
+    const depopState = body.pagination.depop;
+    let depopPage = Math.max(1, depopState?.nextPage ?? 2);
+    let hasMoreDepop = isProviderEnabled('depop') && (depopState?.hasMore ?? true);
+    let depopStopReason = depopState ? 'already_exhausted' : 'missing_pagination_state_assumed_has_more';
+    let depopPagesFetched = 0;
+    if (!isProviderEnabled('depop')) {
+      console.log('[DEPOP_DISABLED] provider skipped');
+      hasMoreDepop = false;
+      depopStopReason = 'provider_disabled';
+    }
+    if (hasMoreDepop) {
+      while (nextDepop.length < batchSize && depopPagesFetched < MAX_PAGES_PER_PROVIDER) {
+        const remaining = batchSize - nextDepop.length;
+        const pageLimit = Math.max(1, Math.min(DEPOP_MAX_PER_PAGE, remaining));
+        let pageItems: DepopSearchItem[] = [];
+        let detectedCards = 0;
+        try {
+          const result = await searchDepopByTextBrowser(query, { page: depopPage, limit: pageLimit });
+          pageItems = result.items;
+          detectedCards = result.detectedCards;
+        } catch (err) {
+          hasMoreDepop = false;
+          depopStopReason = 'provider_error';
+          request.log.error(err, 'Depop pagination failed');
+          console.error('[DEPOP_PROVIDER_ERROR]', err);
+          break;
+        }
+        const mapped = depopItemsToListings(pageItems);
+        const added = dedupePush(nextDepop, mapped);
+        console.log('[CURRENT_DEPOP_PAGE]', depopPage);
+        console.log('[DEPOP_CARD_COUNT]', detectedCards);
+        depopPagesFetched += 1;
+
+        if (pageItems.length === 0) {
+          hasMoreDepop = false;
+          depopStopReason = 'page_empty';
+          break;
+        }
+        if (added === 0) {
+          hasMoreDepop = false;
+          depopStopReason = 'no_new_unique_on_page';
+          break;
+        }
+        if (pageItems.length < pageLimit && detectedCards <= depopPage * pageLimit) {
+          hasMoreDepop = false;
+          depopStopReason = 'provider_exhausted';
+          break;
+        }
+        depopPage += 1;
+      }
+      if (hasMoreDepop && nextDepop.length >= batchSize) {
+        depopStopReason = 'batch_reached';
+      } else if (hasMoreDepop && depopPagesFetched >= MAX_PAGES_PER_PROVIDER) {
+        hasMoreDepop = false;
+        depopStopReason = 'max_pages_reached';
+      }
+    }
+    console.log('[DEPOP_STOP_REASON]', depopStopReason);
+
     console.log('VINTED_NEXT_BATCH_COUNT', nextVinted.length);
     console.log('GRAILED_NEXT_BATCH_COUNT', nextGrailed.length);
     console.log('[EBAY_NEXT_BATCH_COUNT]', nextEbay.length);
     console.log('LEBONCOIN_NEXT_BATCH_COUNT', nextLeboncoin.length);
+    console.log('[DEPOP_NEXT_BATCH_COUNT]', nextDepop.length);
 
-    const merged = rankAcrossSources([...nextVinted, ...nextGrailed, ...nextEbay, ...nextLeboncoin], body.rankingContext);
+    const merged = rankAcrossSources(
+      [...nextVinted, ...nextGrailed, ...nextEbay, ...nextLeboncoin, ...nextDepop],
+      body.rankingContext
+    );
     console.log('MERGED_NEXT_BATCH_COUNT', merged.length);
     console.log('TOTAL_LOADED_VINTED', body.pagination.vinted.loadedCount + nextVinted.length);
     console.log('TOTAL_LOADED_GRAILED', body.pagination.grailed.loadedCount + nextGrailed.length);
@@ -378,10 +469,12 @@ export async function searchMoreRoute(app: FastifyInstance) {
       'TOTAL_LOADED_LEBONCOIN',
       (body.pagination.leboncoin?.loadedCount ?? 0) + nextLeboncoin.length
     );
+    console.log('[TOTAL_LOADED_DEPOP]', (body.pagination.depop?.loadedCount ?? 0) + nextDepop.length);
     console.log('HAS_MORE_VINTED', hasMoreVinted);
     console.log('HAS_MORE_GRAILED', hasMoreGrailed);
     console.log('[HAS_MORE_EBAY]', hasMoreEbay);
     console.log('HAS_MORE_LEBONCOIN', hasMoreLeboncoin);
+    console.log('[HAS_MORE_DEPOP]', hasMoreDepop);
     console.log('NEXT_RESPONSE_TIME_MS', Date.now() - startedAt);
 
     return reply.send({
@@ -390,6 +483,7 @@ export async function searchMoreRoute(app: FastifyInstance) {
       grailedListings: nextGrailed,
       ebayListings: nextEbay,
       leboncoinListings: nextLeboncoin,
+      depopListings: nextDepop,
       pagination: {
         primaryQuery: query,
         batchSizePerProvider: batchSize,
@@ -413,11 +507,17 @@ export async function searchMoreRoute(app: FastifyInstance) {
           hasMore: hasMoreLeboncoin,
           loadedCount: (body.pagination.leboncoin?.loadedCount ?? 0) + nextLeboncoin.length,
         },
+        depop: {
+          nextPage: depopPage,
+          hasMore: hasMoreDepop,
+          loadedCount: (body.pagination.depop?.loadedCount ?? 0) + nextDepop.length,
+        },
       },
       hasMoreVinted,
       hasMoreGrailed,
       hasMoreEbay,
       hasMoreLeboncoin,
+      hasMoreDepop,
     });
   });
 }

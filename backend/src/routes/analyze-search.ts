@@ -15,6 +15,7 @@ import {
   buildLeBonCoinSearchUrl,
 } from '../services/leboncoin-browser-search.js';
 import { searchEbayByText, type EbaySearchItem, buildEbaySearchUrl } from '../services/ebay-text-search.js';
+import { searchDepopByTextBrowser, type DepopSearchItem, buildDepopSearchUrl } from '../services/depop-browser-search.js';
 import type { MarketplaceListingDTO } from '../api/types.js';
 import type { SearchRankingContextDTO } from '../api/types.js';
 import { visionProviderName, isDebug } from '../config.js';
@@ -97,6 +98,29 @@ function ebayItemsToListings(items: EbaySearchItem[]): MarketplaceListingDTO[] {
     return {
       id,
       source: 'eBay',
+      title: item.title,
+      price: item.price ?? 0,
+      currency: item.currency ?? 'EUR',
+      imageUrl: item.imageUrl,
+      thumbnailUrl: item.thumbnailUrl ?? item.imageUrl,
+      listingUrl: item.listingUrl,
+      ...(item.brand ? { brand: item.brand } : {}),
+      ...(item.size ? { size: item.size } : {}),
+      ...(item.condition ? { condition: item.condition } : {}),
+      ...(item.publishedAtRelative ? { publishedAtRelative: item.publishedAtRelative } : {}),
+    };
+  });
+}
+
+function depopItemsToListings(items: DepopSearchItem[]): MarketplaceListingDTO[] {
+  return items.map((item, index) => {
+    const id =
+      item.providerItemId ??
+      item.listingUrl.match(/\/products\/([^/?#]+)/i)?.[1] ??
+      `depop-${index}`;
+    return {
+      id,
+      source: 'Depop',
       title: item.title,
       price: item.price ?? 0,
       currency: item.currency ?? 'EUR',
@@ -201,10 +225,12 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
     const vintedSearchUrl = buildVintedSearchUrl(trimmedPrimary, 1);
     const ebaySearchUrl = buildEbaySearchUrl(trimmedPrimary, 1);
     const leBonCoinSearchUrl = buildLeBonCoinSearchUrl(trimmedPrimary, 1);
+    const depopSearchUrl = buildDepopSearchUrl(trimmedPrimary);
     console.log('[ANALYZE_PRIMARY_QUERY]', trimmedPrimary);
     console.log('[VINTED_SEARCH_URL]', vintedSearchUrl);
     console.log('[EBAY_SEARCH_URL]', ebaySearchUrl);
     console.log('[LEBONCOIN_SEARCH_URL]', leBonCoinSearchUrl);
+    console.log('[DEPOP_SEARCH_URL]', depopSearchUrl);
     const rankingContext: SearchRankingContextDTO = {
       primaryQuery: trimmedPrimary,
       probableBrand: visionResult.probableBrand,
@@ -314,7 +340,44 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
       console.log('[LEBONCOIN_TOTAL_COUNT]', leboncoinTotalCount);
     }
 
-    const mergedInitial = [...vintedListings, ...grailedListings, ...ebayListings, ...leboncoinListings];
+    let depopSearchFailed = false;
+    let depopItems: DepopSearchItem[] = [];
+    let depopDetectedCards = 0;
+    if (!isProviderEnabled('depop')) {
+      console.log('[DEPOP_DISABLED] provider skipped');
+    } else {
+      try {
+        const result = await searchDepopByTextBrowser(trimmedPrimary, {
+          page: 1,
+          limit: INITIAL_RETURN_PER_PROVIDER,
+        });
+        depopItems = result.items;
+        depopDetectedCards = result.detectedCards;
+      } catch (err) {
+        depopSearchFailed = true;
+        request.log.error(err, 'Depop initial fetch failed');
+      }
+    }
+    const depopListings = depopItemsToListings(depopItems);
+    const depopHasMore =
+      depopItems.length >= INITIAL_RETURN_PER_PROVIDER ||
+      depopDetectedCards > depopItems.length;
+    const depopStopReason = depopHasMore
+      ? 'initial_batch_reached_or_more_cards_detected'
+      : 'provider_exhausted_on_page_1';
+    console.log('[DEPOP_INITIAL_COUNT]', depopListings.length);
+    console.log('[CURRENT_DEPOP_PAGE]', 1);
+    console.log('[TOTAL_LOADED_DEPOP]', depopListings.length);
+    console.log('[DEPOP_STOP_REASON]', depopStopReason);
+    console.log('[DEPOP_CARD_COUNT]', depopDetectedCards);
+
+    const mergedInitial = [
+      ...vintedListings,
+      ...grailedListings,
+      ...ebayListings,
+      ...leboncoinListings,
+      ...depopListings,
+    ];
     const ranked = rankAcrossSources(mergedInitial, rankingContext);
     console.log('INITIAL_MERGED_COUNT', ranked.length);
     console.log('FINAL_COUNT', ranked.length);
@@ -348,11 +411,17 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
           hasMore: leboncoinHasMore,
           loadedCount: leboncoinListings.length,
         },
+        depop: {
+          nextPage: 2,
+          hasMore: depopHasMore,
+          loadedCount: depopListings.length,
+        },
       },
       rankingContext,
       ...(vintedSearchFailed ? { vintedSearchFailed: true } : {}),
       ...(ebaySearchFailed ? { ebaySearchFailed: true } : {}),
       ...(leboncoinSearchFailed ? { leboncoinSearchFailed: true } : {}),
+      ...(depopSearchFailed ? { depopSearchFailed: true } : {}),
       ...(isDebug && {
         debug: {
           visionProvider: visionProviderName,

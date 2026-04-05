@@ -14,6 +14,7 @@ import { vintedListingsRoute } from './routes/vinted-listings.js';
 import { grailedListingsRoute } from './routes/grailed-listings.js';
 import { ebayListingsRoute } from './routes/ebay-listings.js';
 import { leBonCoinListingsRoute } from './routes/leboncoin-listings.js';
+import { depopListingsRoute } from './routes/depop-listings.js';
 import { searchMoreRoute } from './routes/search-more.js';
 import { PROVIDERS_ENABLED } from './providers-config.js';
 
@@ -24,6 +25,9 @@ console.log(
 );
 console.log(
   `[LEBONCOIN_BROWSER_READY] ${existsSync(grailedBrowserPath) ? 'yes' : 'no'} path=${grailedBrowserPath}`
+);
+console.log(
+  `[DEPOP_BROWSER_READY] ${existsSync(grailedBrowserPath) ? 'yes' : 'no'} path=${grailedBrowserPath}`
 );
 console.log('[PROVIDERS_ENABLED]', PROVIDERS_ENABLED);
 
@@ -37,6 +41,7 @@ app.register(vintedListingsRoute, { prefix: '/' });
 app.register(grailedListingsRoute, { prefix: '/' });
 app.register(ebayListingsRoute, { prefix: '/' });
 app.register(leBonCoinListingsRoute, { prefix: '/' });
+app.register(depopListingsRoute, { prefix: '/' });
 app.register(searchMoreRoute, { prefix: '/' });
 
 const port = parseInt(process.env.PORT ?? '3000', 10);

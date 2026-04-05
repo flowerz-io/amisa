@@ -29,6 +29,9 @@ final class ResultsViewModel: ObservableObject {
     @Published var hasMoreResults: Bool
     @Published var hasMoreVinted: Bool = false
     @Published var hasMoreGrailed: Bool = false
+    @Published var hasMoreEbay: Bool = false
+    @Published var hasMoreLeboncoin: Bool = false
+    @Published var hasMoreDepop: Bool = false
     @Published var showStickyHeader: Bool = false
     /// Historique debug : page Vinted courante (legacy + nouveau flow).
     @Published private(set) var currentPage: Int
@@ -56,7 +59,15 @@ final class ResultsViewModel: ObservableObject {
             self.nextPageToFetch = paginationState.vinted.nextPage
             self.hasMoreVinted = paginationState.vinted.hasMore
             self.hasMoreGrailed = paginationState.grailed.hasMore
-            self.hasMoreResults = paginationState.vinted.hasMore || paginationState.grailed.hasMore
+            self.hasMoreEbay = paginationState.ebay?.hasMore ?? false
+            self.hasMoreLeboncoin = paginationState.leboncoin?.hasMore ?? false
+            self.hasMoreDepop = paginationState.depop?.hasMore ?? false
+            self.hasMoreResults =
+                paginationState.vinted.hasMore ||
+                paginationState.grailed.hasMore ||
+                (paginationState.ebay?.hasMore ?? false) ||
+                (paginationState.leboncoin?.hasMore ?? false) ||
+                (paginationState.depop?.hasMore ?? false)
             self.state = .loaded(session)
         } else if session.listings.isEmpty {
             let q = session.vintedPaginationQuery.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -66,6 +77,9 @@ final class ResultsViewModel: ObservableObject {
                 self.hasMoreResults = false
                 self.hasMoreVinted = false
                 self.hasMoreGrailed = false
+                self.hasMoreEbay = false
+                self.hasMoreLeboncoin = false
+                self.hasMoreDepop = false
                 self.state = .empty
             } else {
                 self.nextPageToFetch = 2
@@ -73,6 +87,9 @@ final class ResultsViewModel: ObservableObject {
                 self.hasMoreResults = true
                 self.hasMoreVinted = true
                 self.hasMoreGrailed = false
+                self.hasMoreEbay = false
+                self.hasMoreLeboncoin = false
+                self.hasMoreDepop = false
                 self.needsInitialListingsBootstrap = true
                 self.state = .loaded(session)
             }
@@ -85,6 +102,9 @@ final class ResultsViewModel: ObservableObject {
             self.hasMoreResults = more
             self.hasMoreVinted = more
             self.hasMoreGrailed = false
+            self.hasMoreEbay = false
+            self.hasMoreLeboncoin = false
+            self.hasMoreDepop = false
             self.state = .loaded(session)
         }
 
@@ -116,10 +136,16 @@ final class ResultsViewModel: ObservableObject {
             hasMoreResults = response.hasMore
             hasMoreVinted = response.hasMore
             hasMoreGrailed = false
+            hasMoreEbay = false
+            hasMoreLeboncoin = false
+            hasMoreDepop = false
         } catch {
             hasMoreResults = false
             hasMoreVinted = false
             hasMoreGrailed = false
+            hasMoreEbay = false
+            hasMoreLeboncoin = false
+            hasMoreDepop = false
         }
         logPaginationState(context: "bootstrap_done")
     }
@@ -166,11 +192,17 @@ final class ResultsViewModel: ObservableObject {
                 nextPageToFetch = response.pagination.vinted.nextPage
                 hasMoreVinted = response.hasMoreVinted
                 hasMoreGrailed = response.hasMoreGrailed
-                hasMoreResults = response.hasMoreVinted || response.hasMoreGrailed
+                hasMoreEbay = response.hasMoreEbay ?? false
+                hasMoreLeboncoin = response.hasMoreLeboncoin ?? false
+                hasMoreDepop = response.hasMoreDepop ?? false
+                hasMoreResults = hasMoreFromAllProviders()
             } catch {
                 hasMoreResults = false
                 hasMoreVinted = false
                 hasMoreGrailed = false
+                hasMoreEbay = false
+                hasMoreLeboncoin = false
+                hasMoreDepop = false
             }
             logPaginationState(context: "loadNextBatch_searchMore_done")
             return
@@ -190,10 +222,16 @@ final class ResultsViewModel: ObservableObject {
             hasMoreResults = response.hasMore
             hasMoreVinted = response.hasMore
             hasMoreGrailed = false
+            hasMoreEbay = false
+            hasMoreLeboncoin = false
+            hasMoreDepop = false
         } catch {
             hasMoreResults = false
             hasMoreVinted = false
             hasMoreGrailed = false
+            hasMoreEbay = false
+            hasMoreLeboncoin = false
+            hasMoreDepop = false
         }
         logPaginationState(context: "loadNextBatch_legacy_done")
     }
@@ -226,6 +264,10 @@ final class ResultsViewModel: ObservableObject {
         }
     }
 
+    private func hasMoreFromAllProviders() -> Bool {
+        hasMoreVinted || hasMoreGrailed || hasMoreEbay || hasMoreLeboncoin || hasMoreDepop
+    }
+
     private static func mergeUnique(existing: [MarketplaceListing], new: [MarketplaceListing]) -> [MarketplaceListing] {
         var seen = Set<String>()
         for x in existing { seen.insert("\(x.source)|\(x.id)") }
@@ -251,8 +293,9 @@ final class ResultsViewModel: ObservableObject {
         let grailed = allListings.filter { $0.source == "Grailed" }.count
         let ebay = allListings.filter { MarketplaceSource.canonicalKey(from: $0.source) == "ebay" }.count
         let leboncoin = allListings.filter { MarketplaceSource.canonicalKey(from: $0.source) == "leboncoin" }.count
+        let depop = allListings.filter { MarketplaceSource.canonicalKey(from: $0.source) == "depop" }.count
         print(
-            "[RESULTS_VM] \(context) currentPage=\(currentPage) hasMore=\(hasMoreResults) hasMoreVinted=\(hasMoreVinted) hasMoreGrailed=\(hasMoreGrailed) isLoadingMore=\(isLoadingMore) displayedListings.count=\(displayedListings.count) allListings.count=\(allListings.count) vinted=\(vinted) grailed=\(grailed) ebay=\(ebay) leboncoin=\(leboncoin)"
+            "[RESULTS_VM] \(context) currentPage=\(currentPage) hasMore=\(hasMoreResults) hasMoreVinted=\(hasMoreVinted) hasMoreGrailed=\(hasMoreGrailed) hasMoreEbay=\(hasMoreEbay) hasMoreLeboncoin=\(hasMoreLeboncoin) hasMoreDepop=\(hasMoreDepop) isLoadingMore=\(isLoadingMore) displayedListings.count=\(displayedListings.count) allListings.count=\(allListings.count) vinted=\(vinted) grailed=\(grailed) ebay=\(ebay) leboncoin=\(leboncoin) depop=\(depop)"
         )
     }
 }

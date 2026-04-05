@@ -63,9 +63,15 @@ struct MockAPIClient: APIClientProtocol {
             listings: [],
             vintedListings: [],
             grailedListings: [],
+            ebayListings: [],
+            leboncoinListings: [],
+            depopListings: [],
             pagination: request.pagination,
             hasMoreVinted: false,
-            hasMoreGrailed: false
+            hasMoreGrailed: false,
+            hasMoreEbay: false,
+            hasMoreLeboncoin: false,
+            hasMoreDepop: false
         )
     }
 }
@@ -100,7 +106,10 @@ extension AnalyzeSearchResponse {
                 primaryQuery: "Maison Margiela tabi boots black",
                 batchSizePerProvider: 50,
                 vinted: ProviderPaginationStateDTO(nextPage: 2, hasMore: true, loadedCount: 1),
-                grailed: ProviderPaginationStateDTO(nextPage: 2, hasMore: true, loadedCount: 1)
+                grailed: ProviderPaginationStateDTO(nextPage: 2, hasMore: true, loadedCount: 1),
+                ebay: ProviderPaginationStateDTO(nextPage: 2, hasMore: true, loadedCount: 0),
+                leboncoin: ProviderPaginationStateDTO(nextPage: 2, hasMore: false, loadedCount: 0),
+                depop: ProviderPaginationStateDTO(nextPage: 2, hasMore: true, loadedCount: 0)
             ),
             rankingContext: SearchRankingContextDTO(
                 primaryQuery: "Maison Margiela tabi boots black",

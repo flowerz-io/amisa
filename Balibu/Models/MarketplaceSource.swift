@@ -41,6 +41,7 @@ enum MarketplaceSource {
         switch normalizedSource(raw) {
         case "grailed": return "USD"
         case "vinted": return "EUR"
+        case "depop": return "EUR"
         default: return "EUR"
         }
     }
