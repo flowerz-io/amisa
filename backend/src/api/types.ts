@@ -74,6 +74,7 @@ export interface SearchPaginationStateDTO {
   batchSizePerProvider: number;
   vinted: ProviderPaginationStateDTO;
   grailed: ProviderPaginationStateDTO;
+  leboncoin?: ProviderPaginationStateDTO;
 }
 
 export interface AnalyzeSearchResponse {
@@ -86,6 +87,8 @@ export interface AnalyzeSearchResponse {
   vintedSearchFailed?: boolean;
   /** True si le catalogue Grailed n’a pas pu être chargé (Vinted peut avoir réussi). */
   grailedSearchFailed?: boolean;
+  /** True si le catalogue Le Bon Coin n’a pas pu être chargé (les autres providers peuvent avoir réussi). */
+  leboncoinSearchFailed?: boolean;
   /** Présent uniquement quand DEBUG=1 ou NODE_ENV=development */
   debug?: {
     visionProvider: string;
@@ -107,9 +110,11 @@ export interface SearchMoreResponse {
   listings: MarketplaceListingDTO[];
   vintedListings: MarketplaceListingDTO[];
   grailedListings: MarketplaceListingDTO[];
+  leboncoinListings?: MarketplaceListingDTO[];
   pagination: SearchPaginationStateDTO;
   hasMoreVinted: boolean;
   hasMoreGrailed: boolean;
+  hasMoreLeboncoin?: boolean;
 }
 
 /** POST /vinted-listings — pagination sans ré-analyse vision */
@@ -137,6 +142,20 @@ export interface GrailedListingsResponse {
   listings: MarketplaceListingDTO[];
   page: number;
   hasMore: boolean;
+}
+
+/** POST /leboncoin-listings — pagination texte Le Bon Coin sans ré-analyse vision */
+export interface LeBonCoinListingsRequest {
+  searchText: string;
+  /** Page Le Bon Coin (1-based). */
+  page: number;
+}
+
+export interface LeBonCoinListingsResponse {
+  listings: MarketplaceListingDTO[];
+  page: number;
+  hasMore: boolean;
+  totalCount?: number;
 }
 
 // --- POST /resolve-shared-url ---

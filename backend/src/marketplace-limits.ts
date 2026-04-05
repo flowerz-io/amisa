@@ -21,6 +21,13 @@ export const GRAILED_MAX_PER_PAGE = clampInt(
   96
 );
 
+/** Idem Le Bon Coin. */
+export const LEBONCOIN_MAX_PER_PAGE = clampInt(
+  parseInt(process.env.LEBONCOIN_MAX_PER_PAGE ?? '40', 10),
+  1,
+  120
+);
+
 /** Réponse initiale rapide (/analyze-search) par provider. */
 export const INITIAL_RETURN_PER_PROVIDER = clampInt(
   parseInt(process.env.INITIAL_RETURN_PER_PROVIDER ?? '20', 10),

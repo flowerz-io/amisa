@@ -158,7 +158,7 @@ private struct ListingCardImageContainerView: View {
                 logoMaxWidth: logoMaxWidth
             )
             .padding(.top, 5)
-            .padding(.trailing, 1)
+            .padding(.trailing, 5)
         }
     }
 }

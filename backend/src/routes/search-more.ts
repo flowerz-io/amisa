@@ -6,9 +6,11 @@ import type {
 } from '../api/types.js';
 import { searchVintedByText, type VintedSearchItem } from '../services/vinted-text-search.js';
 import { searchGrailedByTextBrowser } from '../services/grailed-browser-search.js';
+import { searchLeBonCoinByText, type LeBonCoinSearchItem } from '../services/leboncoin-text-search.js';
 import { rankAcrossSources } from '../services/marketplace-ranking.js';
 import {
   GRAILED_MAX_PER_PAGE,
+  LEBONCOIN_MAX_PER_PAGE,
   MAX_PAGES_PER_PROVIDER,
   NEXT_BATCH_PER_PROVIDER,
   VINTED_MAX_PER_PAGE,
@@ -32,6 +34,30 @@ function vintedItemsToListings(items: VintedSearchItem[]): MarketplaceListingDTO
       ...(item.brand ? { brand: item.brand } : {}),
       size: item.size,
       condition: item.condition,
+    };
+  });
+}
+
+function leBonCoinItemsToListings(items: LeBonCoinSearchItem[]): MarketplaceListingDTO[] {
+  return items.map((item, index) => {
+    const idFromUrl =
+      item.listingUrl.match(/\/([0-9]{6,})\.htm/i)?.[1] ??
+      item.listingUrl.match(/ad\/([0-9]{6,})/i)?.[1];
+    const id =
+      idFromUrl ??
+      `leboncoin-${Buffer.from(item.listingUrl).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(0, 18)}-${index}`;
+    return {
+      id,
+      source: 'Le Bon Coin',
+      title: item.title,
+      price: item.price ?? 0,
+      currency: item.currency ?? 'EUR',
+      imageUrl: item.imageUrl,
+      thumbnailUrl: item.thumbnailUrl ?? item.imageUrl,
+      listingUrl: item.listingUrl,
+      ...(item.brand ? { brand: item.brand } : {}),
+      ...(item.size ? { size: item.size } : {}),
+      ...(item.condition ? { condition: item.condition } : {}),
     };
   });
 }
@@ -87,8 +113,10 @@ export async function searchMoreRoute(app: FastifyInstance) {
       batchSize,
       vintedNextPage: body.pagination.vinted.nextPage,
       grailedNextPage: body.pagination.grailed.nextPage,
+      leboncoinNextPage: body.pagination.leboncoin?.nextPage,
       hasMoreVinted: body.pagination.vinted.hasMore,
       hasMoreGrailed: body.pagination.grailed.hasMore,
+      hasMoreLeboncoin: body.pagination.leboncoin?.hasMore,
     });
 
     const nextVinted: MarketplaceListingDTO[] = [];
@@ -194,21 +222,80 @@ export async function searchMoreRoute(app: FastifyInstance) {
     }
     console.log('GRAILED_STOP_REASON', grailedStopReason);
 
+    const nextLeboncoin: MarketplaceListingDTO[] = [];
+    const leboncoinState = body.pagination.leboncoin;
+    let leboncoinPage = Math.max(1, leboncoinState?.nextPage ?? 2);
+    let hasMoreLeboncoin = leboncoinState?.hasMore ?? false;
+    let leboncoinStopReason = leboncoinState ? 'already_exhausted' : 'missing_pagination_state';
+    let leboncoinPagesFetched = 0;
+    if (hasMoreLeboncoin) {
+      while (nextLeboncoin.length < batchSize && leboncoinPagesFetched < MAX_PAGES_PER_PROVIDER) {
+        const remaining = batchSize - nextLeboncoin.length;
+        const pageLimit = Math.max(1, Math.min(LEBONCOIN_MAX_PER_PAGE, remaining));
+        let pageItems: LeBonCoinSearchItem[] = [];
+        try {
+          const result = await searchLeBonCoinByText(query, { page: leboncoinPage, limit: pageLimit });
+          pageItems = result.items;
+        } catch (err) {
+          hasMoreLeboncoin = false;
+          leboncoinStopReason = 'provider_error';
+          request.log.error(err, 'Le Bon Coin pagination failed');
+          console.log('[LEBONCOIN_ERROR]', err instanceof Error ? err.message : String(err));
+          break;
+        }
+        const mapped = leBonCoinItemsToListings(pageItems);
+        const added = dedupePush(nextLeboncoin, mapped);
+        console.log('CURRENT_LEBONCOIN_PAGE', leboncoinPage);
+        leboncoinPagesFetched += 1;
+
+        if (pageItems.length === 0) {
+          hasMoreLeboncoin = false;
+          leboncoinStopReason = 'page_empty';
+          break;
+        }
+        if (added === 0) {
+          hasMoreLeboncoin = false;
+          leboncoinStopReason = 'no_new_unique_on_page';
+          break;
+        }
+        if (pageItems.length < pageLimit) {
+          hasMoreLeboncoin = false;
+          leboncoinStopReason = 'provider_exhausted';
+          break;
+        }
+        leboncoinPage += 1;
+      }
+      if (hasMoreLeboncoin && nextLeboncoin.length >= batchSize) {
+        leboncoinStopReason = 'batch_reached';
+      } else if (hasMoreLeboncoin && leboncoinPagesFetched >= MAX_PAGES_PER_PROVIDER) {
+        hasMoreLeboncoin = false;
+        leboncoinStopReason = 'max_pages_reached';
+      }
+    }
+    console.log('LEBONCOIN_STOP_REASON', leboncoinStopReason);
+
     console.log('VINTED_NEXT_BATCH_COUNT', nextVinted.length);
     console.log('GRAILED_NEXT_BATCH_COUNT', nextGrailed.length);
+    console.log('LEBONCOIN_NEXT_BATCH_COUNT', nextLeboncoin.length);
 
-    const merged = rankAcrossSources([...nextVinted, ...nextGrailed], body.rankingContext);
+    const merged = rankAcrossSources([...nextVinted, ...nextGrailed, ...nextLeboncoin], body.rankingContext);
     console.log('MERGED_NEXT_BATCH_COUNT', merged.length);
     console.log('TOTAL_LOADED_VINTED', body.pagination.vinted.loadedCount + nextVinted.length);
     console.log('TOTAL_LOADED_GRAILED', body.pagination.grailed.loadedCount + nextGrailed.length);
+    console.log(
+      'TOTAL_LOADED_LEBONCOIN',
+      (body.pagination.leboncoin?.loadedCount ?? 0) + nextLeboncoin.length
+    );
     console.log('HAS_MORE_VINTED', hasMoreVinted);
     console.log('HAS_MORE_GRAILED', hasMoreGrailed);
+    console.log('HAS_MORE_LEBONCOIN', hasMoreLeboncoin);
     console.log('NEXT_RESPONSE_TIME_MS', Date.now() - startedAt);
 
     return reply.send({
       listings: merged,
       vintedListings: nextVinted,
       grailedListings: nextGrailed,
+      leboncoinListings: nextLeboncoin,
       pagination: {
         primaryQuery: query,
         batchSizePerProvider: batchSize,
@@ -222,9 +309,15 @@ export async function searchMoreRoute(app: FastifyInstance) {
           hasMore: hasMoreGrailed,
           loadedCount: body.pagination.grailed.loadedCount + nextGrailed.length,
         },
+        leboncoin: {
+          nextPage: leboncoinPage,
+          hasMore: hasMoreLeboncoin,
+          loadedCount: (body.pagination.leboncoin?.loadedCount ?? 0) + nextLeboncoin.length,
+        },
       },
       hasMoreVinted,
       hasMoreGrailed,
+      hasMoreLeboncoin,
     });
   });
 }

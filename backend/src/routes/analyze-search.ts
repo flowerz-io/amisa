@@ -9,6 +9,11 @@ import {
   type VintedSearchItem,
 } from '../services/vinted-text-search.js';
 import { searchGrailedByTextBrowser } from '../services/grailed-browser-search.js';
+import {
+  searchLeBonCoinByText,
+  type LeBonCoinSearchItem,
+  buildLeBonCoinSearchUrl,
+} from '../services/leboncoin-text-search.js';
 import type { MarketplaceListingDTO } from '../api/types.js';
 import type { SearchRankingContextDTO } from '../api/types.js';
 import { visionProviderName, isDebug } from '../config.js';
@@ -53,6 +58,30 @@ function vintedItemsToListings(items: VintedSearchItem[]): MarketplaceListingDTO
       ...(item.brand ? { brand: item.brand } : {}),
       size: item.size,
       condition: item.condition,
+    };
+  });
+}
+
+function leBonCoinItemsToListings(items: LeBonCoinSearchItem[]): MarketplaceListingDTO[] {
+  return items.map((item, index) => {
+    const idFromUrl =
+      item.listingUrl.match(/\/([0-9]{6,})\.htm/i)?.[1] ??
+      item.listingUrl.match(/ad\/([0-9]{6,})/i)?.[1];
+    const id =
+      idFromUrl ??
+      `leboncoin-${Buffer.from(item.listingUrl).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(0, 18)}-${index}`;
+    return {
+      id,
+      source: 'Le Bon Coin',
+      title: item.title,
+      price: item.price ?? 0,
+      currency: item.currency ?? 'EUR',
+      imageUrl: item.imageUrl,
+      thumbnailUrl: item.thumbnailUrl ?? item.imageUrl,
+      listingUrl: item.listingUrl,
+      ...(item.brand ? { brand: item.brand } : {}),
+      ...(item.size ? { size: item.size } : {}),
+      ...(item.condition ? { condition: item.condition } : {}),
     };
   });
 }
@@ -145,8 +174,10 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
 
     const trimmedPrimary = String(primaryQuery).trim();
     const vintedSearchUrl = buildVintedSearchUrl(trimmedPrimary, 1);
+    const leBonCoinSearchUrl = buildLeBonCoinSearchUrl(trimmedPrimary, 1);
     console.log('[ANALYZE_PRIMARY_QUERY]', trimmedPrimary);
     console.log('[VINTED_SEARCH_URL]', vintedSearchUrl);
+    console.log('[LEBONCOIN_SEARCH_URL]', leBonCoinSearchUrl);
     const rankingContext: SearchRankingContextDTO = {
       primaryQuery: trimmedPrimary,
       probableBrand: visionResult.probableBrand,
@@ -192,7 +223,34 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
     console.log('TOTAL_LOADED_GRAILED', grailedListings.length);
     console.log('GRAILED_STOP_REASON', grailedStopReason);
 
-    const mergedInitial = [...vintedListings, ...grailedListings];
+    let leboncoinSearchFailed = false;
+    let leboncoinItems: LeBonCoinSearchItem[] = [];
+    let leboncoinTotalCount: number | undefined;
+    try {
+      const result = await searchLeBonCoinByText(trimmedPrimary, {
+        page: 1,
+        limit: INITIAL_RETURN_PER_PROVIDER,
+      });
+      leboncoinItems = result.items;
+      leboncoinTotalCount = result.totalCount;
+    } catch (err) {
+      leboncoinSearchFailed = true;
+      request.log.error(err, 'Le Bon Coin initial fetch failed');
+    }
+    const leboncoinListings = leBonCoinItemsToListings(leboncoinItems);
+    const leboncoinHasMore = leboncoinItems.length >= INITIAL_RETURN_PER_PROVIDER;
+    const leboncoinStopReason = leboncoinHasMore
+      ? 'initial_batch_reached'
+      : 'provider_exhausted_on_page_1';
+    console.log('LEBONCOIN_INITIAL_COUNT', leboncoinListings.length);
+    console.log('CURRENT_LEBONCOIN_PAGE', 1);
+    console.log('TOTAL_LOADED_LEBONCOIN', leboncoinListings.length);
+    console.log('LEBONCOIN_STOP_REASON', leboncoinStopReason);
+    if (leboncoinTotalCount !== undefined) {
+      console.log('[LEBONCOIN_TOTAL_COUNT]', leboncoinTotalCount);
+    }
+
+    const mergedInitial = [...vintedListings, ...grailedListings, ...leboncoinListings];
     const ranked = rankAcrossSources(mergedInitial, rankingContext);
     console.log('INITIAL_MERGED_COUNT', ranked.length);
     console.log('FINAL_COUNT', ranked.length);
@@ -216,9 +274,15 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
           hasMore: grailedHasMore,
           loadedCount: grailedListings.length,
         },
+        leboncoin: {
+          nextPage: 2,
+          hasMore: leboncoinHasMore,
+          loadedCount: leboncoinListings.length,
+        },
       },
       rankingContext,
       ...(vintedSearchFailed ? { vintedSearchFailed: true } : {}),
+      ...(leboncoinSearchFailed ? { leboncoinSearchFailed: true } : {}),
       ...(isDebug && {
         debug: {
           visionProvider: visionProviderName,
