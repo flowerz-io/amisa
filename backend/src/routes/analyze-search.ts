@@ -344,6 +344,7 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
     let ebaySearchFailed = false;
     let ebayItems: EbaySearchItem[] = [];
     let ebayTotalCount: number | undefined;
+    let ebayProviderStopReason: string | undefined;
     if (!requestedSet.has('ebay')) {
       console.log('[PROVIDER_DISABLED_BY_SETTINGS] provider=ebay');
     } else if (!isProviderEnabled('ebay')) {
@@ -357,6 +358,10 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
         });
         ebayItems = result.items;
         ebayTotalCount = result.totalCount;
+        ebayProviderStopReason = result.stopReason;
+        if (result.stopReason && result.stopReason !== 'ok') {
+          console.log(`[EBAY_STOP_REASON] ${result.stopReason}`);
+        }
       } catch (err) {
         ebaySearchFailed = true;
         console.log('[PROVIDER_FETCH_FAILED] provider=ebay');
@@ -364,7 +369,16 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
       }
     }
     const ebayListings = ebayItemsToListings(ebayItems);
-    const ebayHasMore = ebayItems.length >= INITIAL_RETURN_PER_PROVIDER || (ebayItems.length === 0 && (ebayTotalCount ?? 0) > 0);
+    const ebayBlocked =
+      ebayProviderStopReason === 'provider_blocked_by_challenge' ||
+      ebayProviderStopReason === 'page_closed' ||
+      ebayProviderStopReason === 'page_crashed' ||
+      ebayProviderStopReason === 'provider_unavailable' ||
+      ebayProviderStopReason === 'dom_not_ready';
+    const ebayHasMore = !ebayBlocked && (
+      ebayItems.length >= INITIAL_RETURN_PER_PROVIDER ||
+      (ebayItems.length === 0 && (ebayTotalCount ?? 0) > 0)
+    );
     const ebayStopReason = ebayItems.length >= INITIAL_RETURN_PER_PROVIDER
       ? 'initial_batch_reached'
       : (ebayItems.length === 0 && (ebayTotalCount ?? 0) > 0)

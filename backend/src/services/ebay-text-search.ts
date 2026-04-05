@@ -30,6 +30,13 @@ export type EbaySearchOptions = {
 export type EbaySearchResult = {
   items: EbaySearchItem[];
   totalCount?: number;
+  stopReason?:
+    | 'ok'
+    | 'provider_blocked_by_challenge'
+    | 'dom_not_ready'
+    | 'page_closed'
+    | 'page_crashed'
+    | 'provider_unavailable';
 };
 
 const CARD_SELECTORS = [
@@ -274,6 +281,33 @@ async function logDomReadyFailureDiagnostics(page: Page): Promise<void> {
   console.log('[EBAY_DOM_READY_FAILED_CANDIDATES]', JSON.stringify(foundCandidates));
 }
 
+function looksLikeChallengeUrl(url: string): boolean {
+  const u = url.toLowerCase();
+  return u.includes('/splashui/challenge') || u.includes('challenge') || u.includes('captcha');
+}
+
+async function detectChallenge(page: Page): Promise<{ blocked: boolean; url: string }> {
+  const currentUrl = page.url();
+  if (looksLikeChallengeUrl(currentUrl)) {
+    return { blocked: true, url: currentUrl };
+  }
+  const marker = await page
+    .evaluate(() => {
+      const txt = (document.body?.innerText ?? '').toLowerCase();
+      const title = (document.title ?? '').toLowerCase();
+      const hit =
+        txt.includes('captcha') ||
+        txt.includes('attention required') ||
+        txt.includes('verify you are a human') ||
+        txt.includes('security measure') ||
+        title.includes('captcha') ||
+        title.includes('challenge');
+      return hit;
+    })
+    .catch(() => false);
+  return { blocked: marker, url: currentUrl };
+}
+
 export async function searchEbayByText(
   query: string,
   options?: EbaySearchOptions
@@ -290,6 +324,7 @@ export async function searchEbayByText(
   let browser: Browser | undefined;
   let context: BrowserContext | undefined;
   let pageHandle: Page | undefined;
+  let pageCrashed = false;
   let html = '';
   try {
     browser = await chromium.launch({
@@ -302,26 +337,69 @@ export async function searchEbayByText(
       locale: 'fr-FR',
     });
     pageHandle = await context.newPage();
+    pageHandle.on('crash', () => {
+      pageCrashed = true;
+      console.log('[EBAY_STOP_REASON] page_crashed');
+    });
     await pageHandle.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
+    console.log('[EBAY_NAVIGATED_URL]', url);
     await pageHandle.waitForLoadState('domcontentloaded', { timeout: 10000 }).catch(() => undefined);
     await pageHandle.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => undefined);
+    console.log('[EBAY_FINAL_URL]', pageHandle.url());
+
+    const challenge = await detectChallenge(pageHandle);
+    if (challenge.blocked) {
+      console.log('[EBAY_CHALLENGE_DETECTED]', challenge.url);
+      console.log('[EBAY_STOP_REASON] provider_blocked_by_challenge');
+      return { items: [], stopReason: 'provider_blocked_by_challenge' };
+    }
+
+    if (pageHandle.isClosed()) {
+      console.log('[EBAY_STOP_REASON] page_closed');
+      return { items: [], stopReason: 'page_closed' };
+    }
+    if (pageCrashed) {
+      console.log('[EBAY_STOP_REASON] page_crashed');
+      return { items: [], stopReason: 'page_crashed' };
+    }
 
     const domReadySelector = await firstMatchingReadySelector(pageHandle);
     if (!domReadySelector) {
-      console.error('[EBAY_PROVIDER_ERROR]', 'No DOM selector became ready');
       await logDomReadyFailureDiagnostics(pageHandle);
       console.log('[EBAY_FINAL_READY_SELECTOR] none');
+      console.log('[EBAY_STOP_REASON] dom_not_ready');
+      return { items: [], stopReason: 'dom_not_ready' };
     } else {
       console.log('[EBAY_DOM_READY_SELECTOR_OK]', domReadySelector);
       console.log('[EBAY_FINAL_READY_SELECTOR]', domReadySelector);
       console.log('[EBAY_BROWSER_DOM_READY]', domReadySelector);
     }
 
-    html = await pageHandle.content();
+    if (pageHandle.isClosed()) {
+      console.log('[EBAY_STOP_REASON] page_closed');
+      return { items: [], stopReason: 'page_closed' };
+    }
+    if (pageCrashed) {
+      console.log('[EBAY_STOP_REASON] page_crashed');
+      return { items: [], stopReason: 'page_crashed' };
+    }
+    html = await pageHandle.content().catch((err) => {
+      console.error('[EBAY_PROVIDER_ERROR]', err);
+      return '';
+    });
+    if (!html) {
+      const reason = pageCrashed ? 'page_crashed' : pageHandle.isClosed() ? 'page_closed' : 'provider_unavailable';
+      console.log(`[EBAY_STOP_REASON] ${reason}`);
+      return { items: [], stopReason: reason };
+    }
     console.log('[EBAY_BROWSER_HTML_LENGTH]', html.length);
   } catch (err) {
     console.error('[EBAY_PROVIDER_ERROR]', err);
-    throw err;
+    if (pageCrashed) {
+      console.log('[EBAY_STOP_REASON] page_crashed');
+      return { items: [], stopReason: 'page_crashed' };
+    }
+    return { items: [], stopReason: 'provider_unavailable' };
   } finally {
     await pageHandle?.close().catch(() => undefined);
     await context?.close().catch(() => undefined);
@@ -459,6 +537,6 @@ export async function searchEbayByText(
     console.log('[EBAY_PAGE_N_COUNT]', { page, count: items.length });
   }
 
-  return { items, totalCount };
+  return { items, totalCount, stopReason: 'ok' };
 }
 

@@ -296,6 +296,34 @@ export async function searchMoreRoute(app: FastifyInstance) {
         try {
           const result = await searchEbayByText(query, { page: ebayPage, limit: pageLimit });
           pageItems = result.items;
+          if (result.stopReason && result.stopReason !== 'ok') {
+            console.log('[EBAY_STOP_REASON]', result.stopReason);
+            if (result.stopReason === 'provider_blocked_by_challenge') {
+              hasMoreEbay = false;
+              ebayStopReason = 'provider_blocked_by_challenge';
+              break;
+            }
+            if (result.stopReason === 'dom_not_ready') {
+              hasMoreEbay = false;
+              ebayStopReason = 'dom_not_ready';
+              break;
+            }
+            if (result.stopReason === 'page_closed') {
+              hasMoreEbay = false;
+              ebayStopReason = 'page_closed';
+              break;
+            }
+            if (result.stopReason === 'page_crashed') {
+              hasMoreEbay = false;
+              ebayStopReason = 'page_crashed';
+              break;
+            }
+            if (result.stopReason === 'provider_unavailable') {
+              hasMoreEbay = false;
+              ebayStopReason = 'provider_unavailable';
+              break;
+            }
+          }
         } catch (err) {
           hasMoreEbay = false;
           ebayStopReason = 'provider_error';

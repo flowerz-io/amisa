@@ -53,7 +53,16 @@ export async function ebayListingsRoute(app: FastifyInstance) {
     try {
       const result = await searchEbayByText(searchText, { page });
       const listings = ebayItemsToListings(result.items);
-      const hasMore = result.items.length >= EBAY_MAX_PER_PAGE;
+      const isBlockedOrUnavailable =
+        result.stopReason === 'provider_blocked_by_challenge' ||
+        result.stopReason === 'dom_not_ready' ||
+        result.stopReason === 'page_closed' ||
+        result.stopReason === 'page_crashed' ||
+        result.stopReason === 'provider_unavailable';
+      const hasMore = !isBlockedOrUnavailable && result.items.length >= EBAY_MAX_PER_PAGE;
+      if (result.stopReason && result.stopReason !== 'ok') {
+        console.log('[EBAY_STOP_REASON]', result.stopReason);
+      }
       return reply.send({
         listings,
         page,
