@@ -17,6 +17,8 @@ struct ListingCardView: View {
         static let imageHeight: CGFloat = 190
         /// Hauteur fixe bloc texte (identique pour toutes les cartes).
         static let textBlockHeight: CGFloat = 92
+        /// Hauteur totale carte (strictement fixe).
+        static let cardHeight: CGFloat = imageHeight + textBlockHeight
         /// Rayon de carte explicite.
         static let cardCornerRadius: CGFloat = DesignTokens.radiusM
         /// Taille visuelle logo provider (x2 vs version précédente).
@@ -30,7 +32,16 @@ struct ListingCardView: View {
             openListing()
         } label: {
             VStack(alignment: .leading, spacing: 0) {
-                imageSection
+                ListingCardImageContainerView(
+                    imageURL: listing.thumbnailURL ?? listing.imageURL,
+                    source: listing.source,
+                    fallbackLabel: listing.sourceDisplayLabel,
+                    imageHeight: Layout.imageHeight,
+                    logoHeight: Layout.logoHeight,
+                    logoMaxWidth: Layout.logoMaxWidth,
+                    logoPadding: Layout.logoPadding,
+                    cardCornerRadius: Layout.cardCornerRadius
+                )
 
                 VStack(alignment: .leading, spacing: DesignTokens.spacingXXS) {
                     if let brand = displayBrand {
@@ -65,6 +76,8 @@ struct ListingCardView: View {
                 .frame(height: Layout.textBlockHeight, alignment: .topLeading)
                 .frame(maxWidth: .infinity, alignment: .topLeading)
             }
+            .frame(maxWidth: .infinity)
+            .frame(height: Layout.cardHeight, alignment: .top)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(DesignTokens.cardFill)
             .clipShape(RoundedRectangle(cornerRadius: Layout.cardCornerRadius, style: .continuous))
@@ -72,6 +85,7 @@ struct ListingCardView: View {
                 RoundedRectangle(cornerRadius: Layout.cardCornerRadius, style: .continuous)
                     .strokeBorder(DesignTokens.cardStroke, lineWidth: 0.5)
             )
+            .contentShape(RoundedRectangle(cornerRadius: Layout.cardCornerRadius, style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityLabel(accessibilityDescription)
@@ -82,32 +96,6 @@ struct ListingCardView: View {
     private var displayBrand: String? {
         let b = listing.brand?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return b.isEmpty ? nil : b
-    }
-
-    private var imageSection: some View {
-        ZStack(alignment: .topTrailing) {
-            ListingCardImageView(imageURL: listing.thumbnailURL ?? listing.imageURL)
-
-            ProviderLogoOverlay(
-                source: listing.source,
-                fallbackLabel: listing.sourceDisplayLabel,
-                logoHeight: Layout.logoHeight,
-                logoMaxWidth: Layout.logoMaxWidth
-            )
-            .padding(Layout.logoPadding)
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: Layout.imageHeight)
-        .clipped()
-        .clipShape(
-            UnevenRoundedRectangle(
-                topLeadingRadius: Layout.cardCornerRadius,
-                bottomLeadingRadius: 0,
-                bottomTrailingRadius: 0,
-                topTrailingRadius: Layout.cardCornerRadius,
-                style: .continuous
-            )
-        )
     }
 
     private var metaLine: String? {
@@ -142,6 +130,46 @@ struct ListingCardView: View {
             parts.append(meta)
         }
         return parts.joined(separator: ", ")
+    }
+}
+
+private struct ListingCardImageContainerView: View {
+    let imageURL: URL?
+    let source: String
+    let fallbackLabel: String
+    let imageHeight: CGFloat
+    let logoHeight: CGFloat
+    let logoMaxWidth: CGFloat
+    let logoPadding: CGFloat
+    let cardCornerRadius: CGFloat
+
+    var body: some View {
+        ZStack {
+            ListingCardImageView(imageURL: imageURL)
+                .zIndex(0)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: imageHeight)
+        .clipped()
+        .clipShape(
+            UnevenRoundedRectangle(
+                topLeadingRadius: cardCornerRadius,
+                bottomLeadingRadius: 0,
+                bottomTrailingRadius: 0,
+                topTrailingRadius: cardCornerRadius,
+                style: .continuous
+            )
+        )
+        .overlay(alignment: .topTrailing) {
+            ProviderLogoOverlay(
+                source: source,
+                fallbackLabel: fallbackLabel,
+                logoHeight: logoHeight,
+                logoMaxWidth: logoMaxWidth
+            )
+            .padding(logoPadding)
+            .zIndex(1)
+        }
     }
 }
 
