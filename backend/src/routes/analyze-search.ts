@@ -14,6 +14,7 @@ import {
   type LeBonCoinSearchItem,
   buildLeBonCoinSearchUrl,
 } from '../services/leboncoin-browser-search.js';
+import { searchEbayByText, type EbaySearchItem, buildEbaySearchUrl } from '../services/ebay-text-search.js';
 import type { MarketplaceListingDTO } from '../api/types.js';
 import type { SearchRankingContextDTO } from '../api/types.js';
 import { visionProviderName, isDebug } from '../config.js';
@@ -83,6 +84,29 @@ function leBonCoinItemsToListings(items: LeBonCoinSearchItem[]): MarketplaceList
       ...(item.brand ? { brand: item.brand } : {}),
       ...(item.size ? { size: item.size } : {}),
       ...(item.condition ? { condition: item.condition } : {}),
+    };
+  });
+}
+
+function ebayItemsToListings(items: EbaySearchItem[]): MarketplaceListingDTO[] {
+  return items.map((item, index) => {
+    const id =
+      item.listingId ??
+      item.listingUrl.match(/\/itm\/(?:[^/]*\/)?(\d{8,15})/i)?.[1] ??
+      `ebay-${index}`;
+    return {
+      id,
+      source: 'eBay',
+      title: item.title,
+      price: item.price ?? 0,
+      currency: item.currency ?? 'EUR',
+      imageUrl: item.imageUrl,
+      thumbnailUrl: item.thumbnailUrl ?? item.imageUrl,
+      listingUrl: item.listingUrl,
+      ...(item.brand ? { brand: item.brand } : {}),
+      ...(item.size ? { size: item.size } : {}),
+      ...(item.condition ? { condition: item.condition } : {}),
+      ...(item.publishedAtRelative ? { publishedAtRelative: item.publishedAtRelative } : {}),
     };
   });
 }
@@ -175,9 +199,11 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
 
     const trimmedPrimary = String(primaryQuery).trim();
     const vintedSearchUrl = buildVintedSearchUrl(trimmedPrimary, 1);
+    const ebaySearchUrl = buildEbaySearchUrl(trimmedPrimary, 1);
     const leBonCoinSearchUrl = buildLeBonCoinSearchUrl(trimmedPrimary, 1);
     console.log('[ANALYZE_PRIMARY_QUERY]', trimmedPrimary);
     console.log('[VINTED_SEARCH_URL]', vintedSearchUrl);
+    console.log('[EBAY_SEARCH_URL]', ebaySearchUrl);
     console.log('[LEBONCOIN_SEARCH_URL]', leBonCoinSearchUrl);
     const rankingContext: SearchRankingContextDTO = {
       primaryQuery: trimmedPrimary,
@@ -224,6 +250,35 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
     console.log('TOTAL_LOADED_GRAILED', grailedListings.length);
     console.log('GRAILED_STOP_REASON', grailedStopReason);
 
+    let ebaySearchFailed = false;
+    let ebayItems: EbaySearchItem[] = [];
+    let ebayTotalCount: number | undefined;
+    if (!isProviderEnabled('ebay')) {
+      console.log('[EBAY_DISABLED] provider skipped');
+    } else {
+      try {
+        const result = await searchEbayByText(trimmedPrimary, {
+          page: 1,
+          limit: INITIAL_RETURN_PER_PROVIDER,
+        });
+        ebayItems = result.items;
+        ebayTotalCount = result.totalCount;
+      } catch (err) {
+        ebaySearchFailed = true;
+        request.log.error(err, 'eBay initial fetch failed');
+      }
+    }
+    const ebayListings = ebayItemsToListings(ebayItems);
+    const ebayHasMore = ebayItems.length >= INITIAL_RETURN_PER_PROVIDER;
+    const ebayStopReason = ebayHasMore ? 'initial_batch_reached' : 'provider_exhausted_on_page_1';
+    console.log('[EBAY_INITIAL_COUNT]', ebayListings.length);
+    console.log('[CURRENT_EBAY_PAGE]', 1);
+    console.log('[TOTAL_LOADED_EBAY]', ebayListings.length);
+    console.log('[EBAY_STOP_REASON]', ebayStopReason);
+    if (ebayTotalCount !== undefined) {
+      console.log('[EBAY_TOTAL_COUNT]', ebayTotalCount);
+    }
+
     let leboncoinSearchFailed = false;
     let leboncoinItems: LeBonCoinSearchItem[] = [];
     let leboncoinTotalCount: number | undefined;
@@ -255,7 +310,7 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
       console.log('[LEBONCOIN_TOTAL_COUNT]', leboncoinTotalCount);
     }
 
-    const mergedInitial = [...vintedListings, ...grailedListings, ...leboncoinListings];
+    const mergedInitial = [...vintedListings, ...grailedListings, ...ebayListings, ...leboncoinListings];
     const ranked = rankAcrossSources(mergedInitial, rankingContext);
     console.log('INITIAL_MERGED_COUNT', ranked.length);
     console.log('FINAL_COUNT', ranked.length);
@@ -279,6 +334,11 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
           hasMore: grailedHasMore,
           loadedCount: grailedListings.length,
         },
+        ebay: {
+          nextPage: 2,
+          hasMore: ebayHasMore,
+          loadedCount: ebayListings.length,
+        },
         leboncoin: {
           nextPage: 2,
           hasMore: leboncoinHasMore,
@@ -287,6 +347,7 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
       },
       rankingContext,
       ...(vintedSearchFailed ? { vintedSearchFailed: true } : {}),
+      ...(ebaySearchFailed ? { ebaySearchFailed: true } : {}),
       ...(leboncoinSearchFailed ? { leboncoinSearchFailed: true } : {}),
       ...(isDebug && {
         debug: {

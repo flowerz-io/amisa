@@ -3,7 +3,7 @@
  * Prévu pour activer/désactiver rapidement un provider sans toucher la logique de scraping.
  */
 
-export type ProviderKey = 'vinted' | 'grailed' | 'leboncoin';
+export type ProviderKey = 'vinted' | 'grailed' | 'leboncoin' | 'ebay';
 
 function envEnabled(name: string, fallback: boolean): boolean {
   const raw = process.env[name];
@@ -17,6 +17,7 @@ function envEnabled(name: string, fallback: boolean): boolean {
 export const PROVIDERS_ENABLED: Record<ProviderKey, boolean> = {
   vinted: envEnabled('PROVIDER_VINTED_ENABLED', true),
   grailed: envEnabled('PROVIDER_GRAILED_ENABLED', true),
+  ebay: envEnabled('PROVIDER_EBAY_ENABLED', true),
   // Désactivé par défaut : challenge anti-bot/captcha côté plateforme.
   leboncoin: envEnabled('PROVIDER_LEBONCOIN_ENABLED', false),
 };

@@ -7,8 +7,10 @@ import type {
 import { searchVintedByText, type VintedSearchItem } from '../services/vinted-text-search.js';
 import { searchGrailedByTextBrowser } from '../services/grailed-browser-search.js';
 import { searchLeBonCoinByTextBrowser, type LeBonCoinSearchItem } from '../services/leboncoin-browser-search.js';
+import { searchEbayByText, type EbaySearchItem } from '../services/ebay-text-search.js';
 import { rankAcrossSources } from '../services/marketplace-ranking.js';
 import {
+  EBAY_MAX_PER_PAGE,
   GRAILED_MAX_PER_PAGE,
   LEBONCOIN_MAX_PER_PAGE,
   MAX_PAGES_PER_PROVIDER,
@@ -59,6 +61,29 @@ function leBonCoinItemsToListings(items: LeBonCoinSearchItem[]): MarketplaceList
       ...(item.brand ? { brand: item.brand } : {}),
       ...(item.size ? { size: item.size } : {}),
       ...(item.condition ? { condition: item.condition } : {}),
+    };
+  });
+}
+
+function ebayItemsToListings(items: EbaySearchItem[]): MarketplaceListingDTO[] {
+  return items.map((item, index) => {
+    const id =
+      item.listingId ??
+      item.listingUrl.match(/\/itm\/(?:[^/]*\/)?(\d{8,15})/i)?.[1] ??
+      `ebay-${index}`;
+    return {
+      id,
+      source: 'eBay',
+      title: item.title,
+      price: item.price ?? 0,
+      currency: item.currency ?? 'EUR',
+      imageUrl: item.imageUrl,
+      thumbnailUrl: item.thumbnailUrl ?? item.imageUrl,
+      listingUrl: item.listingUrl,
+      ...(item.brand ? { brand: item.brand } : {}),
+      ...(item.size ? { size: item.size } : {}),
+      ...(item.condition ? { condition: item.condition } : {}),
+      ...(item.publishedAtRelative ? { publishedAtRelative: item.publishedAtRelative } : {}),
     };
   });
 }
@@ -114,9 +139,11 @@ export async function searchMoreRoute(app: FastifyInstance) {
       batchSize,
       vintedNextPage: body.pagination.vinted.nextPage,
       grailedNextPage: body.pagination.grailed.nextPage,
+      ebayNextPage: body.pagination.ebay?.nextPage,
       leboncoinNextPage: body.pagination.leboncoin?.nextPage,
       hasMoreVinted: body.pagination.vinted.hasMore,
       hasMoreGrailed: body.pagination.grailed.hasMore,
+      hasMoreEbay: body.pagination.ebay?.hasMore,
       hasMoreLeboncoin: body.pagination.leboncoin?.hasMore,
     });
 
@@ -223,6 +250,63 @@ export async function searchMoreRoute(app: FastifyInstance) {
     }
     console.log('GRAILED_STOP_REASON', grailedStopReason);
 
+    const nextEbay: MarketplaceListingDTO[] = [];
+    const ebayState = body.pagination.ebay;
+    let ebayPage = Math.max(1, ebayState?.nextPage ?? 2);
+    let hasMoreEbay = (ebayState?.hasMore ?? false) && isProviderEnabled('ebay');
+    let ebayStopReason = ebayState ? 'already_exhausted' : 'missing_pagination_state';
+    let ebayPagesFetched = 0;
+    if (!isProviderEnabled('ebay')) {
+      console.log('[EBAY_DISABLED] provider skipped');
+      hasMoreEbay = false;
+      ebayStopReason = 'provider_disabled';
+    }
+    if (hasMoreEbay) {
+      while (nextEbay.length < batchSize && ebayPagesFetched < MAX_PAGES_PER_PROVIDER) {
+        const remaining = batchSize - nextEbay.length;
+        const pageLimit = Math.max(1, Math.min(EBAY_MAX_PER_PAGE, remaining));
+        let pageItems: EbaySearchItem[] = [];
+        try {
+          const result = await searchEbayByText(query, { page: ebayPage, limit: pageLimit });
+          pageItems = result.items;
+        } catch (err) {
+          hasMoreEbay = false;
+          ebayStopReason = 'provider_error';
+          request.log.error(err, 'eBay pagination failed');
+          console.error('[EBAY_PROVIDER_ERROR]', err);
+          break;
+        }
+        const mapped = ebayItemsToListings(pageItems);
+        const added = dedupePush(nextEbay, mapped);
+        console.log('[CURRENT_EBAY_PAGE]', ebayPage);
+        ebayPagesFetched += 1;
+
+        if (pageItems.length === 0) {
+          hasMoreEbay = false;
+          ebayStopReason = 'page_empty';
+          break;
+        }
+        if (added === 0) {
+          hasMoreEbay = false;
+          ebayStopReason = 'no_new_unique_on_page';
+          break;
+        }
+        if (pageItems.length < pageLimit) {
+          hasMoreEbay = false;
+          ebayStopReason = 'provider_exhausted';
+          break;
+        }
+        ebayPage += 1;
+      }
+      if (hasMoreEbay && nextEbay.length >= batchSize) {
+        ebayStopReason = 'batch_reached';
+      } else if (hasMoreEbay && ebayPagesFetched >= MAX_PAGES_PER_PROVIDER) {
+        hasMoreEbay = false;
+        ebayStopReason = 'max_pages_reached';
+      }
+    }
+    console.log('[EBAY_STOP_REASON]', ebayStopReason);
+
     const nextLeboncoin: MarketplaceListingDTO[] = [];
     const leboncoinState = body.pagination.leboncoin;
     let leboncoinPage = Math.max(1, leboncoinState?.nextPage ?? 2);
@@ -282,18 +366,21 @@ export async function searchMoreRoute(app: FastifyInstance) {
 
     console.log('VINTED_NEXT_BATCH_COUNT', nextVinted.length);
     console.log('GRAILED_NEXT_BATCH_COUNT', nextGrailed.length);
+    console.log('[EBAY_NEXT_BATCH_COUNT]', nextEbay.length);
     console.log('LEBONCOIN_NEXT_BATCH_COUNT', nextLeboncoin.length);
 
-    const merged = rankAcrossSources([...nextVinted, ...nextGrailed, ...nextLeboncoin], body.rankingContext);
+    const merged = rankAcrossSources([...nextVinted, ...nextGrailed, ...nextEbay, ...nextLeboncoin], body.rankingContext);
     console.log('MERGED_NEXT_BATCH_COUNT', merged.length);
     console.log('TOTAL_LOADED_VINTED', body.pagination.vinted.loadedCount + nextVinted.length);
     console.log('TOTAL_LOADED_GRAILED', body.pagination.grailed.loadedCount + nextGrailed.length);
+    console.log('[TOTAL_LOADED_EBAY]', (body.pagination.ebay?.loadedCount ?? 0) + nextEbay.length);
     console.log(
       'TOTAL_LOADED_LEBONCOIN',
       (body.pagination.leboncoin?.loadedCount ?? 0) + nextLeboncoin.length
     );
     console.log('HAS_MORE_VINTED', hasMoreVinted);
     console.log('HAS_MORE_GRAILED', hasMoreGrailed);
+    console.log('[HAS_MORE_EBAY]', hasMoreEbay);
     console.log('HAS_MORE_LEBONCOIN', hasMoreLeboncoin);
     console.log('NEXT_RESPONSE_TIME_MS', Date.now() - startedAt);
 
@@ -301,6 +388,7 @@ export async function searchMoreRoute(app: FastifyInstance) {
       listings: merged,
       vintedListings: nextVinted,
       grailedListings: nextGrailed,
+      ebayListings: nextEbay,
       leboncoinListings: nextLeboncoin,
       pagination: {
         primaryQuery: query,
@@ -315,6 +403,11 @@ export async function searchMoreRoute(app: FastifyInstance) {
           hasMore: hasMoreGrailed,
           loadedCount: body.pagination.grailed.loadedCount + nextGrailed.length,
         },
+        ebay: {
+          nextPage: ebayPage,
+          hasMore: hasMoreEbay,
+          loadedCount: (body.pagination.ebay?.loadedCount ?? 0) + nextEbay.length,
+        },
         leboncoin: {
           nextPage: leboncoinPage,
           hasMore: hasMoreLeboncoin,
@@ -323,6 +416,7 @@ export async function searchMoreRoute(app: FastifyInstance) {
       },
       hasMoreVinted,
       hasMoreGrailed,
+      hasMoreEbay,
       hasMoreLeboncoin,
     });
   });

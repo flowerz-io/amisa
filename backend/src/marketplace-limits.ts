@@ -28,6 +28,13 @@ export const LEBONCOIN_MAX_PER_PAGE = clampInt(
   120
 );
 
+/** Idem eBay. */
+export const EBAY_MAX_PER_PAGE = clampInt(
+  parseInt(process.env.EBAY_MAX_PER_PAGE ?? '40', 10),
+  1,
+  120
+);
+
 /** Réponse initiale rapide (/analyze-search) par provider. */
 export const INITIAL_RETURN_PER_PROVIDER = clampInt(
   parseInt(process.env.INITIAL_RETURN_PER_PROVIDER ?? '20', 10),
