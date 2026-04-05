@@ -12,11 +12,18 @@ import UIKit
 struct ListingCardView: View {
     let listing: MarketplaceListing
 
-    /// Hauteur fixe zone image (identique pour toutes les cartes).
-    private static let imageBlockHeight: CGFloat = 190
-
-    /// Hauteur fixe du bloc texte pour garantir des cartes homogènes cross-source
-    private static let textBlockHeight: CGFloat = 92
+    private enum Layout {
+        /// Hauteur fixe zone image (identique pour toutes les cartes).
+        static let imageHeight: CGFloat = 190
+        /// Hauteur fixe bloc texte (identique pour toutes les cartes).
+        static let textBlockHeight: CGFloat = 92
+        /// Rayon de carte explicite.
+        static let cardCornerRadius: CGFloat = DesignTokens.radiusM
+        /// Taille visuelle logo provider (x2 vs version précédente).
+        static let logoHeight: CGFloat = 28
+        static let logoMaxWidth: CGFloat = 120
+        static let logoPadding: CGFloat = 8
+    }
 
     var body: some View {
         Button {
@@ -55,20 +62,16 @@ struct ListingCardView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .padding(DesignTokens.spacingS)
-                .frame(height: Self.textBlockHeight, alignment: .topLeading)
+                .frame(height: Layout.textBlockHeight, alignment: .topLeading)
                 .frame(maxWidth: .infinity, alignment: .topLeading)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(DesignTokens.cardFill)
-            .clipShape(RoundedRectangle(cornerRadius: DesignTokens.radiusM, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: Layout.cardCornerRadius, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: DesignTokens.radiusM, style: .continuous)
+                RoundedRectangle(cornerRadius: Layout.cardCornerRadius, style: .continuous)
                     .strokeBorder(DesignTokens.cardStroke, lineWidth: 0.5)
             )
-            .overlay(alignment: .topTrailing) {
-                ProviderBadgeView(source: listing.source, fallbackLabel: listing.sourceDisplayLabel)
-                    .padding(8)
-            }
         }
         .buttonStyle(.plain)
         .accessibilityLabel(accessibilityDescription)
@@ -82,19 +85,29 @@ struct ListingCardView: View {
     }
 
     private var imageSection: some View {
-        ListingCardImageView(imageURL: listing.thumbnailURL ?? listing.imageURL)
+        ZStack(alignment: .topTrailing) {
+            ListingCardImageView(imageURL: listing.thumbnailURL ?? listing.imageURL)
+
+            ProviderLogoOverlay(
+                source: listing.source,
+                fallbackLabel: listing.sourceDisplayLabel,
+                logoHeight: Layout.logoHeight,
+                logoMaxWidth: Layout.logoMaxWidth
+            )
+            .padding(Layout.logoPadding)
+        }
         .frame(maxWidth: .infinity)
-        .frame(height: Self.imageBlockHeight)
+        .frame(height: Layout.imageHeight)
+        .clipped()
         .clipShape(
             UnevenRoundedRectangle(
-                topLeadingRadius: DesignTokens.radiusM,
+                topLeadingRadius: Layout.cardCornerRadius,
                 bottomLeadingRadius: 0,
                 bottomTrailingRadius: 0,
-                topTrailingRadius: DesignTokens.radiusM,
+                topTrailingRadius: Layout.cardCornerRadius,
                 style: .continuous
             )
         )
-        .clipped()
     }
 
     private var metaLine: String? {
@@ -167,61 +180,47 @@ private struct ListingCardImageView: View {
     }
 }
 
-private struct ProviderBadgeView: View {
+private struct ProviderLogoOverlay: View {
     let source: String
     let fallbackLabel: String
-
-    private static let badgeHeight: CGFloat = 26
-    private static let maxLogoWidth: CGFloat = 72
-    private static let logoHeight: CGFloat = 14
+    let logoHeight: CGFloat
+    let logoMaxWidth: CGFloat
 
     var body: some View {
-        let content = resolvedContent
-        ZStack {
-            if let uiImage = content.logo {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .renderingMode(.original)
-                    .interpolation(.high)
-                    .antialiased(true)
-                    .scaledToFit()
-                    .frame(width: Self.maxLogoWidth, height: Self.logoHeight, alignment: .center)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 6)
-            } else {
-                Text(content.fallbackText)
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(Color.primary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-            }
+        if let uiImage = resolvedLogo {
+            Image(uiImage: uiImage)
+                .resizable()
+                .renderingMode(.original)
+                .interpolation(.high)
+                .antialiased(true)
+                .scaledToFit()
+                .frame(width: logoMaxWidth, height: logoHeight, alignment: .center)
+                .shadow(color: .black.opacity(0.22), radius: 2, x: 0, y: 1)
+                .accessibilityLabel(fallbackLabel)
+        } else {
+            Text(fallbackLabel)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(Color.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(.ultraThinMaterial, in: Capsule())
+                .accessibilityLabel(fallbackLabel)
         }
-        .frame(minHeight: Self.badgeHeight)
-        .background(
-            Color(uiColor: .systemBackground)
-                .opacity(0.78),
-            in: Capsule()
-        )
-        .overlay(
-            Capsule()
-                .strokeBorder(Color.primary.opacity(0.12), lineWidth: 0.5)
-        )
-        .accessibilityLabel(content.fallbackText)
     }
 
-    private var resolvedContent: (logo: UIImage?, fallbackText: String) {
-        let assetName = MarketplaceSource.providerLogoAssetName(for: source)
-        if let assetName,
-           let uiImage = UIImage(named: assetName),
-           uiImage.size.width > 0,
-           uiImage.size.height > 0 {
-            print("[PROVIDER_BADGE] source=\(source) asset=\(assetName) fallback=false")
-            return (uiImage, fallbackLabel)
+    private var resolvedLogo: UIImage? {
+        guard let assetName = MarketplaceSource.providerLogoAssetName(for: source) else {
+            return nil
         }
-        print("[PROVIDER_BADGE] source=\(source) asset=\(assetName ?? "nil") fallback=true")
-        return (nil, fallbackLabel)
+        guard let image = UIImage(named: assetName) else {
+            return nil
+        }
+        guard image.size.width > 0, image.size.height > 0 else {
+            return nil
+        }
+        return image
     }
 }
 
