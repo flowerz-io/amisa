@@ -48,13 +48,13 @@ final class CameraViewModel: ObservableObject {
             startSessionAfterConfig()
         case .notDetermined:
             AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
+                guard let model = self else { return }
                 Task { @MainActor in
-                    guard let self else { return }
-                    self.cameraAuth = AVCaptureDevice.authorizationStatus(for: .video)
+                    model.cameraAuth = AVCaptureDevice.authorizationStatus(for: .video)
                     if granted {
-                        self.startSessionAfterConfig()
+                        model.startSessionAfterConfig()
                     } else {
-                        self.uiState = .denied
+                        model.uiState = .denied
                     }
                 }
             }
@@ -67,8 +67,9 @@ final class CameraViewModel: ObservableObject {
         photoLibraryAuth = PHPhotoLibrary.authorizationStatus(for: .readWrite)
         if photoLibraryAuth == .notDetermined {
             PHPhotoLibrary.requestAuthorization(for: .readWrite) { [weak self] status in
+                guard let model = self else { return }
                 Task { @MainActor in
-                    self?.photoLibraryAuth = status
+                    model.photoLibraryAuth = status
                 }
             }
         }
@@ -149,8 +150,9 @@ final class CameraViewModel: ObservableObject {
         guard uiState == .ready else { return }
         isCapturing = true
         sessionController.capturePhoto(flashMode: flashMode) { [weak self] data in
+            guard let model = self else { return }
             Task { @MainActor in
-                self?.isCapturing = false
+                model.isCapturing = false
                 completion(data)
             }
         }

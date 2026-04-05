@@ -38,8 +38,9 @@ final class RecentPhotosLibraryModel: ObservableObject {
         authStatus = status
         if status == .notDetermined {
             PHPhotoLibrary.requestAuthorization(for: .readWrite) { [weak self] _ in
+                guard let model = self else { return }
                 Task { @MainActor in
-                    self?.reload()
+                    model.reload()
                 }
             }
         } else {
@@ -146,7 +147,7 @@ private struct RecentPhotoThumbnail: View {
             contentMode: .aspectFill,
             options: opts
         ) { img, _ in
-            Task { @MainActor in
+            DispatchQueue.main.async {
                 self.image = img
             }
         }

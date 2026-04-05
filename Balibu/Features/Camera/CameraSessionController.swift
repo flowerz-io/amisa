@@ -21,6 +21,7 @@ final class CameraSessionController: NSObject, AVCapturePhotoCaptureDelegate {
     private(set) var currentDevice: AVCaptureDevice?
 
     private var photoCompletion: ((Data?) -> Void)?
+    private var maxPhotoDimensions: CMVideoDimensions?
 
     /// Facteur demandé (1…max device, plafonné).
     private var pendingZoomFactor: CGFloat = 1
@@ -67,7 +68,18 @@ final class CameraSessionController: NSObject, AVCapturePhotoCaptureDelegate {
                 if self.session.canAddOutput(self.photoOutput) {
                     self.session.addOutput(self.photoOutput)
                 }
-                self.photoOutput.isHighResolutionCaptureEnabled = true
+                if #available(iOS 16.0, *) {
+                    let supported = device.activeFormat.supportedMaxPhotoDimensions
+                    let best = supported.max { lhs, rhs in
+                        Int(lhs.width) * Int(lhs.height) < Int(rhs.width) * Int(rhs.height)
+                    }
+                    if let best {
+                        self.maxPhotoDimensions = best
+                        self.photoOutput.maxPhotoDimensions = best
+                    }
+                } else {
+                    self.photoOutput.isHighResolutionCaptureEnabled = true
+                }
             } catch {
                 self.session.commitConfiguration()
                 DispatchQueue.main.async { completion(false, error.localizedDescription) }
@@ -156,6 +168,13 @@ final class CameraSessionController: NSObject, AVCapturePhotoCaptureDelegate {
         sessionQueue.async { [weak self] in
             guard let self else { return }
             let settings = AVCapturePhotoSettings()
+            if #available(iOS 16.0, *) {
+                if let maxPhotoDimensions = self.maxPhotoDimensions {
+                    settings.maxPhotoDimensions = maxPhotoDimensions
+                }
+            } else {
+                settings.isHighResolutionPhotoEnabled = true
+            }
             if self.currentPosition == .back, self.currentDevice?.hasFlash == true {
                 settings.flashMode = flashMode
             }

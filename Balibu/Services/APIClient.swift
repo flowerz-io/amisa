@@ -29,8 +29,7 @@ actor APIClient: APIClientProtocol {
     }
     static let shared = APIClient()
 
-    /// Fournit le client par défaut (pour injection depuis le MainActor).
-    @MainActor
+    /// Fournit le client par défaut (pour injection).
     static func makeDefault() -> APIClient {
         shared
     }

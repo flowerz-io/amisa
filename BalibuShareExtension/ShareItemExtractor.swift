@@ -5,7 +5,6 @@
 //  Extrait image ou URL du contexte de partage.
 //
 
-import MobileCoreServices
 import UniformTypeIdentifiers
 import UIKit
 
@@ -63,7 +62,7 @@ enum ShareItemExtractor {
             UTType.jpeg.identifier,
             UTType.png.identifier,
             UTType.webP.identifier,
-            kUTTypeImage as String,
+            "public.image",
         ]
 
         for typeId in imageTypes {

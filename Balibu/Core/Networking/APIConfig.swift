@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import UIKit
 
 enum APIConfig {
     /// Passe à `false` pour utiliser le backend réel.
