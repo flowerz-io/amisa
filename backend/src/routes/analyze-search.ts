@@ -19,6 +19,7 @@ import type { SearchRankingContextDTO } from '../api/types.js';
 import { visionProviderName, isDebug } from '../config.js';
 import { rankAcrossSources } from '../services/marketplace-ranking.js';
 import { INITIAL_RETURN_PER_PROVIDER, NEXT_BATCH_PER_PROVIDER } from '../marketplace-limits.js';
+import { isProviderEnabled } from '../providers-config.js';
 
 const visionProvider =
   visionProviderName === 'openai' ? openaiVisionProvider : mockVisionProvider;
@@ -226,16 +227,20 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
     let leboncoinSearchFailed = false;
     let leboncoinItems: LeBonCoinSearchItem[] = [];
     let leboncoinTotalCount: number | undefined;
-    try {
-      const result = await searchLeBonCoinByTextBrowser(trimmedPrimary, {
-        page: 1,
-        limit: INITIAL_RETURN_PER_PROVIDER,
-      });
-      leboncoinItems = result.items;
-      leboncoinTotalCount = result.totalCount;
-    } catch (err) {
-      leboncoinSearchFailed = true;
-      request.log.error(err, 'Le Bon Coin initial fetch failed');
+    if (!isProviderEnabled('leboncoin')) {
+      console.log('[LEBONCOIN_DISABLED] anti-bot challenge detected, provider skipped');
+    } else {
+      try {
+        const result = await searchLeBonCoinByTextBrowser(trimmedPrimary, {
+          page: 1,
+          limit: INITIAL_RETURN_PER_PROVIDER,
+        });
+        leboncoinItems = result.items;
+        leboncoinTotalCount = result.totalCount;
+      } catch (err) {
+        leboncoinSearchFailed = true;
+        request.log.error(err, 'Le Bon Coin initial fetch failed');
+      }
     }
     const leboncoinListings = leBonCoinItemsToListings(leboncoinItems);
     const leboncoinHasMore = leboncoinItems.length >= INITIAL_RETURN_PER_PROVIDER;

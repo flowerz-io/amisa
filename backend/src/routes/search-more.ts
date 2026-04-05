@@ -15,6 +15,7 @@ import {
   NEXT_BATCH_PER_PROVIDER,
   VINTED_MAX_PER_PAGE,
 } from '../marketplace-limits.js';
+import { isProviderEnabled } from '../providers-config.js';
 
 const DEFAULT_BATCH_SIZE = NEXT_BATCH_PER_PROVIDER;
 
@@ -225,9 +226,14 @@ export async function searchMoreRoute(app: FastifyInstance) {
     const nextLeboncoin: MarketplaceListingDTO[] = [];
     const leboncoinState = body.pagination.leboncoin;
     let leboncoinPage = Math.max(1, leboncoinState?.nextPage ?? 2);
-    let hasMoreLeboncoin = leboncoinState?.hasMore ?? false;
+    let hasMoreLeboncoin = (leboncoinState?.hasMore ?? false) && isProviderEnabled('leboncoin');
     let leboncoinStopReason = leboncoinState ? 'already_exhausted' : 'missing_pagination_state';
     let leboncoinPagesFetched = 0;
+    if (!isProviderEnabled('leboncoin')) {
+      console.log('[LEBONCOIN_DISABLED] anti-bot challenge detected, provider skipped');
+      hasMoreLeboncoin = false;
+      leboncoinStopReason = 'provider_disabled';
+    }
     if (hasMoreLeboncoin) {
       while (nextLeboncoin.length < batchSize && leboncoinPagesFetched < MAX_PAGES_PER_PROVIDER) {
         const remaining = batchSize - nextLeboncoin.length;

@@ -3,6 +3,7 @@ import type { LeBonCoinListingsRequest, LeBonCoinListingsResponse } from '../api
 import type { MarketplaceListingDTO } from '../api/types.js';
 import { searchLeBonCoinByTextBrowser, type LeBonCoinSearchItem } from '../services/leboncoin-browser-search.js';
 import { LEBONCOIN_MAX_PER_PAGE } from '../marketplace-limits.js';
+import { isProviderEnabled } from '../providers-config.js';
 
 function leBonCoinItemsToListings(items: LeBonCoinSearchItem[]): MarketplaceListingDTO[] {
   return items.map((item, index) => {
@@ -49,6 +50,15 @@ export async function leBonCoinListingsRoute(app: FastifyInstance) {
     }
 
     console.log('[LEBONCOIN_LISTINGS_PAGE]', { page, searchText: searchText.slice(0, 80) });
+
+    if (!isProviderEnabled('leboncoin')) {
+      console.log('[LEBONCOIN_DISABLED] anti-bot challenge detected, provider skipped');
+      return reply.send({
+        listings: [],
+        page,
+        hasMore: false,
+      });
+    }
 
     try {
       const result = await searchLeBonCoinByTextBrowser(searchText, { page });
