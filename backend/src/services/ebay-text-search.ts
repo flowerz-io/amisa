@@ -1,15 +1,9 @@
 import * as cheerio from 'cheerio';
+import { chromium } from 'playwright';
+import type { Browser, BrowserContext, Page } from 'playwright';
 import { EBAY_MAX_PER_PAGE } from '../marketplace-limits.js';
 
 const EBAY_ORIGIN = 'https://www.ebay.fr';
-
-const FETCH_HEADERS: Record<string, string> = {
-  'User-Agent':
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-  Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-  'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.6',
-  Referer: 'https://www.ebay.fr/',
-};
 
 export type EbaySearchItem = {
   source: 'eBay';
@@ -44,6 +38,14 @@ const CARD_SELECTORS = [
   'div.s-card',
   'div.su-card-container',
   '[data-view*="mi:"]',
+] as const;
+
+const WAIT_SELECTORS = [
+  'li.s-item',
+  '[role="listitem"]',
+  'div[data-testid]',
+  'section ul li',
+  'a[href*="/itm/"]',
 ] as const;
 
 function encodeEbayKeywords(input: string): string {
@@ -197,17 +199,54 @@ export async function searchEbayByText(
   const limit = Math.max(1, Math.min(EBAY_MAX_PER_PAGE, Math.floor(options?.limit ?? EBAY_MAX_PER_PAGE)));
   const url = buildEbaySearchUrl(q, page);
   console.log('[EBAY_SEARCH_URL]', url);
-  console.log('[EBAY_FETCH]', { page, limit });
+  console.log('[EBAY_BROWSER_URL]', url);
 
-  const res = await fetch(url, { headers: FETCH_HEADERS, redirect: 'follow' });
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    console.error('[EBAY_PROVIDER_ERROR]', `HTTP ${res.status} ${res.statusText}`);
-    if (body) console.error('[EBAY_ERROR_BODY]', body.slice(0, 800));
-    throw new Error(`eBay HTTP ${res.status}`);
+  let browser: Browser | undefined;
+  let context: BrowserContext | undefined;
+  let pageHandle: Page | undefined;
+  let html = '';
+  try {
+    browser = await chromium.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-dev-shm-usage'],
+    });
+    context = await browser.newContext({
+      userAgent:
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      locale: 'fr-FR',
+    });
+    pageHandle = await context.newPage();
+    await pageHandle.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
+    await pageHandle.waitForLoadState('networkidle', { timeout: 12000 }).catch(() => undefined);
+
+    let domReadySelector = '';
+    for (const selector of WAIT_SELECTORS) {
+      const found = await pageHandle
+        .waitForSelector(selector, { timeout: 6000 })
+        .then(() => true)
+        .catch(() => false);
+      if (found) {
+        domReadySelector = selector;
+        break;
+      }
+    }
+    if (!domReadySelector) {
+      console.error('[EBAY_PROVIDER_ERROR]', 'No DOM selector became ready');
+      throw new Error('eBay DOM not ready');
+    }
+    console.log('[EBAY_BROWSER_DOM_READY]', domReadySelector);
+
+    html = await pageHandle.content();
+    console.log('[EBAY_BROWSER_HTML_LENGTH]', html.length);
+  } catch (err) {
+    console.error('[EBAY_PROVIDER_ERROR]', err);
+    throw err;
+  } finally {
+    await pageHandle?.close().catch(() => undefined);
+    await context?.close().catch(() => undefined);
+    await browser?.close().catch(() => undefined);
   }
 
-  const html = await res.text();
   const $ = cheerio.load(html);
   const totalCount = extractTotalCount($);
   if (totalCount !== undefined) {
