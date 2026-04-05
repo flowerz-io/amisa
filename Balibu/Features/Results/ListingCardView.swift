@@ -157,7 +157,7 @@ private struct ListingCardImageContainerView: View {
                 logoHeight: logoHeight,
                 logoMaxWidth: logoMaxWidth
             )
-            .padding(.top, 1)
+            .padding(.top, 5)
             .padding(.trailing, 1)
         }
     }
@@ -216,7 +216,7 @@ private struct ProviderLogoOverlay: View {
                 .interpolation(.high)
                 .antialiased(true)
                 .scaledToFit()
-                .frame(width: logoMaxWidth, height: logoHeight, alignment: .center)
+                .frame(height: logoHeight, alignment: .center)
                 .shadow(color: .black.opacity(0.22), radius: 2, x: 0, y: 1)
                 .accessibilityLabel(fallbackLabel)
                 .fixedSize(horizontal: true, vertical: true)
