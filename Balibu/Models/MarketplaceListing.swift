@@ -86,6 +86,30 @@ struct MarketplaceListing: Identifiable, Codable, Equatable, Hashable {
             fallbackCurrencyCode: MarketplaceSource.defaultCurrencyCode(forSource: source)
         )
     }
+
+    /// Marque affichée : fallback "No brand" si absente/invalide.
+    var displayBrand: String {
+        let value = (brand ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if value.isEmpty { return "No brand" }
+        let lowered = value.lowercased()
+        if ["unknown", "undefined", "null"].contains(lowered) {
+            return "No brand"
+        }
+        return value
+    }
+
+    /// Taille affichée normalisée en majuscules.
+    var displaySize: String? {
+        let value = (size ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.isEmpty else { return nil }
+        return value.uppercased()
+    }
+
+    /// État affiché nettoyé.
+    var displayCondition: String? {
+        let value = (condition ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return value.isEmpty ? nil : value
+    }
 }
 
 // MARK: - Conversion DTO → Modèle

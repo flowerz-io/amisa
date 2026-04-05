@@ -23,8 +23,8 @@ struct ListingCardView: View {
         static let cardCornerRadius: CGFloat = DesignTokens.radiusM
         /// Taille visuelle logo provider (x2 vs version précédente).
         static let logoHeight: CGFloat = 28
-        static let logoMaxWidth: CGFloat = 120
-        static let logoPadding: CGFloat = 8
+        static let logoMaxWidth: CGFloat = 110
+        static let logoBottomRowTrailingPadding: CGFloat = 0
     }
 
     var body: some View {
@@ -34,23 +34,16 @@ struct ListingCardView: View {
             VStack(alignment: .leading, spacing: 0) {
                 ListingCardImageContainerView(
                     imageURL: listing.thumbnailURL ?? listing.imageURL,
-                    source: listing.source,
-                    fallbackLabel: listing.sourceDisplayLabel,
                     imageHeight: Layout.imageHeight,
-                    logoHeight: Layout.logoHeight,
-                    logoMaxWidth: Layout.logoMaxWidth,
-                    logoPadding: Layout.logoPadding,
                     cardCornerRadius: Layout.cardCornerRadius
                 )
 
                 VStack(alignment: .leading, spacing: DesignTokens.spacingXXS) {
-                    if let brand = displayBrand {
-                        Text(brand)
-                            .font(.caption2)
-                            .foregroundStyle(Color.secondary)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                    }
+                    Text(listing.displayBrand)
+                        .font(.caption2)
+                        .foregroundStyle(Color.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
 
                     Text(listing.title)
                         .font(DesignTokens.body)
@@ -67,10 +60,21 @@ struct ListingCardView: View {
                             .lineLimit(1)
                     }
 
-                    Text(listing.formattedPrice)
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-                        .foregroundStyle(Color.primary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    HStack(alignment: .center, spacing: DesignTokens.spacingXS) {
+                        Text(listing.formattedPrice)
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color.primary)
+                            .lineLimit(1)
+                        Spacer(minLength: DesignTokens.spacingXS)
+                        ProviderLogoOverlay(
+                            source: listing.source,
+                            fallbackLabel: listing.sourceDisplayLabel,
+                            logoHeight: Layout.logoHeight,
+                            logoMaxWidth: Layout.logoMaxWidth
+                        )
+                        .padding(.trailing, Layout.logoBottomRowTrailingPadding)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .padding(DesignTokens.spacingS)
                 .frame(height: Layout.textBlockHeight, alignment: .topLeading)
@@ -93,14 +97,9 @@ struct ListingCardView: View {
         .disabled(listing.listingURL == nil)
     }
 
-    private var displayBrand: String? {
-        let b = listing.brand?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return b.isEmpty ? nil : b
-    }
-
     private var metaLine: String? {
-        let s = listing.size?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let c = listing.condition?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let s = listing.displaySize ?? ""
+        let c = listing.displayCondition ?? ""
         let hasS = !s.isEmpty
         let hasC = !c.isEmpty
         if hasS, hasC {
@@ -122,9 +121,7 @@ struct ListingCardView: View {
 
     private var accessibilityDescription: String {
         var parts: [String] = []
-        if let b = displayBrand {
-            parts.append(b)
-        }
+        parts.append(listing.displayBrand)
         parts.append(contentsOf: [listing.title, listing.formattedPrice, listing.sourceDisplayLabel])
         if let meta = metaLine {
             parts.append(meta)
@@ -135,19 +132,11 @@ struct ListingCardView: View {
 
 private struct ListingCardImageContainerView: View {
     let imageURL: URL?
-    let source: String
-    let fallbackLabel: String
     let imageHeight: CGFloat
-    let logoHeight: CGFloat
-    let logoMaxWidth: CGFloat
-    let logoPadding: CGFloat
     let cardCornerRadius: CGFloat
 
     var body: some View {
-        ZStack {
-            ListingCardImageView(imageURL: imageURL)
-                .zIndex(0)
-        }
+        ListingCardImageView(imageURL: imageURL)
         .frame(maxWidth: .infinity)
         .frame(height: imageHeight)
         .clipped()
@@ -160,16 +149,6 @@ private struct ListingCardImageContainerView: View {
                 style: .continuous
             )
         )
-        .overlay(alignment: .topTrailing) {
-            ProviderLogoOverlay(
-                source: source,
-                fallbackLabel: fallbackLabel,
-                logoHeight: logoHeight,
-                logoMaxWidth: logoMaxWidth
-            )
-            .padding(.top, logoPadding)
-            .padding(.trailing, logoPadding)
-        }
     }
 }
 
@@ -177,21 +156,25 @@ private struct ListingCardImageView: View {
     let imageURL: URL?
 
     var body: some View {
-        AsyncImage(url: imageURL) { phase in
-            switch phase {
-            case .success(let image):
-                image
-                    .resizable()
-                    .scaledToFill()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-                    .clipped()
-            case .failure:
-                placeholder
-            case .empty:
-                placeholder.overlay { ProgressView() }
-            @unknown default:
-                placeholder
+        GeometryReader { proxy in
+            AsyncImage(url: imageURL) { phase in
+                switch phase {
+                case .success(let image):
+                    image
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: proxy.size.width, height: proxy.size.height, alignment: .center)
+                        .clipped()
+                case .failure:
+                    placeholder
+                case .empty:
+                    placeholder.overlay { ProgressView() }
+                @unknown default:
+                    placeholder
+                }
             }
+            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .center)
+            .clipped()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         .clipped()
@@ -225,6 +208,7 @@ private struct ProviderLogoOverlay: View {
                 .frame(width: logoMaxWidth, height: logoHeight, alignment: .center)
                 .shadow(color: .black.opacity(0.22), radius: 2, x: 0, y: 1)
                 .accessibilityLabel(fallbackLabel)
+                .fixedSize(horizontal: true, vertical: true)
         } else {
             Text(fallbackLabel)
                 .font(.caption2.weight(.semibold))
@@ -233,6 +217,7 @@ private struct ProviderLogoOverlay: View {
                 .minimumScaleFactor(0.85)
                 .shadow(color: .black.opacity(0.55), radius: 2, x: 0, y: 1)
                 .accessibilityLabel(fallbackLabel)
+                .fixedSize(horizontal: true, vertical: true)
         }
     }
 
