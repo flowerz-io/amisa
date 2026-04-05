@@ -62,4 +62,28 @@ enum MarketplaceSource {
     static func providerLogoAssetName(for raw: String) -> String? {
         logoAssetName(from: raw)
     }
+
+    /// Clé canonique stable pour les filtres UI et comparaisons.
+    static func canonicalKey(from raw: String) -> String {
+        switch normalizedSource(raw) {
+        case "vinted": return "vinted"
+        case "grailed": return "grailed"
+        case "le bon coin", "leboncoin": return "leboncoin"
+        case "ebay": return "ebay"
+        case "depop": return "depop"
+        case "facebook marketplace", "facebookmarketplace": return "facebookmarketplace"
+        default:
+            return normalizedSource(raw).replacingOccurrences(of: " ", with: "")
+        }
+    }
+
+    /// Providers affichables dans le filtre Marketplace (préparé pour extension).
+    static let knownProviderDisplayNames: [String] = [
+        "Vinted",
+        "Grailed",
+        "eBay",
+        "Le Bon Coin",
+        "Depop",
+        "Facebook Marketplace",
+    ]
 }

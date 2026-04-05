@@ -11,11 +11,8 @@ struct ResultsView: View {
 
     @State private var showDetailsSheet = false
     @State private var showImageFullscreen = false
-    @State private var showFilterSheet = false
-    @State private var showSizeSheet = false
-    @State private var showBrandSheet = false
-    @State private var showConditionSheet = false
-    @State private var showColorSheet = false
+    @State private var showFiltersSheet = false
+    @State private var selectedFilterTab: ResultsFilterTab = .marketplace
     @State private var isFavorite = false
 
     private let listingGridColumns = [
@@ -71,13 +68,7 @@ struct ResultsView: View {
                 heroSection(session: session)
 
                 if !viewModel.showStickyHeader {
-                    ResultsFiltersBar(
-                        showFilterSheet: $showFilterSheet,
-                        showSizeSheet: $showSizeSheet,
-                        showBrandSheet: $showBrandSheet,
-                        showConditionSheet: $showConditionSheet,
-                        showColorSheet: $showColorSheet
-                    )
+                    ResultsFiltersBar(onSelectTab: openFilterSheet)
                 }
 
                 VStack(alignment: .leading, spacing: DesignTokens.spacingS) {
@@ -150,40 +141,16 @@ struct ResultsView: View {
         .sheet(isPresented: $showDetailsSheet) {
             ResultsDetailsSheet(session: session)
         }
-        .sheet(isPresented: $showFilterSheet) {
-            filterPlaceholderSheet(
-                title: String(localized: "Filtrer"),
-                message: String(localized: "Filtres avancés — à brancher."),
-                isPresented: $showFilterSheet
+        .sheet(isPresented: $showFiltersSheet) {
+            ResultsFiltersPagerSheet(
+                selectedTab: $selectedFilterTab,
+                enabledProviderKeys: $viewModel.enabledProviderKeys,
+                availableProviders: viewModel.availableMarketplaceSources,
+                onClose: { showFiltersSheet = false }
             )
-        }
-        .sheet(isPresented: $showSizeSheet) {
-            filterPlaceholderSheet(
-                title: String(localized: "Taille"),
-                message: String(localized: "Sélection des tailles — à brancher."),
-                isPresented: $showSizeSheet
-            )
-        }
-        .sheet(isPresented: $showBrandSheet) {
-            filterPlaceholderSheet(
-                title: String(localized: "Marque"),
-                message: String(localized: "Filtrer par marque — à brancher."),
-                isPresented: $showBrandSheet
-            )
-        }
-        .sheet(isPresented: $showConditionSheet) {
-            filterPlaceholderSheet(
-                title: String(localized: "État"),
-                message: String(localized: "Multi-sélection état — à brancher."),
-                isPresented: $showConditionSheet
-            )
-        }
-        .sheet(isPresented: $showColorSheet) {
-            filterPlaceholderSheet(
-                title: String(localized: "Couleur"),
-                message: String(localized: "Filtrer par couleur — à brancher."),
-                isPresented: $showColorSheet
-            )
+            .presentationDetents([.fraction(0.52), .large])
+            .presentationDragIndicator(.visible)
+            .presentationBackgroundInteraction(.enabled(upThrough: .fraction(0.52)))
         }
     }
 
@@ -253,11 +220,7 @@ struct ResultsView: View {
                 onThumbnailTap: session.sourceImage != nil ? { showImageFullscreen = true } : nil
             )
             ResultsFiltersBar(
-                showFilterSheet: $showFilterSheet,
-                showSizeSheet: $showSizeSheet,
-                showBrandSheet: $showBrandSheet,
-                showConditionSheet: $showConditionSheet,
-                showColorSheet: $showColorSheet
+                onSelectTab: openFilterSheet
             )
             .padding(.horizontal, DesignTokens.spacingM)
             .padding(.bottom, DesignTokens.spacingXS)
@@ -284,27 +247,9 @@ struct ResultsView: View {
         .ignoresSafeArea(edges: .top)
     }
 
-    private func filterPlaceholderSheet(title: String, message: String, isPresented: Binding<Bool>) -> some View {
-        NavigationStack {
-            VStack(alignment: .leading, spacing: DesignTokens.spacingM) {
-                Text(message)
-                    .font(DesignTokens.body)
-                    .foregroundStyle(Color.secondary)
-                Spacer()
-            }
-            .padding(DesignTokens.spacingM)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .background(DesignTokens.background)
-            .navigationTitle(title)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(String(localized: "Fermer")) {
-                        isPresented.wrappedValue = false
-                    }
-                }
-            }
-        }
+    private func openFilterSheet(_ tab: ResultsFilterTab) {
+        selectedFilterTab = tab
+        showFiltersSheet = true
     }
 
     private func errorState(message: String) -> some View {

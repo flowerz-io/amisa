@@ -19,6 +19,12 @@ final class ResultsViewModel: ObservableObject {
     @Published var state: ResultsViewState
     @Published var displayedListings: [MarketplaceListing]
     @Published private(set) var allListings: [MarketplaceListing]
+    @Published var enabledProviderKeys: Set<String> {
+        didSet {
+            applyDisplayedFilters()
+            logPaginationState(context: "providers_filter_changed")
+        }
+    }
     @Published var isLoadingMore: Bool = false
     @Published var hasMoreResults: Bool
     @Published var hasMoreVinted: Bool = false
@@ -39,8 +45,9 @@ final class ResultsViewModel: ObservableObject {
     init(session: SearchSession, apiClient: any APIClientProtocol = APIConfig.apiClient) {
         self.apiClient = apiClient
         self.paginationSearchText = session.vintedPaginationQuery
-        self.displayedListings = Self.sortByRelevance(session.listings)
         self.allListings = Self.sortByRelevance(session.listings)
+        self.enabledProviderKeys = Set(MarketplaceSource.knownProviderDisplayNames.map { MarketplaceSource.canonicalKey(from: $0) })
+        self.displayedListings = []
         self.paginationState = session.paginationState
         self.rankingContext = session.rankingContext
 
@@ -81,6 +88,7 @@ final class ResultsViewModel: ObservableObject {
             self.state = .loaded(session)
         }
 
+        applyDisplayedFilters()
         logPaginationState(context: "init")
     }
 
@@ -101,8 +109,8 @@ final class ResultsViewModel: ObservableObject {
                 page: 1
             )
             let newItems = response.listings.map { MarketplaceListing.from($0) }
-            allListings = newItems
-            displayedListings = Self.sortByRelevance(allListings)
+            allListings = Self.sortByRelevance(newItems)
+            applyDisplayedFilters()
             currentPage = response.page
             nextPageToFetch = 2
             hasMoreResults = response.hasMore
@@ -151,7 +159,7 @@ final class ResultsViewModel: ObservableObject {
                 let newItems = response.listings.map { MarketplaceListing.from($0) }
                 allListings = Self.mergeUnique(existing: allListings, new: newItems)
                 allListings = Self.sortByRelevance(allListings)
-                displayedListings = allListings
+                applyDisplayedFilters()
 
                 self.paginationState = response.pagination
                 currentPage = max(1, response.pagination.vinted.nextPage - 1)
@@ -175,7 +183,8 @@ final class ResultsViewModel: ObservableObject {
             )
             let newItems = response.listings.map { MarketplaceListing.from($0) }
             allListings = Self.mergeUnique(existing: allListings, new: newItems)
-            displayedListings = Self.sortByRelevance(allListings)
+            allListings = Self.sortByRelevance(allListings)
+            applyDisplayedFilters()
             currentPage = response.page
             nextPageToFetch += 1
             hasMoreResults = response.hasMore
@@ -187,6 +196,34 @@ final class ResultsViewModel: ObservableObject {
             hasMoreGrailed = false
         }
         logPaginationState(context: "loadNextBatch_legacy_done")
+    }
+
+    var availableMarketplaceSources: [String] {
+        var ordered: [String] = []
+        var seen = Set<String>()
+
+        for known in MarketplaceSource.knownProviderDisplayNames {
+            let key = MarketplaceSource.canonicalKey(from: known)
+            if !seen.contains(key) {
+                seen.insert(key)
+                ordered.append(known)
+            }
+        }
+
+        for listing in allListings {
+            let key = MarketplaceSource.canonicalKey(from: listing.source)
+            if !seen.contains(key) {
+                seen.insert(key)
+                ordered.append(listing.sourceDisplayLabel)
+            }
+        }
+        return ordered
+    }
+
+    private func applyDisplayedFilters() {
+        displayedListings = allListings.filter { listing in
+            enabledProviderKeys.contains(MarketplaceSource.canonicalKey(from: listing.source))
+        }
     }
 
     private static func mergeUnique(existing: [MarketplaceListing], new: [MarketplaceListing]) -> [MarketplaceListing] {
@@ -212,8 +249,10 @@ final class ResultsViewModel: ObservableObject {
     private func logPaginationState(context: String) {
         let vinted = allListings.filter { $0.source == "Vinted" }.count
         let grailed = allListings.filter { $0.source == "Grailed" }.count
+        let ebay = allListings.filter { MarketplaceSource.canonicalKey(from: $0.source) == "ebay" }.count
+        let leboncoin = allListings.filter { MarketplaceSource.canonicalKey(from: $0.source) == "leboncoin" }.count
         print(
-            "[RESULTS_VM] \(context) currentPage=\(currentPage) hasMore=\(hasMoreResults) hasMoreVinted=\(hasMoreVinted) hasMoreGrailed=\(hasMoreGrailed) isLoadingMore=\(isLoadingMore) displayedListings.count=\(displayedListings.count) allListings.count=\(allListings.count) vinted=\(vinted) grailed=\(grailed)"
+            "[RESULTS_VM] \(context) currentPage=\(currentPage) hasMore=\(hasMoreResults) hasMoreVinted=\(hasMoreVinted) hasMoreGrailed=\(hasMoreGrailed) isLoadingMore=\(isLoadingMore) displayedListings.count=\(displayedListings.count) allListings.count=\(allListings.count) vinted=\(vinted) grailed=\(grailed) ebay=\(ebay) leboncoin=\(leboncoin)"
         )
     }
 }
