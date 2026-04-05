@@ -253,8 +253,8 @@ export async function searchMoreRoute(app: FastifyInstance) {
     const nextEbay: MarketplaceListingDTO[] = [];
     const ebayState = body.pagination.ebay;
     let ebayPage = Math.max(1, ebayState?.nextPage ?? 2);
-    let hasMoreEbay = (ebayState?.hasMore ?? false) && isProviderEnabled('ebay');
-    let ebayStopReason = ebayState ? 'already_exhausted' : 'missing_pagination_state';
+    let hasMoreEbay = isProviderEnabled('ebay') && (ebayState?.hasMore ?? true);
+    let ebayStopReason = ebayState ? 'already_exhausted' : 'missing_pagination_state_assumed_has_more';
     let ebayPagesFetched = 0;
     if (!isProviderEnabled('ebay')) {
       console.log('[EBAY_DISABLED] provider skipped');

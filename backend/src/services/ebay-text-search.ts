@@ -38,6 +38,14 @@ export type EbaySearchResult = {
   totalCount?: number;
 };
 
+const CARD_SELECTORS = [
+  'ul.srp-results > li.s-item',
+  'li.s-item',
+  'div.s-card',
+  'div.su-card-container',
+  '[data-view*="mi:"]',
+] as const;
+
 function encodeEbayKeywords(input: string): string {
   return encodeURIComponent(input.trim()).replace(/%20/g, '+');
 }
@@ -131,7 +139,51 @@ function isInvalidCard(title: string, listingUrl: string): boolean {
   if (t.includes('shop on ebay')) return true;
   if (t.includes('sponsored')) return true;
   if (t.includes('explore more options')) return true;
+  if (t.includes('résultats correspondant à')) return true;
   return false;
+}
+
+function firstTextBySelectors($root: cheerio.Cheerio<any>, selectors: string[]): string {
+  for (const sel of selectors) {
+    const t = $root.find(sel).first().text().trim();
+    if (t) return t;
+  }
+  return '';
+}
+
+function firstAttrBySelectors(
+  $root: cheerio.Cheerio<any>,
+  selectors: string[],
+  attr: string
+): string {
+  for (const sel of selectors) {
+    const v = $root.find(sel).first().attr(attr)?.trim();
+    if (v) return v;
+  }
+  return '';
+}
+
+function logCardSelectorDiagnostics($: cheerio.CheerioAPI): { selected: cheerio.Cheerio<any>; selector: string; count: number } {
+  let selected: cheerio.Cheerio<any> = $([]);
+  let selectorUsed: string = CARD_SELECTORS[0];
+  let selectedCount = 0;
+
+  for (const selector of CARD_SELECTORS) {
+    const nodes = $(selector);
+    const count = nodes.length;
+    console.log(`[EBAY_CARD_SELECTOR_MATCH] selector=${selector} count=${count}`);
+    for (let i = 0; i < Math.min(3, count); i++) {
+      const sample = $(nodes[i]).html()?.replace(/\s+/g, ' ').slice(0, 420) ?? '';
+      console.log(`[EBAY_CARD_SAMPLE_HTML] selector=${selector} idx=${i} html=${sample}`);
+    }
+    if (count > selectedCount) {
+      selected = nodes;
+      selectorUsed = selector;
+      selectedCount = count;
+    }
+  }
+
+  return { selected, selector: selectorUsed, count: selectedCount };
 }
 
 export async function searchEbayByText(
@@ -164,37 +216,68 @@ export async function searchEbayByText(
 
   const items: EbaySearchItem[] = [];
   const seen = new Set<string>();
-  $('li.s-item, div.s-card, div.su-card-container').each((index, el) => {
+  const { selected: cards, selector: selectorUsed, count: selectedCount } = logCardSelectorDiagnostics($);
+  console.log(`[EBAY_CARD_SELECTOR_USED] selector=${selectorUsed} count=${selectedCount}`);
+
+  cards.each((index, el) => {
     if (items.length >= limit) return false;
     const $root = $(el);
 
-    const link =
-      $root.find('a.s-item__link[href]').first().attr('href')?.trim() ||
-      $root.find('a[href*="/itm/"]').first().attr('href')?.trim() ||
-      '';
+    const link = firstAttrBySelectors(
+      $root,
+      [
+        'a.s-item__link[href]',
+        'a.s-card__link[href]',
+        'a[href*="/itm/"]',
+        'a[href*="itm"]',
+      ],
+      'href'
+    );
     const listingUrl = toAbsoluteUrl(link);
-    if (!listingUrl || seen.has(listingUrl)) return;
+    if (!listingUrl) {
+      console.log('[EBAY_CARD_PARSE_SKIPPED] reason=missing_link');
+      return;
+    }
+    if (seen.has(listingUrl)) {
+      console.log('[EBAY_CARD_PARSE_SKIPPED] reason=duplicate_link');
+      return;
+    }
 
-    const title =
-      $root.find('.s-item__title').first().text().trim() ||
-      $root.find('[role="heading"]').first().text().trim() ||
-      '';
-    if (!title) return;
-    if (isInvalidCard(title, listingUrl)) return;
+    const title = firstTextBySelectors($root, [
+      '.s-item__title',
+      '.su-card__title',
+      '[data-testid="title"]',
+      '[role="heading"]',
+      'h3',
+    ]);
+    if (!title) {
+      console.log('[EBAY_CARD_PARSE_SKIPPED] reason=missing_title');
+      return;
+    }
+    if (isInvalidCard(title, listingUrl)) {
+      console.log('[EBAY_CARD_PARSE_SKIPPED] reason=invalid_card_type');
+      return;
+    }
 
-    const priceText =
-      $root.find('.s-item__price').first().text().trim() ||
-      $root.find('[data-testid*="price"]').first().text().trim() ||
-      '';
+    const priceText = firstTextBySelectors($root, [
+      '.s-item__price',
+      '.su-card__price',
+      '[data-testid*="price"]',
+      '.POSITIVE',
+    ]);
     const { price, currency } = parsePrice(priceText);
-    if (price === undefined) return;
+    if (price === undefined) {
+      console.log('[EBAY_CARD_PARSE_SKIPPED] reason=missing_price');
+      return;
+    }
 
     const image =
-      $root.find('img.s-item__image-img').first().attr('src')?.trim() ||
-      $root.find('img.s-item__image-img').first().attr('data-src')?.trim() ||
-      $root.find('img').first().attr('src')?.trim() ||
-      '';
-    if (!image || isPlaceholderImage(image)) return;
+      firstAttrBySelectors($root, ['img.s-item__image-img', 'img.su-card__image', 'img'], 'data-src') ||
+      firstAttrBySelectors($root, ['img.s-item__image-img', 'img.su-card__image', 'img'], 'src');
+    if (!image || isPlaceholderImage(image)) {
+      console.log('[EBAY_CARD_PARSE_SKIPPED] reason=missing_or_placeholder_image');
+      return;
+    }
 
     const listingId =
       listingUrl.match(/\/itm\/(?:[^/]*\/)?(\d{8,15})/i)?.[1] ||
@@ -210,11 +293,14 @@ export async function searchEbayByText(
     const published = $root.find('.s-item__ended-date, .s-item__time-left').first().text().trim() || undefined;
 
     const dedupeKey = listingId ? `ebay|${listingId}` : `ebay|${listingUrl}`;
-    if (seen.has(dedupeKey)) return;
+    if (seen.has(dedupeKey)) {
+      console.log('[EBAY_CARD_PARSE_SKIPPED] reason=duplicate_id');
+      return;
+    }
     seen.add(listingUrl);
     seen.add(dedupeKey);
 
-    items.push({
+    const parsed: EbaySearchItem = {
       source: 'eBay',
       sourceKey: 'ebay',
       ...(listingId ? { listingId } : {}),
@@ -229,7 +315,11 @@ export async function searchEbayByText(
       ...(size ? { size } : {}),
       ...(condition ? { condition } : {}),
       ...(published ? { publishedAtRelative: published } : {}),
-    });
+    };
+    items.push(parsed);
+    console.log(
+      `[EBAY_CARD_PARSE_OK] rank=${parsed.sourceRank ?? -1} listingId=${parsed.listingId ?? 'none'} title=${parsed.title.slice(0, 90)}`
+    );
     return undefined;
   });
 

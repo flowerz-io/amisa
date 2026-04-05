@@ -269,8 +269,12 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
       }
     }
     const ebayListings = ebayItemsToListings(ebayItems);
-    const ebayHasMore = ebayItems.length >= INITIAL_RETURN_PER_PROVIDER;
-    const ebayStopReason = ebayHasMore ? 'initial_batch_reached' : 'provider_exhausted_on_page_1';
+    const ebayHasMore = ebayItems.length >= INITIAL_RETURN_PER_PROVIDER || (ebayItems.length === 0 && (ebayTotalCount ?? 0) > 0);
+    const ebayStopReason = ebayItems.length >= INITIAL_RETURN_PER_PROVIDER
+      ? 'initial_batch_reached'
+      : (ebayItems.length === 0 && (ebayTotalCount ?? 0) > 0)
+          ? 'parse_failed_page_1_total_detected'
+          : 'provider_exhausted_on_page_1';
     console.log('[EBAY_INITIAL_COUNT]', ebayListings.length);
     console.log('[CURRENT_EBAY_PAGE]', 1);
     console.log('[TOTAL_LOADED_EBAY]', ebayListings.length);
