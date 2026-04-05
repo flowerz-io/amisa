@@ -20,6 +20,9 @@ const grailedBrowserPath = chromium.executablePath();
 console.log(
   `[GRAILED_BROWSER_READY] ${existsSync(grailedBrowserPath) ? 'yes' : 'no'} path=${grailedBrowserPath}`
 );
+console.log(
+  `[LEBONCOIN_BROWSER_READY] ${existsSync(grailedBrowserPath) ? 'yes' : 'no'} path=${grailedBrowserPath}`
+);
 
 const app = Fastify({ logger: true });
 

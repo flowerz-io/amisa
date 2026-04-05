@@ -6,7 +6,7 @@ import type {
 } from '../api/types.js';
 import { searchVintedByText, type VintedSearchItem } from '../services/vinted-text-search.js';
 import { searchGrailedByTextBrowser } from '../services/grailed-browser-search.js';
-import { searchLeBonCoinByText, type LeBonCoinSearchItem } from '../services/leboncoin-text-search.js';
+import { searchLeBonCoinByTextBrowser, type LeBonCoinSearchItem } from '../services/leboncoin-browser-search.js';
 import { rankAcrossSources } from '../services/marketplace-ranking.js';
 import {
   GRAILED_MAX_PER_PAGE,
@@ -234,7 +234,7 @@ export async function searchMoreRoute(app: FastifyInstance) {
         const pageLimit = Math.max(1, Math.min(LEBONCOIN_MAX_PER_PAGE, remaining));
         let pageItems: LeBonCoinSearchItem[] = [];
         try {
-          const result = await searchLeBonCoinByText(query, { page: leboncoinPage, limit: pageLimit });
+          const result = await searchLeBonCoinByTextBrowser(query, { page: leboncoinPage, limit: pageLimit });
           pageItems = result.items;
         } catch (err) {
           hasMoreLeboncoin = false;

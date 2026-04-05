@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import type { LeBonCoinListingsRequest, LeBonCoinListingsResponse } from '../api/types.js';
 import type { MarketplaceListingDTO } from '../api/types.js';
-import { searchLeBonCoinByText, type LeBonCoinSearchItem } from '../services/leboncoin-text-search.js';
+import { searchLeBonCoinByTextBrowser, type LeBonCoinSearchItem } from '../services/leboncoin-browser-search.js';
 import { LEBONCOIN_MAX_PER_PAGE } from '../marketplace-limits.js';
 
 function leBonCoinItemsToListings(items: LeBonCoinSearchItem[]): MarketplaceListingDTO[] {
@@ -51,7 +51,7 @@ export async function leBonCoinListingsRoute(app: FastifyInstance) {
     console.log('[LEBONCOIN_LISTINGS_PAGE]', { page, searchText: searchText.slice(0, 80) });
 
     try {
-      const result = await searchLeBonCoinByText(searchText, { page });
+      const result = await searchLeBonCoinByTextBrowser(searchText, { page });
       const listings = leBonCoinItemsToListings(result.items);
       const hasMore = result.items.length >= LEBONCOIN_MAX_PER_PAGE;
       return reply.send({

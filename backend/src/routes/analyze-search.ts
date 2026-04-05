@@ -10,10 +10,10 @@ import {
 } from '../services/vinted-text-search.js';
 import { searchGrailedByTextBrowser } from '../services/grailed-browser-search.js';
 import {
-  searchLeBonCoinByText,
+  searchLeBonCoinByTextBrowser,
   type LeBonCoinSearchItem,
   buildLeBonCoinSearchUrl,
-} from '../services/leboncoin-text-search.js';
+} from '../services/leboncoin-browser-search.js';
 import type { MarketplaceListingDTO } from '../api/types.js';
 import type { SearchRankingContextDTO } from '../api/types.js';
 import { visionProviderName, isDebug } from '../config.js';
@@ -227,7 +227,7 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
     let leboncoinItems: LeBonCoinSearchItem[] = [];
     let leboncoinTotalCount: number | undefined;
     try {
-      const result = await searchLeBonCoinByText(trimmedPrimary, {
+      const result = await searchLeBonCoinByTextBrowser(trimmedPrimary, {
         page: 1,
         limit: INITIAL_RETURN_PER_PROVIDER,
       });
