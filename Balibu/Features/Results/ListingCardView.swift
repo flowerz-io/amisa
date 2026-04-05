@@ -34,7 +34,11 @@ struct ListingCardView: View {
             VStack(alignment: .leading, spacing: 0) {
                 ListingCardImageContainerView(
                     imageURL: listing.thumbnailURL ?? listing.imageURL,
+                    source: listing.source,
+                    fallbackLabel: listing.sourceDisplayLabel,
                     imageHeight: Layout.imageHeight,
+                    logoHeight: Layout.logoHeight,
+                    logoMaxWidth: Layout.logoMaxWidth,
                     cardCornerRadius: Layout.cardCornerRadius
                 )
 
@@ -66,13 +70,6 @@ struct ListingCardView: View {
                             .foregroundStyle(Color.primary)
                             .lineLimit(1)
                         Spacer(minLength: DesignTokens.spacingXS)
-                        ProviderLogoOverlay(
-                            source: listing.source,
-                            fallbackLabel: listing.sourceDisplayLabel,
-                            logoHeight: Layout.logoHeight,
-                            logoMaxWidth: Layout.logoMaxWidth
-                        )
-                        .padding(.trailing, Layout.logoBottomRowTrailingPadding)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -132,7 +129,11 @@ struct ListingCardView: View {
 
 private struct ListingCardImageContainerView: View {
     let imageURL: URL?
+    let source: String
+    let fallbackLabel: String
     let imageHeight: CGFloat
+    let logoHeight: CGFloat
+    let logoMaxWidth: CGFloat
     let cardCornerRadius: CGFloat
 
     var body: some View {
@@ -149,6 +150,16 @@ private struct ListingCardImageContainerView: View {
                 style: .continuous
             )
         )
+        .overlay(alignment: .topTrailing) {
+            ProviderLogoOverlay(
+                source: source,
+                fallbackLabel: fallbackLabel,
+                logoHeight: logoHeight,
+                logoMaxWidth: logoMaxWidth
+            )
+            .padding(.top, 1)
+            .padding(.trailing, 1)
+        }
     }
 }
 
