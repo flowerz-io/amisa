@@ -40,11 +40,13 @@ const CARD_SELECTORS = [
   '[data-view*="mi:"]',
 ] as const;
 
-const WAIT_SELECTORS = [
+const DOM_READY_SELECTORS = [
+  'ul.srp-results',
   'li.s-item',
-  '[role="listitem"]',
-  'div[data-testid]',
-  'section ul li',
+  'div.s-card',
+  'div.s-card-container',
+  '[data-view="mi:1"]',
+  '[data-view^="mi:"]',
   'a[href*="/itm/"]',
 ] as const;
 
@@ -214,6 +216,64 @@ function logCardSelectorDiagnostics($: cheerio.CheerioAPI): { selected: cheerio.
   return { selected, selector: selectorUsed, count: selectedCount };
 }
 
+async function firstMatchingReadySelector(page: Page): Promise<string | null> {
+  const rounds = 6;
+  for (let round = 1; round <= rounds; round++) {
+    for (const selector of DOM_READY_SELECTORS) {
+      console.log(`[EBAY_DOM_READY_SELECTOR_TRY] round=${round} selector=${selector}`);
+      const count = await page
+        .locator(selector)
+        .count()
+        .catch(() => 0);
+      if (count > 0) {
+        console.log(`[EBAY_DOM_READY_SELECTOR_OK] round=${round} selector=${selector} count=${count}`);
+        return selector;
+      }
+      console.log(`[EBAY_DOM_READY_SELECTOR_FAIL] round=${round} selector=${selector} count=${count}`);
+    }
+    await page.waitForTimeout(800 * round);
+  }
+  return null;
+}
+
+async function logDomReadyFailureDiagnostics(page: Page): Promise<void> {
+  const title = await page.title().catch(() => '(unavailable)');
+  const finalUrl = page.url();
+  const mainSnippet = await page
+    .evaluate(() => {
+      const el = document.querySelector('main, #mainContent, #srp-river-main, body');
+      const html = (el?.innerHTML ?? document.body?.innerHTML ?? '').replace(/\s+/g, ' ').trim();
+      return html.slice(0, 1600);
+    })
+    .catch(() => '(unavailable)');
+  const foundCandidates = await page
+    .evaluate(() => {
+      const out: string[] = [];
+      const push = (s: string) => {
+        if (!s || out.includes(s)) return;
+        out.push(s);
+      };
+      const nodes = Array.from(document.querySelectorAll('a[href*="/itm/"], [class*="s-item"], [class*="s-card"], li, ul, div')).slice(0, 200);
+      for (const node of nodes) {
+        if (out.length >= 10) break;
+        const el = node as HTMLElement;
+        const tag = el.tagName.toLowerCase();
+        if (el.id) push(`${tag}#${el.id}`);
+        const cls = (el.className || '').toString().trim().split(/\s+/).filter(Boolean);
+        if (cls.length > 0) push(`${tag}.${cls.slice(0, 2).join('.')}`);
+        const dv = el.getAttribute('data-view');
+        if (dv) push(`${tag}[data-view="${dv}"]`);
+      }
+      return out.slice(0, 10);
+    })
+    .catch(() => [] as string[]);
+
+  console.log('[EBAY_DOM_READY_FAILED_TITLE]', title);
+  console.log('[EBAY_DOM_READY_FAILED_URL]', finalUrl);
+  console.log('[EBAY_DOM_READY_FAILED_MAIN_SNIPPET]', mainSnippet);
+  console.log('[EBAY_DOM_READY_FAILED_CANDIDATES]', JSON.stringify(foundCandidates));
+}
+
 export async function searchEbayByText(
   query: string,
   options?: EbaySearchOptions
@@ -243,24 +303,19 @@ export async function searchEbayByText(
     });
     pageHandle = await context.newPage();
     await pageHandle.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
-    await pageHandle.waitForLoadState('networkidle', { timeout: 12000 }).catch(() => undefined);
+    await pageHandle.waitForLoadState('domcontentloaded', { timeout: 10000 }).catch(() => undefined);
+    await pageHandle.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => undefined);
 
-    let domReadySelector = '';
-    for (const selector of WAIT_SELECTORS) {
-      const found = await pageHandle
-        .waitForSelector(selector, { timeout: 6000 })
-        .then(() => true)
-        .catch(() => false);
-      if (found) {
-        domReadySelector = selector;
-        break;
-      }
-    }
+    const domReadySelector = await firstMatchingReadySelector(pageHandle);
     if (!domReadySelector) {
       console.error('[EBAY_PROVIDER_ERROR]', 'No DOM selector became ready');
-      throw new Error('eBay DOM not ready');
+      await logDomReadyFailureDiagnostics(pageHandle);
+      console.log('[EBAY_FINAL_READY_SELECTOR] none');
+    } else {
+      console.log('[EBAY_DOM_READY_SELECTOR_OK]', domReadySelector);
+      console.log('[EBAY_FINAL_READY_SELECTOR]', domReadySelector);
+      console.log('[EBAY_BROWSER_DOM_READY]', domReadySelector);
     }
-    console.log('[EBAY_BROWSER_DOM_READY]', domReadySelector);
 
     html = await pageHandle.content();
     console.log('[EBAY_BROWSER_HTML_LENGTH]', html.length);
