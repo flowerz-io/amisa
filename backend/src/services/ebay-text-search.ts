@@ -70,7 +70,14 @@ function toAbsoluteUrl(href: string): string {
 function parsePrice(raw: string): { price?: number; currency?: string } {
   const text = (raw ?? '').replace(/\u00a0/g, ' ').trim();
   if (!text) return {};
-  const currency = text.includes('€') ? 'EUR' : text.includes('£') ? 'GBP' : text.includes('$') ? 'USD' : 'EUR';
+  const upper = text.toUpperCase();
+  const currency = upper.includes('EUR') || text.includes('€')
+    ? 'EUR'
+    : upper.includes('GBP') || text.includes('£')
+      ? 'GBP'
+      : upper.includes('USD') || text.includes('$')
+        ? 'USD'
+        : 'EUR';
   const m = text.match(/(\d[\d.,\s]*)/);
   if (!m) return { currency };
   const num = m[1].replace(/\s/g, '');
@@ -78,6 +85,25 @@ function parsePrice(raw: string): { price?: number; currency?: string } {
   const n = parseFloat(normalized);
   if (!Number.isFinite(n)) return { currency };
   return { price: n, currency };
+}
+
+function formatMarketplacePriceForLog(value: number | undefined, currency: string | undefined): string {
+  if (value === undefined || !Number.isFinite(value)) return '—';
+  const c = (currency ?? 'EUR').toUpperCase();
+  if (c === 'EUR') {
+    const fr = new Intl.NumberFormat('fr-FR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+    return `${fr} €`;
+  }
+  if (c === 'USD') {
+    return `$${value.toFixed(2)}`;
+  }
+  if (c === 'GBP') {
+    return `£${value.toFixed(2)}`;
+  }
+  return value.toFixed(2);
 }
 
 function inferBrandFromTitle(title: string): string | undefined {
@@ -299,14 +325,24 @@ export async function searchEbayByText(
     }
 
     const priceText = firstTextBySelectors($root, [
+      'span.s-card__price',
+      '.s-card__price',
+      'span[class*="price"]',
+      '[class*="s-card__price"]',
       '.s-item__price',
       '.su-card__price',
       '[data-testid*="price"]',
       '.POSITIVE',
     ]);
+    console.log('[EBAY_PRICE_RAW]', priceText || '(empty)');
     const { price, currency } = parsePrice(priceText);
-    if (price === undefined) {
-      console.log('[EBAY_CARD_PARSE_SKIPPED] reason=missing_price');
+    console.log('[EBAY_PRICE_PARSED]', price ?? '(none)');
+    console.log('[EBAY_CURRENCY_DETECTED]', currency ?? '(none)');
+    console.log('[EBAY_PRICE_DISPLAY]', formatMarketplacePriceForLog(price, currency));
+
+    const hasRawPrice = priceText.trim().length > 0;
+    if (price === undefined && !hasRawPrice) {
+      console.log('[EBAY_CARD_PARSE_SKIPPED] reason=missing_price_and_raw_absent');
       return;
     }
 
@@ -345,7 +381,7 @@ export async function searchEbayByText(
       ...(listingId ? { listingId } : {}),
       sourceRank: index + 1,
       title,
-      price,
+      price: price ?? 0,
       currency: currency ?? 'EUR',
       imageUrl: image,
       thumbnailUrl: image,
