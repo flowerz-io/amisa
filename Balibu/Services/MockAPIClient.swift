@@ -21,6 +21,11 @@ struct MockAPIClient: APIClientProtocol {
         try await analyzeAndSearch(image: UIImage(data: imageData) ?? UIImage())
     }
 
+    func analyzeTextSearch(query: String) async throws -> AnalyzeSearchResponse {
+        try await Task.sleep(nanoseconds: UInt64(delaySeconds * 500_000_000))
+        return AnalyzeSearchResponse.mock
+    }
+
     func fetchVintedListingsPage(searchText: String, page: Int) async throws -> VintedListingsResponse {
         try await Task.sleep(nanoseconds: UInt64(delaySeconds * 500_000_000))
         guard page >= 2 else {

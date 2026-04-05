@@ -6,7 +6,9 @@
 // --- POST /analyze-search ---
 
 export interface AnalyzeSearchRequest {
-  imageBase64: string;
+  imageBase64?: string;
+  textQuery?: string;
+  enabledProviders?: string[];
 }
 
 export interface FashionVisionResult {

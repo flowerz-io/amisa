@@ -5,6 +5,52 @@ import { DEPOP_MAX_PER_PAGE } from '../marketplace-limits.js';
 
 const DEPOP_ORIGIN = 'https://www.depop.com';
 
+const CARD_SELECTORS = [
+  'ol.styles_productGrid__Cpzyf li.styles_listItem__Uv9lb',
+  'ol[class*="styles_productGrid"] li[class*="styles_listItem"]',
+  'li.styles_listItem__Uv9lb',
+  'li[class*="styles_listItem"]',
+  'a[href*="/products/"]',
+] as const;
+
+const LINK_SELECTORS = [
+  'a.styles_unstyledLink__DsttP[href*="/products/"]',
+  'a[class*="unstyledLink"][href*="/products/"]',
+  'a[href*="/products/"]',
+] as const;
+
+const IMAGE_SELECTORS = [
+  'img._mainImage_e5j9l_11',
+  'img[class*="_mainImage"]',
+  'picture img',
+  'img',
+] as const;
+
+const BRAND_SELECTORS = [
+  'p.styles_brandName__PHsIX',
+  'p[class*="styles_brandName"]',
+  '[data-testid*="brand"]',
+] as const;
+
+const SIZE_SELECTORS = [
+  'p.styles_sizeAttributeText__r9QJj',
+  'p[class*="styles_sizeAttributeText"]',
+  '[data-testid*="size"]',
+] as const;
+
+const PRICE_SELECTORS_DISCOUNT = [
+  'p.styles_price__H8qdh[aria-label="Discounted price"]',
+  'p[class*="styles_price"][aria-label*="Discounted"]',
+] as const;
+
+const PRICE_SELECTORS_NORMAL = [
+  'p.styles_price__H8qdh[aria-label="Price"]',
+  'p[class*="styles_price"][aria-label="Price"]',
+  'p.styles_price__H8qdh',
+  'p[class*="styles_price"]',
+  '[data-testid*="price"]',
+] as const;
+
 export type DepopSearchItem = {
   source: 'Depop';
   sourceKey: 'depop';
@@ -96,6 +142,44 @@ function inferProviderItemId(listingUrl: string): string | undefined {
   return m?.[1]?.trim() || undefined;
 }
 
+function pickBestCardSelector($: cheerio.CheerioAPI): { selector: string; nodes: cheerio.Cheerio<any> } {
+  let bestSelector: string = CARD_SELECTORS[0];
+  let bestNodes: cheerio.Cheerio<any> = $(bestSelector);
+  let bestCount = bestNodes.length;
+  for (const selector of CARD_SELECTORS) {
+    const nodes = $(selector);
+    const count = nodes.length;
+    console.log(`[DEPOP_SELECTOR_MATCH] type=card selector=${selector} count=${count}`);
+    if (count > bestCount) {
+      bestCount = count;
+      bestSelector = selector;
+      bestNodes = nodes;
+    }
+  }
+  console.log(`[DEPOP_SELECTOR_USED] type=card selector=${bestSelector} count=${bestCount}`);
+  return { selector: bestSelector, nodes: bestNodes };
+}
+
+function firstTextBySelectors($root: cheerio.Cheerio<any>, selectors: readonly string[]): string {
+  for (const selector of selectors) {
+    const value = $root.find(selector).first().text().trim();
+    if (value) return value;
+  }
+  return '';
+}
+
+function firstAttrBySelectors(
+  $root: cheerio.Cheerio<any>,
+  selectors: readonly string[],
+  attr: string
+): string {
+  for (const selector of selectors) {
+    const value = $root.find(selector).first().attr(attr)?.trim();
+    if (value) return value;
+  }
+  return '';
+}
+
 function parseDepopCardsFromHtml(
   html: string,
   query: string,
@@ -103,7 +187,7 @@ function parseDepopCardsFromHtml(
   limit: number
 ): DepopSearchResult {
   const $ = cheerio.load(html);
-  const cards = $('ol[class*="styles_productGrid"] li[class*="styles_listItem"], li[class*="styles_listItem"]');
+  const { nodes: cards } = pickBestCardSelector($);
   const detectedCards = cards.length;
   console.log(`[DEPOP_CARD_COUNT] detected=${detectedCards} requestedPage=${page} limit=${limit}`);
 
@@ -112,10 +196,7 @@ function parseDepopCardsFromHtml(
 
   cards.each((index, el) => {
     const $root = $(el);
-    const href =
-      $root.find('a.styles_unstyledLink__DsttP[href*="/products/"]').first().attr('href')?.trim() ||
-      $root.find('a[href*="/products/"]').first().attr('href')?.trim() ||
-      '';
+    const href = firstAttrBySelectors($root, LINK_SELECTORS, 'href');
     const listingUrl = toAbsoluteUrl(href);
     if (!listingUrl) {
       console.log('[DEPOP_PARSE_SKIPPED] reason=missing_link');
@@ -126,15 +207,11 @@ function parseDepopCardsFromHtml(
       return;
     }
 
-    const brandRaw = $root.find('p.styles_brandName__PHsIX, p[class*="styles_brandName"]').first().text().trim();
+    const brandRaw = firstTextBySelectors($root, BRAND_SELECTORS);
     const brand = brandRaw || 'No brand';
 
-    const linkAria =
-      $root.find('a.styles_unstyledLink__DsttP[href*="/products/"]').first().attr('aria-label')?.trim() ||
-      $root.find('a[href*="/products/"]').first().attr('aria-label')?.trim() ||
-      '';
-    const imageAlt =
-      $root.find('img._mainImage_e5j9l_11, img[class*="_mainImage"]').first().attr('alt')?.trim() || '';
+    const linkAria = firstAttrBySelectors($root, LINK_SELECTORS, 'aria-label');
+    const imageAlt = firstAttrBySelectors($root, IMAGE_SELECTORS, 'alt');
     let title =
       linkAria ||
       imageAlt ||
@@ -145,27 +222,12 @@ function parseDepopCardsFromHtml(
       console.log(`[DEPOP_TITLE_FALLBACK] listing=${listingUrl} title="${title}"`);
     }
 
-    const sizeRaw =
-      $root.find('p.styles_sizeAttributeText__r9QJj, p[class*="styles_sizeAttributeText"]').first().text().trim() ||
-      '';
+    const sizeRaw = firstTextBySelectors($root, SIZE_SELECTORS);
     const size = normalizeSize(sizeRaw);
 
-    const discountedPriceRaw =
-      $root
-        .find(
-          'p.styles_price__H8qdh[aria-label="Discounted price"], p[class*="styles_price"][aria-label*="Discounted"]'
-        )
-        .first()
-        .text()
-        .trim() || '';
-    const normalPriceRaw =
-      $root
-        .find('p.styles_price__H8qdh[aria-label="Price"], p[class*="styles_price"][aria-label="Price"]')
-        .first()
-        .text()
-        .trim() || '';
-    const fallbackPriceRaw =
-      $root.find('p.styles_price__H8qdh, p[class*="styles_price"]').first().text().trim() || '';
+    const discountedPriceRaw = firstTextBySelectors($root, PRICE_SELECTORS_DISCOUNT);
+    const normalPriceRaw = firstTextBySelectors($root, PRICE_SELECTORS_NORMAL);
+    const fallbackPriceRaw = firstTextBySelectors($root, ['p', 'span']);
     const priceRaw = discountedPriceRaw || normalPriceRaw || fallbackPriceRaw;
     if (!priceRaw) {
       console.log('[DEPOP_PARSE_SKIPPED] reason=missing_price');
@@ -177,9 +239,8 @@ function parseDepopCardsFromHtml(
       return;
     }
 
-    const imageNode = $root.find('img._mainImage_e5j9l_11, img[class*="_mainImage"]').first();
-    const src = imageNode.attr('src')?.trim() || imageNode.attr('data-src')?.trim() || '';
-    const srcset = imageNode.attr('srcset')?.trim() || '';
+    const src = firstAttrBySelectors($root, IMAGE_SELECTORS, 'src') || firstAttrBySelectors($root, IMAGE_SELECTORS, 'data-src');
+    const srcset = firstAttrBySelectors($root, IMAGE_SELECTORS, 'srcset');
     const imageUrl = src || bestFromSrcset(srcset) || undefined;
     if (!imageUrl) {
       console.log('[DEPOP_PARSE_SKIPPED] reason=missing_image');

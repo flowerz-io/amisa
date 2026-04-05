@@ -13,6 +13,7 @@ import UIKit
 protocol APIClientProtocol: Sendable {
     func analyzeAndSearch(image: UIImage) async throws -> AnalyzeSearchResponse
     func analyzeAndSearch(imageData: Data) async throws -> AnalyzeSearchResponse
+    func analyzeTextSearch(query: String) async throws -> AnalyzeSearchResponse
     /// Pages suivantes Vinted (page ≥ 2). La page 1 vient de `analyze-search`.
     func fetchVintedListingsPage(searchText: String, page: Int) async throws -> VintedListingsResponse
     /// Pagination multi-providers sans ré-analyse vision.
@@ -51,7 +52,11 @@ actor APIClient: APIClientProtocol {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        let body = AnalyzeSearchRequest(imageBase64: imageData.base64EncodedString())
+        let enabledProviders = ProviderSettingsStore.enabledProviderBackendKeysSnapshot()
+        let body = AnalyzeSearchRequest(
+            imageBase64: imageData.base64EncodedString(),
+            enabledProviders: enabledProviders
+        )
         request.httpBody = try JSONEncoder().encode(body)
 
         let (data, response) = try await session.data(for: request)
@@ -91,6 +96,38 @@ actor APIClient: APIClientProtocol {
             throw APIError.unknown(statusCode: 502)
         case 400:
             throw APIError.badRequest
+        case 500:
+            throw APIError.serverError
+        default:
+            throw APIError.unknown(statusCode: httpResponse.statusCode)
+        }
+    }
+
+    func analyzeTextSearch(query: String) async throws -> AnalyzeSearchResponse {
+        let url = baseURL.appending(path: "analyze-search")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let enabledProviders = ProviderSettingsStore.enabledProviderBackendKeysSnapshot()
+        let body = AnalyzeSearchRequest(
+            textQuery: query,
+            enabledProviders: enabledProviders
+        )
+        request.httpBody = try JSONEncoder().encode(body)
+
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        switch httpResponse.statusCode {
+        case 200:
+            return try decoder.decode(AnalyzeSearchResponse.self, from: data)
+        case 400:
+            throw APIError.badRequest
+        case 422:
+            throw APIError.nonFashion
         case 500:
             throw APIError.serverError
         default:

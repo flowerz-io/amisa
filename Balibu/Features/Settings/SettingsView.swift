@@ -6,6 +6,8 @@
 import SwiftUI
 
 struct SettingsView: View {
+    @StateObject private var providerSettings = ProviderSettingsStore.shared
+
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
     }
@@ -45,6 +47,16 @@ struct SettingsView: View {
             }
 
             Section {
+                ForEach(ProviderCatalog.all) { provider in
+                    providerRow(provider)
+                }
+            } header: {
+                Text(String(localized: "Providers"))
+            } footer: {
+                Text(String(localized: "Ces interrupteurs contrôlent les providers réellement exécutés côté backend."))
+            }
+
+            Section {
                 HStack {
                     Text(String(localized: "Version"))
                     Spacer()
@@ -63,6 +75,32 @@ struct SettingsView: View {
         }
         .navigationTitle(String(localized: "Réglages"))
         .navigationBarTitleDisplayMode(.large)
+    }
+
+    private func providerRow(_ provider: ProviderMetadata) -> some View {
+        HStack(spacing: DesignTokens.spacingS) {
+            ProviderLogoView(
+                source: provider.logoSourceName,
+                fallbackLabel: provider.displayName,
+                logoHeight: 18,
+                logoMaxWidth: 72
+            )
+            .frame(width: 72, alignment: .leading)
+
+            Text(provider.displayName)
+                .font(DesignTokens.bodyFont)
+
+            Spacer()
+
+            Toggle(
+                "",
+                isOn: Binding(
+                    get: { providerSettings.isEnabled(provider.id) },
+                    set: { providerSettings.setEnabled($0, for: provider.id) }
+                )
+            )
+            .labelsHidden()
+        }
     }
 
     private var notificationSettingsPlaceholder: some View {
@@ -105,7 +143,7 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: DesignTokens.spacingM) {
                     howItWorksStep(number: 1, text: String(localized: "Repère une pièce dans une app ou sur le web."))
                     howItWorksStep(number: 2, text: String(localized: "Partage vers Balibu ou importe une photo depuis l’accueil."))
-                    howItWorksStep(number: 3, text: String(localized: "Balibu analyse l’image et propose des annonces similaires sur Vinted. Tu peux aussi lancer une recherche directement par mot-clé."))
+                    howItWorksStep(number: 3, text: String(localized: "Balibu analyse l’image et propose des annonces similaires sur les marketplaces activées. Tu peux aussi lancer une recherche directement par mot-clé."))
                 }
                 .padding(DesignTokens.spacingM)
                 .frame(maxWidth: .infinity, alignment: .leading)

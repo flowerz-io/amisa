@@ -49,7 +49,11 @@ final class ResultsViewModel: ObservableObject {
         self.apiClient = apiClient
         self.paginationSearchText = session.vintedPaginationQuery
         self.allListings = Self.sortByRelevance(session.listings)
-        self.enabledProviderKeys = Set(MarketplaceSource.knownProviderDisplayNames.map { MarketplaceSource.canonicalKey(from: $0) })
+        self.enabledProviderKeys = Set(
+            ProviderSettingsStore.enabledProviderBackendKeysSnapshot().map {
+                MarketplaceSource.canonicalKey(from: $0)
+            }
+        )
         self.displayedListings = []
         self.paginationState = session.paginationState
         self.rankingContext = session.rankingContext

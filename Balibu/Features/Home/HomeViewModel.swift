@@ -40,13 +40,13 @@ final class HomeViewModel: ObservableObject {
         recentSessions = searchHistoryService.recentSessions(limit: 5)
     }
 
-    /// Recherche texte : page 1 Vinted (même endpoint que la pagination Results).
+    /// Recherche texte : pipeline multi-providers via /analyze-search (sans image).
     func submitTextSearch(query: String) async throws -> SearchSession {
         textSearchError = nil
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw TextSearchError.emptyQuery }
 
-        let response = try await apiClient.fetchVintedListingsPage(searchText: trimmed, page: 1)
+        let response = try await apiClient.analyzeTextSearch(query: trimmed)
         let listings = response.listings.map { MarketplaceListing.from($0) }
 
         let session = SearchSession(
@@ -58,7 +58,9 @@ final class HomeViewModel: ObservableObject {
             attributes: nil,
             listings: listings,
             createdAt: Date(),
-            vintedSearchFailed: false,
+            vintedSearchFailed: response.vintedSearchFailed ?? false,
+            paginationState: response.pagination,
+            rankingContext: response.rankingContext,
             mode: .textQuery
         )
 

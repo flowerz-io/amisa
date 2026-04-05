@@ -113,7 +113,7 @@ struct HomeView: View {
     }
 
     private var hintLine: some View {
-        Text(String(localized: "Saisis un mot-clé pour chercher sur Vinted, ou importe une photo pour une analyse visuelle. Tu peux aussi utiliser Partager depuis une autre app."))
+        Text(String(localized: "Saisis un mot-clé pour chercher sur les marketplaces activées, ou importe une photo pour une analyse visuelle. Tu peux aussi utiliser Partager depuis une autre app."))
             .font(DesignTokens.captionFont)
             .foregroundColor(DesignTokens.textSecondary)
             .frame(maxWidth: .infinity, alignment: .leading)
