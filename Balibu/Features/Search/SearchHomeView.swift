@@ -2,7 +2,7 @@
 //  SearchHomeView.swift
 //  Balibu
 //
-//  Onglet « Rechercher » : barre de recherche + recherches texte récentes uniquement.
+//  Onglet « Recherche » : aide, barre de recherche, recherches texte récentes.
 //
 
 import SwiftUI
@@ -24,8 +24,8 @@ struct SearchHomeView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: DesignTokens.spacingL) {
-                searchBar
                 hintLine
+                searchBar
                 recentTextSearchesSection
             }
             .padding(DesignTokens.spacingL)
@@ -118,21 +118,11 @@ struct SearchHomeView: View {
                             router.navigateToResults(session: session)
                         })
                     }
-
-                    if viewModel.recentTextOnlySessions.count >= 3 {
-                        Button(String(localized: "Voir tout")) {
-                            router.navigateToSearchHistory()
-                        }
-                        .font(DesignTokens.captionFont)
-                        .foregroundColor(DesignTokens.accent)
-                    }
                 }
             }
         }
     }
 }
-
-// MARK: - Réutilisé par l’historique texte (même style que l’ancienne Home)
 
 struct HistoryRowView: View {
     let session: SearchSession

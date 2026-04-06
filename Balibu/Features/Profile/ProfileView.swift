@@ -5,6 +5,7 @@ struct ProfileView: View {
     @EnvironmentObject private var router: Router
     @ObservedObject private var store = ProfileStore.shared
     @State private var showEditProfile = false
+    @State private var showSettings = false
 
     private let moodColumns = [
         GridItem(.adaptive(minimum: 72), spacing: 6),
@@ -19,9 +20,13 @@ struct ProfileView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: DesignTokens.spacingL) {
-                headerCard
-                linksSection
+            VStack(alignment: .leading, spacing: DesignTokens.spacingXL) {
+                ProfileHeaderView(
+                    store: store,
+                    onEditProfile: { showEditProfile = true },
+                    onSettings: { showSettings = true }
+                )
+
                 moodboardSection
             }
             .padding(DesignTokens.spacingL)
@@ -34,79 +39,18 @@ struct ProfileView: View {
                 EditProfileView()
             }
         }
-    }
-
-    private var headerCard: some View {
-        VStack(spacing: DesignTokens.spacingM) {
-            avatarView
-                .frame(width: 88, height: 88)
-
-            Text(store.displayName)
-                .font(DesignTokens.fontTitle)
-                .foregroundStyle(DesignTokens.textPrimary)
-                .multilineTextAlignment(.center)
-
-            Button(String(localized: "Modifier le profil")) {
-                showEditProfile = true
-            }
-            .buttonStyle(.bordered)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(DesignTokens.spacingL)
-        .background(DesignTokens.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.cornerRadiusM, style: .continuous))
-    }
-
-    @ViewBuilder
-    private var avatarView: some View {
-        if let ui = store.avatarImage() {
-            Image(uiImage: ui)
-                .resizable()
-                .scaledToFill()
-                .clipShape(Circle())
-        } else {
-            Circle()
-                .fill(DesignTokens.accentMuted)
-                .overlay {
-                    Image(systemName: "person.fill")
-                        .font(.system(size: 36))
-                        .foregroundStyle(DesignTokens.textSecondary)
-                }
-        }
-    }
-
-    private var linksSection: some View {
-        VStack(spacing: DesignTokens.spacingS) {
-            NavigationLink {
-                FavoritesView()
-            } label: {
-                rowLabel(String(localized: "Favoris"), systemImage: "heart.fill")
-            }
-            .buttonStyle(.plain)
-
-            NavigationLink {
+        .sheet(isPresented: $showSettings) {
+            NavigationStack {
                 SettingsView()
-            } label: {
-                rowLabel(String(localized: "Réglages"), systemImage: "gearshape.fill")
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button(String(localized: "Fermer")) {
+                                showSettings = false
+                            }
+                        }
+                    }
             }
-            .buttonStyle(.plain)
         }
-    }
-
-    private func rowLabel(_ title: String, systemImage: String) -> some View {
-        HStack {
-            Label(title, systemImage: systemImage)
-                .font(DesignTokens.bodyFont)
-                .foregroundStyle(DesignTokens.textPrimary)
-            Spacer()
-            Image(systemName: "chevron.right")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(DesignTokens.textTertiary)
-        }
-        .padding(DesignTokens.spacingM)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(DesignTokens.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.cornerRadiusM, style: .continuous))
     }
 
     private var moodboardSection: some View {

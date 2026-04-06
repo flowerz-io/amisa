@@ -1,12 +1,5 @@
-//
-//  HomeViewModel.swift
-//  Balibu
-//
-//  Created for Balibu MVP.
-//
-
-import SwiftUI
 import Combine
+import SwiftUI
 
 enum TextSearchError: LocalizedError {
     case emptyQuery
@@ -22,7 +15,7 @@ enum TextSearchError: LocalizedError {
 @MainActor
 final class HomeViewModel: ObservableObject {
     @Published var recentSessions: [SearchSession] = []
-    /// Uniquement `mode == .textQuery` (onglet Rechercher).
+    /// Uniquement `mode == .textQuery` (onglet Recherche), ordre historique complet.
     @Published private(set) var recentTextOnlySessions: [SearchSession] = []
     @Published var textSearchError: String?
 
@@ -40,14 +33,9 @@ final class HomeViewModel: ObservableObject {
 
     func loadRecentSessions() {
         recentSessions = searchHistoryService.recentSessions(limit: 5)
-        recentTextOnlySessions = Array(
-            searchHistoryService.fetchSessions()
-                .filter { $0.mode == .textQuery }
-                .prefix(10)
-        )
+        recentTextOnlySessions = searchHistoryService.fetchSessions().filter { $0.mode == .textQuery }
     }
 
-    /// Recherche texte : pipeline multi-providers via /analyze-search (sans image).
     func submitTextSearch(query: String) async throws -> SearchSession {
         textSearchError = nil
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)

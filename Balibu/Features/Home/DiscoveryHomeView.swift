@@ -66,9 +66,9 @@ struct DiscoveryHomeView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: DesignTokens.spacingL) {
+            VStack(alignment: .leading, spacing: DesignTokens.spacingM) {
                 Text(String(localized: "Découvre des pièces à partir de tes analyses photo."))
-                    .font(DesignTokens.bodyFont)
+                    .font(DesignTokens.captionFont)
                     .foregroundStyle(DesignTokens.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -85,8 +85,7 @@ struct DiscoveryHomeView: View {
             .padding(DesignTokens.spacingL)
         }
         .background(DesignTokens.backgroundColor)
-        .navigationTitle(String(localized: "Home"))
-        .navigationBarTitleDisplayMode(.large)
+        .toolbar(.hidden, for: .navigationBar)
         .onAppear { viewModel.load() }
         .onChange(of: router.path.count) { _, _ in viewModel.load() }
         .onChange(of: router.selectedTab) { _, new in

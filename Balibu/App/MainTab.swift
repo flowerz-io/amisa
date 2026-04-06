@@ -1,7 +1,8 @@
 import Foundation
 
-enum MainTab: Hashable, CaseIterable {
+enum MainTab: Hashable {
     case home
     case search
+    case favorites
     case profile
 }

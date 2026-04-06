@@ -35,7 +35,7 @@ struct FavoritesView: View {
             records = FavoriteSearchService.shared.allRecords()
         }
         .onChange(of: router.selectedTab) { _, new in
-            if new == .profile {
+            if new == .favorites {
                 records = FavoriteSearchService.shared.allRecords()
             }
         }
