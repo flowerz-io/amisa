@@ -20,6 +20,7 @@ struct AnalyzeSearchResponse: Decodable {
     let ebaySearchFailed: Bool?
     let leboncoinSearchFailed: Bool?
     let depopSearchFailed: Bool?
+    let providerAvailability: ProviderAvailabilityMapDTO?
 
     init(
         visionResult: FashionVisionResult,
@@ -31,7 +32,8 @@ struct AnalyzeSearchResponse: Decodable {
         grailedSearchFailed: Bool? = nil,
         ebaySearchFailed: Bool? = nil,
         leboncoinSearchFailed: Bool? = nil,
-        depopSearchFailed: Bool? = nil
+        depopSearchFailed: Bool? = nil,
+        providerAvailability: ProviderAvailabilityMapDTO? = nil
     ) {
         self.visionResult = visionResult
         self.generatedQueries = generatedQueries
@@ -43,5 +45,6 @@ struct AnalyzeSearchResponse: Decodable {
         self.ebaySearchFailed = ebaySearchFailed
         self.leboncoinSearchFailed = leboncoinSearchFailed
         self.depopSearchFailed = depopSearchFailed
+        self.providerAvailability = providerAvailability
     }
 }

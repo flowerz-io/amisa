@@ -33,6 +33,8 @@ final class ResultsViewModel: ObservableObject {
     @Published var hasMoreLeboncoin: Bool = false
     @Published var hasMoreDepop: Bool = false
     @Published var showStickyHeader: Bool = false
+    /// Disponibilité providers (ex. eBay bloqué par challenge).
+    @Published private(set) var providerAvailabilityMap: ProviderAvailabilityMapDTO?
     /// Historique debug : page Vinted courante (legacy + nouveau flow).
     @Published private(set) var currentPage: Int
     /// Liste vide au chargement mais requête Vinted disponible (favori) : première page à charger.
@@ -112,6 +114,9 @@ final class ResultsViewModel: ObservableObject {
             self.state = .loaded(session)
         }
 
+        self.providerAvailabilityMap = session.providerAvailability
+        ProviderRuntimeAvailabilityStore.shared.merge(from: session.providerAvailability)
+
         applyDisplayedFilters()
         logPaginationState(context: "init")
     }
@@ -187,6 +192,10 @@ final class ResultsViewModel: ObservableObject {
                         enabledProviders: ProviderSettingsStore.enabledProviderBackendKeysSnapshot()
                     )
                 )
+                if let delta = response.providerAvailability {
+                    providerAvailabilityMap = (providerAvailabilityMap ?? ProviderAvailabilityMapDTO()).merged(with: delta)
+                    ProviderRuntimeAvailabilityStore.shared.merge(from: delta)
+                }
                 let newItems = response.listings.map { MarketplaceListing.from($0) }
                 allListings = Self.mergeUnique(existing: allListings, new: newItems)
                 allListings = Self.sortByRelevance(allListings)
@@ -265,8 +274,14 @@ final class ResultsViewModel: ObservableObject {
 
     private func applyDisplayedFilters() {
         displayedListings = allListings.filter { listing in
-            enabledProviderKeys.contains(MarketplaceSource.canonicalKey(from: listing.source))
+            if isEbayHiddenWhenBlocked(listing) { return false }
+            return enabledProviderKeys.contains(MarketplaceSource.canonicalKey(from: listing.source))
         }
+    }
+
+    private func isEbayHiddenWhenBlocked(_ listing: MarketplaceListing) -> Bool {
+        guard MarketplaceSource.canonicalKey(from: listing.source) == "ebay" else { return false }
+        return providerAvailabilityMap?.ebay?.status == .blocked_by_challenge
     }
 
     private func hasMoreFromAllProviders() -> Bool {

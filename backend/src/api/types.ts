@@ -54,6 +54,24 @@ export interface MarketplaceListingDTO {
   relevanceScore?: number;
 }
 
+/** Statut de disponibilité d’un provider (recherche initiale + pagination). */
+export type ProviderAvailabilityStatus =
+  | 'ok'
+  | 'no_results'
+  | 'blocked_by_challenge'
+  | 'provider_error';
+
+export interface ProviderAvailabilityDTO {
+  status: ProviderAvailabilityStatus;
+  /** Sous-raison (ex. challenge_detected, dom_not_ready). */
+  reason?: string;
+}
+
+/** Dernière disponibilité connue par provider (clé = id backend : vinted, ebay, …). */
+export type ProviderAvailabilityMap = Partial<
+  Record<'vinted' | 'grailed' | 'ebay' | 'leboncoin' | 'depop', ProviderAvailabilityDTO>
+>;
+
 export interface SearchRankingContextDTO {
   primaryQuery: string;
   probableBrand?: string;
@@ -97,6 +115,8 @@ export interface AnalyzeSearchResponse {
   leboncoinSearchFailed?: boolean;
   /** True si le catalogue Depop n’a pas pu être chargé (les autres providers peuvent avoir réussi). */
   depopSearchFailed?: boolean;
+  /** Disponibilité par provider (anti-bot, erreur, vide légitime). */
+  providerAvailability?: ProviderAvailabilityMap;
   /** Présent uniquement quand DEBUG=1 ou NODE_ENV=development */
   debug?: {
     visionProvider: string;
@@ -129,6 +149,8 @@ export interface SearchMoreResponse {
   hasMoreEbay?: boolean;
   hasMoreLeboncoin?: boolean;
   hasMoreDepop?: boolean;
+  /** Mise à jour de la disponibilité (ex. eBay bloqué au scroll). */
+  providerAvailability?: ProviderAvailabilityMap;
 }
 
 /** POST /vinted-listings — pagination sans ré-analyse vision */

@@ -76,7 +76,8 @@ struct MockAPIClient: APIClientProtocol {
             hasMoreGrailed: false,
             hasMoreEbay: false,
             hasMoreLeboncoin: false,
-            hasMoreDepop: false
+            hasMoreDepop: false,
+            providerAvailability: nil
         )
     }
 }
@@ -125,7 +126,8 @@ extension AnalyzeSearchResponse {
                 dominantItem: "black leather ankle boots",
                 inferredModel: "Tabi",
                 itemTypeCanonical: "boots"
-            )
+            ),
+            providerAvailability: nil
         )
     }
 }

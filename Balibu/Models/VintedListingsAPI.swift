@@ -69,4 +69,5 @@ struct SearchMoreResponse: Decodable {
     let hasMoreEbay: Bool?
     let hasMoreLeboncoin: Bool?
     let hasMoreDepop: Bool?
+    let providerAvailability: ProviderAvailabilityMapDTO?
 }

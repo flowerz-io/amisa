@@ -1,13 +1,16 @@
 import { FastifyInstance } from 'fastify';
 import type {
   MarketplaceListingDTO,
+  ProviderAvailabilityDTO,
+  ProviderAvailabilityMap,
   SearchMoreRequest,
   SearchMoreResponse,
 } from '../api/types.js';
+import { ebayToProviderAvailability } from '../provider-availability.js';
 import { searchVintedByText, type VintedSearchItem } from '../services/vinted-text-search.js';
 import { searchGrailedByTextBrowser } from '../services/grailed-browser-search.js';
 import { searchLeBonCoinByTextBrowser, type LeBonCoinSearchItem } from '../services/leboncoin-browser-search.js';
-import { searchEbayByText, type EbaySearchItem } from '../services/ebay-text-search.js';
+import { searchEbayByText, type EbaySearchItem } from '../services/ebay-api-search.js';
 import { searchDepopByTextBrowser, type DepopSearchItem } from '../services/depop-browser-search.js';
 import { rankAcrossSources } from '../services/marketplace-ranking.js';
 import {
@@ -296,6 +299,7 @@ export async function searchMoreRoute(app: FastifyInstance) {
       requestedSet.has('ebay') && isProviderEnabled('ebay') && (ebayState?.hasMore ?? true);
     let ebayStopReason = ebayState ? 'already_exhausted' : 'missing_pagination_state_assumed_has_more';
     let ebayPagesFetched = 0;
+    let ebayProviderAvailability: ProviderAvailabilityDTO | undefined;
     if (!requestedSet.has('ebay')) {
       console.log('[PROVIDER_DISABLED_BY_SETTINGS] provider=ebay search_more');
       hasMoreEbay = false;
@@ -312,38 +316,22 @@ export async function searchMoreRoute(app: FastifyInstance) {
         let pageItems: EbaySearchItem[] = [];
         try {
           const result = await searchEbayByText(query, { page: ebayPage, limit: pageLimit });
+          ebayProviderAvailability =
+            result.providerAvailability ??
+            ebayToProviderAvailability(result.stopReason ?? 'ok', result.items.length, result.totalCount);
           pageItems = result.items;
           if (result.stopReason && result.stopReason !== 'ok') {
             console.log('[EBAY_STOP_REASON]', result.stopReason);
-            if (result.stopReason === 'provider_blocked_by_challenge') {
+            if (result.stopReason === 'api_error' || result.stopReason === 'credentials_missing') {
               hasMoreEbay = false;
-              ebayStopReason = 'provider_blocked_by_challenge';
-              break;
-            }
-            if (result.stopReason === 'dom_not_ready') {
-              hasMoreEbay = false;
-              ebayStopReason = 'dom_not_ready';
-              break;
-            }
-            if (result.stopReason === 'page_closed') {
-              hasMoreEbay = false;
-              ebayStopReason = 'page_closed';
-              break;
-            }
-            if (result.stopReason === 'page_crashed') {
-              hasMoreEbay = false;
-              ebayStopReason = 'page_crashed';
-              break;
-            }
-            if (result.stopReason === 'provider_unavailable') {
-              hasMoreEbay = false;
-              ebayStopReason = 'provider_unavailable';
+              ebayStopReason = result.stopReason;
               break;
             }
           }
         } catch (err) {
           hasMoreEbay = false;
           ebayStopReason = 'provider_error';
+          ebayProviderAvailability = ebayToProviderAvailability('api_error', 0, undefined);
           request.log.error(err, 'eBay pagination failed');
           console.error('[EBAY_PROVIDER_ERROR]', err);
           break;
@@ -534,6 +522,12 @@ export async function searchMoreRoute(app: FastifyInstance) {
     console.log('[HAS_MORE_DEPOP]', hasMoreDepop);
     console.log('NEXT_RESPONSE_TIME_MS', Date.now() - startedAt);
 
+    const providerAvailability: ProviderAvailabilityMap = {};
+    if (ebayProviderAvailability) {
+      providerAvailability.ebay = ebayProviderAvailability;
+      console.log('[PROVIDER_AVAILABILITY]', JSON.stringify(providerAvailability));
+    }
+
     return reply.send({
       listings: merged,
       vintedListings: nextVinted,
@@ -575,6 +569,7 @@ export async function searchMoreRoute(app: FastifyInstance) {
       hasMoreEbay,
       hasMoreLeboncoin,
       hasMoreDepop,
+      ...(Object.keys(providerAvailability).length > 0 ? { providerAvailability } : {}),
     });
   });
 }

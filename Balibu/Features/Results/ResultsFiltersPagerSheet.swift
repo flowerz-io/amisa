@@ -9,6 +9,8 @@ struct ResultsFiltersPagerSheet: View {
     @Binding var selectedTab: ResultsFilterTab
     @Binding var enabledProviderKeys: Set<String>
     let availableProviders: [String]
+    /// Statut serveur (ex. eBay bloqué par challenge).
+    let providerAvailability: ProviderAvailabilityMapDTO?
     let onClose: () -> Void
 
     var body: some View {
@@ -89,8 +91,10 @@ struct ResultsFiltersPagerSheet: View {
     private func providerRow(source: String) -> some View {
         let label = MarketplaceSource.displayLabel(from: source)
         let key = MarketplaceSource.canonicalKey(from: source)
+        let temporarilyUnavailable =
+            key == "ebay" && providerAvailability?.ebay?.status == .blocked_by_challenge
 
-        return HStack(spacing: DesignTokens.spacingS) {
+        return HStack(alignment: .center, spacing: DesignTokens.spacingS) {
             ProviderLogoView(
                 source: source,
                 fallbackLabel: label,
@@ -99,16 +103,24 @@ struct ResultsFiltersPagerSheet: View {
             )
             .frame(width: 72, alignment: .leading)
 
-            Text(label)
-                .font(DesignTokens.body)
-                .foregroundStyle(Color.primary)
-                .lineLimit(1)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(DesignTokens.body)
+                    .foregroundStyle(Color.primary)
+                    .lineLimit(1)
+                if temporarilyUnavailable {
+                    Text(String(localized: "Indisponible temporairement"))
+                        .font(DesignTokens.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
 
             Spacer(minLength: DesignTokens.spacingS)
 
             Toggle("", isOn: Binding(
                 get: { enabledProviderKeys.contains(key) },
                 set: { enabled in
+                    if temporarilyUnavailable { return }
                     if enabled {
                         enabledProviderKeys.insert(key)
                     } else {
@@ -117,6 +129,7 @@ struct ResultsFiltersPagerSheet: View {
                 }
             ))
             .labelsHidden()
+            .disabled(temporarilyUnavailable)
         }
         .padding(.vertical, DesignTokens.spacingXS)
     }

@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import type { EbayListingsRequest, EbayListingsResponse, MarketplaceListingDTO } from '../api/types.js';
-import { searchEbayByText, type EbaySearchItem } from '../services/ebay-text-search.js';
+import { searchEbayByText, type EbaySearchItem } from '../services/ebay-api-search.js';
 import { EBAY_MAX_PER_PAGE } from '../marketplace-limits.js';
 import { isProviderEnabled } from '../providers-config.js';
 
@@ -54,12 +54,15 @@ export async function ebayListingsRoute(app: FastifyInstance) {
       const result = await searchEbayByText(searchText, { page });
       const listings = ebayItemsToListings(result.items);
       const isBlockedOrUnavailable =
-        result.stopReason === 'provider_blocked_by_challenge' ||
-        result.stopReason === 'dom_not_ready' ||
-        result.stopReason === 'page_closed' ||
-        result.stopReason === 'page_crashed' ||
-        result.stopReason === 'provider_unavailable';
-      const hasMore = !isBlockedOrUnavailable && result.items.length >= EBAY_MAX_PER_PAGE;
+        result.stopReason === 'api_error' || result.stopReason === 'credentials_missing';
+      const limit = EBAY_MAX_PER_PAGE;
+      const loadedThrough = (page - 1) * limit + result.items.length;
+      const hasMore =
+        !isBlockedOrUnavailable &&
+        result.items.length > 0 &&
+        (result.totalCount === undefined
+          ? result.items.length >= limit
+          : loadedThrough < result.totalCount);
       if (result.stopReason && result.stopReason !== 'ok') {
         console.log('[EBAY_STOP_REASON]', result.stopReason);
       }

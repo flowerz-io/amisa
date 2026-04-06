@@ -69,6 +69,8 @@ final class SharedImportReviewViewModel: ObservableObject {
                 let primaryQuery = response.generatedQueries.first ?? ""
                 let listings = response.listings.map { MarketplaceListing.from($0) }
 
+                ProviderRuntimeAvailabilityStore.shared.merge(from: response.providerAvailability)
+
                 var session = SearchSession(
                     id: UUID(),
                     imageFileName: nil,
@@ -80,7 +82,8 @@ final class SharedImportReviewViewModel: ObservableObject {
                     createdAt: Date(),
                     vintedSearchFailed: response.vintedSearchFailed ?? false,
                     paginationState: response.pagination,
-                    rankingContext: response.rankingContext
+                    rankingContext: response.rankingContext,
+                    providerAvailability: response.providerAvailability
                 )
 
                 if let fileName = imagePersistence.saveImage(imageData) {

@@ -14,10 +14,11 @@ import {
   type LeBonCoinSearchItem,
   buildLeBonCoinSearchUrl,
 } from '../services/leboncoin-browser-search.js';
-import { searchEbayByText, type EbaySearchItem, buildEbaySearchUrl } from '../services/ebay-text-search.js';
+import { searchEbayByText, type EbaySearchItem, buildEbaySearchUrl } from '../services/ebay-api-search.js';
 import { searchDepopByTextBrowser, type DepopSearchItem, buildDepopSearchUrl } from '../services/depop-browser-search.js';
-import type { MarketplaceListingDTO } from '../api/types.js';
+import type { MarketplaceListingDTO, ProviderAvailabilityDTO, ProviderAvailabilityMap } from '../api/types.js';
 import type { SearchRankingContextDTO } from '../api/types.js';
+import { ebayToProviderAvailability } from '../provider-availability.js';
 import { visionProviderName, isDebug } from '../config.js';
 import { rankAcrossSources } from '../services/marketplace-ranking.js';
 import { INITIAL_RETURN_PER_PROVIDER, NEXT_BATCH_PER_PROVIDER } from '../marketplace-limits.js';
@@ -247,7 +248,7 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
 
     const trimmedPrimary = String(primaryQuery).trim();
     const vintedSearchUrl = buildVintedSearchUrl(trimmedPrimary, 1);
-    const ebaySearchUrl = buildEbaySearchUrl(trimmedPrimary, 1);
+    const ebaySearchUrl = buildEbaySearchUrl(trimmedPrimary, 1, INITIAL_RETURN_PER_PROVIDER);
     const leBonCoinSearchUrl = buildLeBonCoinSearchUrl(trimmedPrimary, 1);
     const depopSearchUrl = buildDepopSearchUrl(trimmedPrimary);
     console.log('[ANALYZE_PRIMARY_QUERY]', trimmedPrimary);
@@ -320,6 +321,7 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
     let ebayItems: EbaySearchItem[] = [];
     let ebayTotalCount: number | undefined;
     let ebayProviderStopReason: string | undefined;
+    let ebayProviderAvailability: ProviderAvailabilityDTO | undefined;
     if (!requestedSet.has('ebay')) {
       console.log('[PROVIDER_DISABLED_BY_SETTINGS] provider=ebay');
     } else if (!isProviderEnabled('ebay')) {
@@ -334,22 +336,24 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
         ebayItems = result.items;
         ebayTotalCount = result.totalCount;
         ebayProviderStopReason = result.stopReason;
+        ebayProviderAvailability =
+          result.providerAvailability ??
+          ebayToProviderAvailability(result.stopReason ?? 'ok', result.items.length, result.totalCount);
         if (result.stopReason && result.stopReason !== 'ok') {
           console.log(`[EBAY_STOP_REASON] ${result.stopReason}`);
         }
       } catch (err) {
         ebaySearchFailed = true;
+        ebayProviderAvailability = ebayToProviderAvailability('provider_unavailable', 0, undefined);
         console.log('[PROVIDER_FETCH_FAILED] provider=ebay');
         request.log.error(err, 'eBay initial fetch failed');
       }
     }
     const ebayListings = ebayItemsToListings(ebayItems);
     const ebayBlocked =
-      ebayProviderStopReason === 'provider_blocked_by_challenge' ||
-      ebayProviderStopReason === 'page_closed' ||
-      ebayProviderStopReason === 'page_crashed' ||
-      ebayProviderStopReason === 'provider_unavailable' ||
-      ebayProviderStopReason === 'dom_not_ready';
+      ebayProviderStopReason === 'api_error' ||
+      ebayProviderStopReason === 'credentials_missing' ||
+      ebayProviderStopReason === 'provider_unavailable';
     const ebayHasMore = !ebayBlocked && (
       ebayItems.length >= INITIAL_RETURN_PER_PROVIDER ||
       (ebayItems.length === 0 && (ebayTotalCount ?? 0) > 0)
@@ -462,6 +466,14 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
     console.log('BY_SOURCE', JSON.stringify(countBySource(ranked)));
     console.log('INITIAL_RESPONSE_TIME_MS', Date.now() - startedAt);
 
+    const providerAvailability: ProviderAvailabilityMap = {};
+    if (ebayProviderAvailability) {
+      providerAvailability.ebay = ebayProviderAvailability;
+    }
+    if (Object.keys(providerAvailability).length > 0) {
+      console.log('[PROVIDER_AVAILABILITY]', JSON.stringify(providerAvailability));
+    }
+
     const response: AnalyzeSearchResponse = {
       visionResult,
       generatedQueries,
@@ -500,6 +512,7 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
       ...(ebaySearchFailed ? { ebaySearchFailed: true } : {}),
       ...(leboncoinSearchFailed ? { leboncoinSearchFailed: true } : {}),
       ...(depopSearchFailed ? { depopSearchFailed: true } : {}),
+      ...(Object.keys(providerAvailability).length > 0 ? { providerAvailability } : {}),
       ...(isDebug && {
         debug: {
           visionProvider: visionProviderName,

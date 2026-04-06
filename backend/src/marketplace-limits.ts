@@ -28,9 +28,9 @@ export const LEBONCOIN_MAX_PER_PAGE = clampInt(
   120
 );
 
-/** Idem eBay. */
+/** eBay Browse API (item_summary/search), défaut aligné sur l’API (souvent 50). */
 export const EBAY_MAX_PER_PAGE = clampInt(
-  parseInt(process.env.EBAY_MAX_PER_PAGE ?? '40', 10),
+  parseInt(process.env.EBAY_MAX_PER_PAGE ?? '50', 10),
   1,
   120
 );

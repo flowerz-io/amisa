@@ -146,6 +146,7 @@ struct ResultsView: View {
                 selectedTab: $selectedFilterTab,
                 enabledProviderKeys: $viewModel.enabledProviderKeys,
                 availableProviders: viewModel.availableMarketplaceSources,
+                providerAvailability: viewModel.providerAvailabilityMap,
                 onClose: { showFiltersSheet = false }
             )
             .presentationDetents([.fraction(0.52), .large])

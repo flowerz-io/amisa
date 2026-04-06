@@ -56,6 +56,8 @@ final class HomeViewModel: ObservableObject {
         let response = try await apiClient.analyzeTextSearch(query: trimmed)
         let listings = response.listings.map { MarketplaceListing.from($0) }
 
+        ProviderRuntimeAvailabilityStore.shared.merge(from: response.providerAvailability)
+
         let session = SearchSession(
             id: UUID(),
             imageFileName: nil,
@@ -68,6 +70,7 @@ final class HomeViewModel: ObservableObject {
             vintedSearchFailed: response.vintedSearchFailed ?? false,
             paginationState: response.pagination,
             rankingContext: response.rankingContext,
+            providerAvailability: response.providerAvailability,
             mode: .textQuery
         )
 

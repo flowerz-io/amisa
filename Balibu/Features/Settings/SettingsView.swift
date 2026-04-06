@@ -7,6 +7,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @StateObject private var providerSettings = ProviderSettingsStore.shared
+    @ObservedObject private var runtimeAvailability = ProviderRuntimeAvailabilityStore.shared
 
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
@@ -78,28 +79,37 @@ struct SettingsView: View {
     }
 
     private func providerRow(_ provider: ProviderMetadata) -> some View {
-        HStack(spacing: DesignTokens.spacingS) {
-            ProviderLogoView(
-                source: provider.logoSourceName,
-                fallbackLabel: provider.displayName,
-                logoHeight: 18,
-                logoMaxWidth: 72
-            )
-            .frame(width: 72, alignment: .leading)
+        let ebayBlocked = provider.id == .ebay && runtimeAvailability.ebay?.status == .blocked_by_challenge
 
-            Text(provider.displayName)
-                .font(DesignTokens.bodyFont)
-
-            Spacer()
-
-            Toggle(
-                "",
-                isOn: Binding(
-                    get: { providerSettings.isEnabled(provider.id) },
-                    set: { providerSettings.setEnabled($0, for: provider.id) }
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: DesignTokens.spacingS) {
+                ProviderLogoView(
+                    source: provider.logoSourceName,
+                    fallbackLabel: provider.displayName,
+                    logoHeight: 18,
+                    logoMaxWidth: 72
                 )
-            )
-            .labelsHidden()
+                .frame(width: 72, alignment: .leading)
+
+                Text(provider.displayName)
+                    .font(DesignTokens.bodyFont)
+
+                Spacer()
+
+                Toggle(
+                    "",
+                    isOn: Binding(
+                        get: { providerSettings.isEnabled(provider.id) },
+                        set: { providerSettings.setEnabled($0, for: provider.id) }
+                    )
+                )
+                .labelsHidden()
+            }
+            if ebayBlocked {
+                Text(String(localized: "Indisponible temporairement (protection eBay). Les autres sources fonctionnent normalement."))
+                    .font(DesignTokens.captionFont)
+                    .foregroundStyle(DesignTokens.textSecondary)
+            }
         }
     }
 
