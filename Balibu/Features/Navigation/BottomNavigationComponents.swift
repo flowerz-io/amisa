@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 struct BottomNavigationRow: View {
     @ObservedObject var router: Router
@@ -20,13 +19,7 @@ struct BottomNavigationRow: View {
     }
 
     private var bottomBarBottomPadding: CGFloat {
-        let bottomInset = UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .flatMap(\.windows)
-            .first(where: \.isKeyWindow)?
-            .safeAreaInsets.bottom ?? 0
-
-        return bottomInset > 0 ? 2 : 8
+        20
     }
 }
 
@@ -35,7 +28,7 @@ struct LeftTabCapsule: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            tabItem(tab: .home, title: String(localized: "Home"), systemImage: "house.fill")
+            tabItem(tab: .home, title: String(localized: "Home"), systemImage: "house.and.flag.fill")
             tabItem(tab: .search, title: String(localized: "Recherche"), systemImage: "magnifyingglass")
         }
         .padding(.vertical, 10)
@@ -60,12 +53,16 @@ struct LeftTabCapsule: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 4)
-            .foregroundStyle(router.selectedTab == tab ? Color.accentColor : Color.secondary)
+            .foregroundStyle(tabBarForeground(isSelected: router.selectedTab == tab))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(router.selectedTab == tab ? [.isSelected] : [])
     }
+}
+
+private func tabBarForeground(isSelected: Bool) -> Color {
+    isSelected ? Color.black : Color.black.opacity(0.42)
 }
 
 struct RightTabCapsule: View {
@@ -98,7 +95,7 @@ struct RightTabCapsule: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 4)
-            .foregroundStyle(router.selectedTab == tab ? Color.accentColor : Color.secondary)
+            .foregroundStyle(tabBarForeground(isSelected: router.selectedTab == tab))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -120,6 +117,7 @@ struct ScanFloatingButton: View {
 
                 Image(systemName: "camera.viewfinder")
                     .font(.system(size: 24, weight: .semibold))
+                    .foregroundStyle(.black)
             }
             .frame(width: 60, height: 60)
             .shadow(color: .black.opacity(0.12), radius: 16, x: 0, y: 8)

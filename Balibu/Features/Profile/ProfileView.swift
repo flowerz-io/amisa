@@ -32,8 +32,7 @@ struct ProfileView: View {
             .padding(DesignTokens.spacingL)
         }
         .background(DesignTokens.backgroundColor)
-        .navigationTitle(String(localized: "Profil"))
-        .navigationBarTitleDisplayMode(.large)
+        .toolbar(.hidden, for: .navigationBar)
         .sheet(isPresented: $showEditProfile) {
             NavigationStack {
                 EditProfileView()

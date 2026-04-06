@@ -9,7 +9,7 @@ struct ProfileHeaderView: View {
     private let avatarSize: CGFloat = 100
 
     var body: some View {
-        HStack(alignment: .center, spacing: 16) {
+        HStack(alignment: .top, spacing: 16) {
             profileImage
                 .frame(width: avatarSize, height: avatarSize)
 
@@ -24,22 +24,38 @@ struct ProfileHeaderView: View {
                     onEditProfile()
                 }
                 .font(.subheadline.weight(.medium))
-                .buttonStyle(.bordered)
-                .controlSize(.small)
+                .foregroundStyle(Color.black.opacity(0.72))
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(Color.gray.opacity(0.16))
+                .clipShape(Capsule())
+                .buttonStyle(.plain)
             }
 
             Spacer(minLength: 0)
 
-            Button(action: onSettings) {
-                Image(systemName: "gearshape.fill")
-                    .font(.system(size: 22, weight: .medium))
-                    .foregroundStyle(DesignTokens.textPrimary)
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(String(localized: "Réglages"))
+            profileSettingsButton
         }
+    }
+
+    private var profileSettingsButton: some View {
+        Button(action: onSettings) {
+            ZStack {
+                Circle()
+                    .fill(.ultraThinMaterial)
+                    .overlay(
+                        Circle().stroke(Color.white.opacity(0.35), lineWidth: 1)
+                    )
+
+                Image(systemName: "gearshape.fill")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(.black)
+            }
+            .frame(width: 44, height: 44)
+            .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 4)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(String(localized: "Réglages"))
     }
 
     @ViewBuilder
