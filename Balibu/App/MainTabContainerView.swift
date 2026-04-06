@@ -36,6 +36,13 @@ struct MainTabContainerView: View {
 
     private var mainContent: some View {
         ZStack {
+            NavigationStack {
+                DiscoveryHomeView()
+                    .environmentObject(router)
+            }
+            .opacity(router.selectedTab == .home ? 1 : 0)
+            .allowsHitTesting(router.selectedTab == .home)
+
             NavigationStack(path: $router.path) {
                 SearchHomeView(searchHistoryService: .shared)
                     .environmentObject(router)
@@ -54,21 +61,15 @@ struct MainTabContainerView: View {
                         }
                     }
             }
-            .opacity(router.selectedTab == 0 ? 1 : 0)
-            .allowsHitTesting(router.selectedTab == 0)
+            .opacity(router.selectedTab == .search ? 1 : 0)
+            .allowsHitTesting(router.selectedTab == .search)
 
             NavigationStack {
-                FavoritesView()
+                ProfileView()
                     .environmentObject(router)
             }
-            .opacity(router.selectedTab == 1 ? 1 : 0)
-            .allowsHitTesting(router.selectedTab == 1)
-
-            NavigationStack {
-                SettingsView()
-            }
-            .opacity(router.selectedTab == 2 ? 1 : 0)
-            .allowsHitTesting(router.selectedTab == 2)
+            .opacity(router.selectedTab == .profile ? 1 : 0)
+            .allowsHitTesting(router.selectedTab == .profile)
         }
         .tint(.accentColor)
     }
@@ -86,9 +87,9 @@ struct MainTabContainerView: View {
 
     private var tabBarCapsule: some View {
         HStack(spacing: 0) {
-            tabBarItem(tag: 0, title: String(localized: "Rechercher"), systemImage: "magnifyingglass")
-            tabBarItem(tag: 1, title: String(localized: "Favoris"), systemImage: "heart.fill")
-            tabBarItem(tag: 2, title: String(localized: "Réglages"), systemImage: "gearshape.fill")
+            tabBarItem(tab: .home, title: String(localized: "Home"), systemImage: "house.fill")
+            tabBarItem(tab: .search, title: String(localized: "Rechercher"), systemImage: "magnifyingglass")
+            tabBarItem(tab: .profile, title: String(localized: "Profil"), systemImage: "face.dashed.fill")
         }
         .padding(.vertical, 10)
         .padding(.horizontal, 6)
@@ -98,9 +99,9 @@ struct MainTabContainerView: View {
         }
     }
 
-    private func tabBarItem(tag: Int, title: String, systemImage: String) -> some View {
+    private func tabBarItem(tab: MainTab, title: String, systemImage: String) -> some View {
         Button {
-            router.selectedTab = tag
+            router.selectedTab = tab
         } label: {
             VStack(spacing: 4) {
                 Image(systemName: systemImage)
@@ -112,11 +113,11 @@ struct MainTabContainerView: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 4)
-            .foregroundStyle(router.selectedTab == tag ? Color.accentColor : Color.secondary)
+            .foregroundStyle(router.selectedTab == tab ? Color.accentColor : Color.secondary)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityAddTraits(router.selectedTab == tag ? [.isSelected] : [])
+        .accessibilityAddTraits(router.selectedTab == tab ? [.isSelected] : [])
     }
 
     private var scanFloatingButton: some View {
@@ -128,7 +129,7 @@ struct MainTabContainerView: View {
                         Circle().stroke(Color.white.opacity(0.35), lineWidth: 1)
                     )
 
-                Image(systemName: "viewfinder")
+                Image(systemName: "camera.viewfinder")
                     .font(.system(size: 24, weight: .semibold))
             }
             .frame(width: 60, height: 60)
@@ -149,7 +150,7 @@ struct MainTabContainerView: View {
             .first(where: \.isKeyWindow)?
             .safeAreaInsets.bottom ?? 0
 
-        return max(12, bottomInset > 0 ? bottomInset - 4 : 12)
+        return bottomInset > 0 ? 6 : 10
     }
 
     private func checkPendingLegacySharedPayload() {
