@@ -54,7 +54,7 @@ struct ResultsStickyBar: View {
             } label: {
                 Image(systemName: isFavorite ? "heart.fill" : "heart")
                     .font(.body)
-                    .foregroundStyle(isFavorite ? Color.red : Color.primary)
+                    .foregroundStyle(isFavorite ? Color.accentColor : Color.primary)
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
             }

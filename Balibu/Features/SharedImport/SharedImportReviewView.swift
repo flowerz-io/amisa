@@ -58,7 +58,7 @@ struct SharedImportReviewView: View {
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             bottomActionBar
-                .background(DesignTokens.backgroundColor.opacity(0.92))
+                .background(.ultraThinMaterial)
         }
     }
 
@@ -77,7 +77,7 @@ struct SharedImportReviewView: View {
 
                             Text(String(localized: "Appuie pour changer la photo · déplace et pince pour cadrer."))
                                 .font(DesignTokens.captionFont)
-                                .foregroundColor(DesignTokens.textSecondary)
+                                .foregroundStyle(DesignTokens.textSecondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         .contentShape(Rectangle())
@@ -96,7 +96,7 @@ struct SharedImportReviewView: View {
                                 Text(String(localized: "Choisir une photo"))
                                     .font(DesignTokens.bodyFont)
                             }
-                            .foregroundColor(DesignTokens.textSecondary)
+                            .foregroundStyle(DesignTokens.textSecondary)
                         }
                 }
                 .buttonStyle(.plain)
@@ -107,7 +107,7 @@ struct SharedImportReviewView: View {
     private var explanationText: some View {
         Text(String(localized: "Nous analysons l’image et cherchons des articles similaires sur les marketplaces."))
             .font(DesignTokens.bodyFont)
-            .foregroundColor(DesignTokens.textSecondary)
+            .foregroundStyle(DesignTokens.textSecondary)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
@@ -117,11 +117,11 @@ struct SharedImportReviewView: View {
             VStack(spacing: DesignTokens.spacingXS) {
                 Text(message)
                     .font(DesignTokens.captionFont)
-                    .foregroundColor(DesignTokens.errorColor)
+                    .foregroundStyle(DesignTokens.errorColor)
                     .multilineTextAlignment(.center)
                 Text(String(localized: "Tu peux corriger et appuyer sur Analyser pour réessayer."))
                     .font(DesignTokens.captionFont)
-                    .foregroundColor(DesignTokens.textSecondary)
+                    .foregroundStyle(DesignTokens.textSecondary)
                     .multilineTextAlignment(.center)
             }
             .frame(maxWidth: .infinity)
@@ -133,7 +133,7 @@ struct SharedImportReviewView: View {
         VStack(spacing: DesignTokens.spacingS) {
             switch viewModel.searchState {
             case .loading:
-                LoadingView(message: String(localized: "Analyse en cours…"))
+                AnalysisLoadingView()
                     .padding(.vertical, DesignTokens.spacingS)
             case .idle, .error, .success:
                 Button {

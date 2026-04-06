@@ -19,6 +19,7 @@ struct BottomNavigationRow: View {
 
 struct LeftTabCapsule: View {
     @ObservedObject var router: Router
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         HStack(spacing: 0) {
@@ -47,7 +48,12 @@ struct LeftTabCapsule: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 4)
-            .foregroundStyle(tabBarForeground(isSelected: router.selectedTab == tab))
+            .foregroundStyle(
+                BalibuSemanticColors.tabItemForeground(
+                    isSelected: router.selectedTab == tab,
+                    colorScheme: colorScheme
+                )
+            )
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -55,12 +61,9 @@ struct LeftTabCapsule: View {
     }
 }
 
-private func tabBarForeground(isSelected: Bool) -> Color {
-    isSelected ? Color.black : Color.black.opacity(0.42)
-}
-
 struct RightTabCapsule: View {
     @ObservedObject var router: Router
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         HStack(spacing: 0) {
@@ -89,7 +92,12 @@ struct RightTabCapsule: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 4)
-            .foregroundStyle(tabBarForeground(isSelected: router.selectedTab == tab))
+            .foregroundStyle(
+                BalibuSemanticColors.tabItemForeground(
+                    isSelected: router.selectedTab == tab,
+                    colorScheme: colorScheme
+                )
+            )
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -99,6 +107,7 @@ struct RightTabCapsule: View {
 
 struct ScanFloatingButton: View {
     var action: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         Button(action: action) {
@@ -106,15 +115,15 @@ struct ScanFloatingButton: View {
                 Circle()
                     .fill(.ultraThinMaterial)
                     .overlay(
-                        Circle().stroke(Color.white.opacity(0.35), lineWidth: 1)
+                        Circle().stroke(Color.primary.opacity(0.18), lineWidth: 1)
                     )
 
                 Image(systemName: "camera.viewfinder")
                     .font(.system(size: 24, weight: .semibold))
-                    .foregroundStyle(.black)
+                    .foregroundStyle(BalibuSemanticColors.scanButtonIconForeground(colorScheme: colorScheme))
             }
             .frame(width: 60, height: 60)
-            .shadow(color: .black.opacity(0.12), radius: 16, x: 0, y: 8)
+            .shadow(color: Color.black.opacity(0.1), radius: 12, x: 0, y: 6)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(String(localized: "Scanner ou photographier"))

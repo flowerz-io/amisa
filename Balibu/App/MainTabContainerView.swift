@@ -41,9 +41,9 @@ struct MainTabContainerView: View {
     }
 
     /// Réserve de l’espace pour le scroll afin que le dernier contenu ne passe pas sous la barre flottante (indépendant du positionnement visuel de la barre).
-    private static let scrollContentBottomInset: CGFloat = 108
+    private static let scrollContentBottomInset: CGFloat = 98
     /// Marge entre le bord bas de l’écran (hors safe area) et la barre — ne doit pas servir à inset le contenu scrollable.
-    private static let bottomBarAnchorPadding: CGFloat = 6
+    private static let bottomBarAnchorPadding: CGFloat = 16
 
     private var mainContent: some View {
         ZStack {

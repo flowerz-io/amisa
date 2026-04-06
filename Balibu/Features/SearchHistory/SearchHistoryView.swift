@@ -29,13 +29,13 @@ struct SearchHistoryView: View {
         VStack(spacing: DesignTokens.Spacing.lg) {
             Image(systemName: "clock.arrow.circlepath")
                 .font(.system(size: 48))
-                .foregroundColor(DesignTokens.Colors.textSecondary)
+                .foregroundStyle(DesignTokens.Colors.textSecondary)
             Text("No search history yet")
                 .font(DesignTokens.Typography.headline)
-                .foregroundColor(DesignTokens.Colors.text)
+                .foregroundStyle(DesignTokens.Colors.text)
             Text("Share an image to Balibu to find similar items.")
                 .font(DesignTokens.Typography.body)
-                .foregroundColor(DesignTokens.Colors.textSecondary)
+                .foregroundStyle(DesignTokens.Colors.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
         }
@@ -79,7 +79,7 @@ private struct HistoryRow: View {
                     .frame(width: 56, height: 56)
                     .overlay {
                         Image(systemName: "photo")
-                            .foregroundColor(DesignTokens.Colors.textSecondary)
+                            .foregroundStyle(DesignTokens.Colors.textSecondary)
                     }
             }
             
@@ -87,22 +87,22 @@ private struct HistoryRow: View {
                 if let query = session.generatedQuery {
                     Text(query)
                         .font(DesignTokens.Typography.body)
-                        .foregroundColor(DesignTokens.Colors.text)
+                        .foregroundStyle(DesignTokens.Colors.text)
                         .lineLimit(2)
                 } else {
                     Text("Search")
                         .font(DesignTokens.Typography.body)
-                        .foregroundColor(DesignTokens.Colors.text)
+                        .foregroundStyle(DesignTokens.Colors.text)
                 }
                 Text(session.createdAt.formatted(date: .abbreviated, time: .shortened))
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(DesignTokens.Colors.textSecondary)
+                    .foregroundStyle(DesignTokens.Colors.textSecondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             
             Image(systemName: "chevron.right")
                 .font(.system(size: 14, weight: .medium))
-                .foregroundColor(DesignTokens.Colors.textSecondary)
+                .foregroundStyle(DesignTokens.Colors.textSecondary)
         }
         .padding(DesignTokens.Spacing.md)
         .background(DesignTokens.Colors.surface)

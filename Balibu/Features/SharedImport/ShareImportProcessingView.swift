@@ -29,11 +29,11 @@ struct ShareImportProcessingView: View {
                 case .idle:
                     ProgressView()
                 case .loading:
-                    VStack(spacing: DesignTokens.spacingM) {
-                        ProgressView()
-                        Text(String(localized: "Analyse en cours…"))
-                            .font(DesignTokens.body)
-                            .foregroundStyle(Color.secondary)
+                    VStack {
+                        Spacer(minLength: 0)
+                        AnalysisLoadingView()
+                            .padding(.horizontal, DesignTokens.spacingL)
+                        Spacer(minLength: 0)
                     }
                 case .error(let message):
                     VStack(spacing: DesignTokens.spacingM) {

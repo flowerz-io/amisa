@@ -95,7 +95,7 @@ struct SearchHomeView: View {
     private var hintLine: some View {
         Text(String(localized: "Saisis un mot-clé pour chercher sur les marketplaces activées dans Réglages (Profil). Utilise le bouton scan pour une analyse à partir d’une photo."))
             .font(DesignTokens.captionFont)
-            .foregroundColor(DesignTokens.textSecondary)
+            .foregroundStyle(DesignTokens.textSecondary)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
@@ -111,7 +111,7 @@ struct SearchHomeView: View {
                 VStack(alignment: .leading, spacing: DesignTokens.spacingM) {
                     Text(String(localized: "Recherches récentes"))
                         .font(DesignTokens.headlineFont)
-                        .foregroundColor(DesignTokens.textPrimary)
+                        .foregroundStyle(DesignTokens.textPrimary)
 
                     ForEach(viewModel.recentTextOnlySessions) { session in
                         HistoryRowView(session: session, onTap: {
@@ -136,19 +136,19 @@ struct HistoryRowView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(session.displayQuery ?? "Search")
                         .font(DesignTokens.bodyFont)
-                        .foregroundColor(DesignTokens.textPrimary)
+                        .foregroundStyle(DesignTokens.textPrimary)
                         .lineLimit(1)
 
                     Text(session.formattedDate)
                         .font(DesignTokens.captionFont)
-                        .foregroundColor(DesignTokens.textSecondary)
+                        .foregroundStyle(DesignTokens.textSecondary)
                 }
 
                 Spacer()
 
                 Image(systemName: "chevron.right")
                     .font(.caption)
-                    .foregroundColor(DesignTokens.textSecondary)
+                    .foregroundStyle(DesignTokens.textSecondary)
             }
             .padding(DesignTokens.spacingM)
             .background(DesignTokens.cardBackground)
@@ -180,7 +180,7 @@ struct HistoryRowView: View {
                 .frame(width: 48, height: 48)
                 .overlay {
                     Image(systemName: "text.magnifyingglass")
-                        .foregroundColor(DesignTokens.textSecondary)
+                        .foregroundStyle(DesignTokens.textSecondary)
                 }
         } else {
             RoundedRectangle(cornerRadius: DesignTokens.cornerRadiusS)
@@ -188,7 +188,7 @@ struct HistoryRowView: View {
                 .frame(width: 48, height: 48)
                 .overlay {
                     Image(systemName: "photo")
-                        .foregroundColor(DesignTokens.textSecondary)
+                        .foregroundStyle(DesignTokens.textSecondary)
                 }
         }
     }
@@ -203,13 +203,13 @@ struct EmptyStateView: View {
         VStack(spacing: DesignTokens.spacingM) {
             Image(systemName: icon)
                 .font(.system(size: 40))
-                .foregroundColor(DesignTokens.textSecondary)
+                .foregroundStyle(DesignTokens.textSecondary)
             Text(title)
                 .font(DesignTokens.headlineFont)
-                .foregroundColor(DesignTokens.textPrimary)
+                .foregroundStyle(DesignTokens.textPrimary)
             Text(message)
                 .font(DesignTokens.bodyFont)
-                .foregroundColor(DesignTokens.textSecondary)
+                .foregroundStyle(DesignTokens.textSecondary)
                 .multilineTextAlignment(.center)
         }
         .padding(DesignTokens.spacingXL)

@@ -13,10 +13,10 @@ struct BalibuPrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(size: 17, weight: .medium, design: .default))
-            .foregroundStyle(.white)
+            .foregroundStyle(Color.white)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
-            .background(isEnabled ? Color.black : Color.gray.opacity(0.4))
+            .background(isEnabled ? Color.accentColor : Color.accentColor.opacity(0.35))
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .opacity(configuration.isPressed ? 0.9 : 1)
             .animation(.easeInOut(duration: 0.15), value: configuration.isPressed)
@@ -29,10 +29,10 @@ struct BalibuSecondaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(size: 17, weight: .medium, design: .default))
-            .foregroundStyle(.primary)
+            .foregroundStyle(Color.primary)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
-            .background(Color(.systemGray5))
+            .background(Color(uiColor: .secondarySystemFill))
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .opacity(configuration.isPressed ? 0.8 : 1)
     }

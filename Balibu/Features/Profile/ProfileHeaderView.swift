@@ -24,10 +24,10 @@ struct ProfileHeaderView: View {
                     onEditProfile()
                 }
                 .font(.subheadline.weight(.medium))
-                .foregroundStyle(Color.black.opacity(0.72))
+                .foregroundStyle(Color.primary.opacity(0.88))
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
-                .background(Color.gray.opacity(0.16))
+                .background(Color(uiColor: .tertiarySystemFill))
                 .clipShape(Capsule())
                 .buttonStyle(.plain)
             }
@@ -44,12 +44,12 @@ struct ProfileHeaderView: View {
                 Circle()
                     .fill(.ultraThinMaterial)
                     .overlay(
-                        Circle().stroke(Color.white.opacity(0.35), lineWidth: 1)
+                        Circle().stroke(Color.primary.opacity(0.18), lineWidth: 1)
                     )
 
                 Image(systemName: "gearshape.fill")
                     .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(.black)
+                    .foregroundStyle(Color.accentColor)
             }
             .frame(width: 44, height: 44)
             .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 4)

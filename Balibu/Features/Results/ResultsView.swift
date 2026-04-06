@@ -48,7 +48,7 @@ struct ResultsView: View {
                         toggleFavorite()
                     } label: {
                         Image(systemName: isFavorite ? "heart.fill" : "heart")
-                            .foregroundStyle(isFavorite ? Color.red : Color.primary)
+                            .foregroundStyle(isFavorite ? Color.accentColor : Color.primary)
                     }
                     .accessibilityLabel(String(localized: "Favori"))
                 }
