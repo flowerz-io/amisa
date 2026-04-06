@@ -60,7 +60,7 @@ final class SquareCropEditorViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = UIColor.secondarySystemGroupedBackground
+        view.backgroundColor = .clear
 
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.delegate = self

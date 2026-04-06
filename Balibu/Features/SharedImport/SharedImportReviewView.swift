@@ -1,7 +1,7 @@
 //
 //  SharedImportReviewView.swift
 //
-//  Review : recadrage, tap image = nouvelle photo, Analyser en bas.
+//  Review : recadrage, tap image = nouvelle photo, Analyser ; chargement = page dédiée.
 //
 
 import PhotosUI
@@ -17,6 +17,13 @@ struct SharedImportReviewView: View {
     @State private var cropController: SquareCropEditorViewController?
     @State private var cropKey = UUID()
     @State private var photoPickerItem: PhotosPickerItem?
+    @State private var phase: PreviewPhase = .editing
+    @State private var searchingPreviewThumb: UIImage?
+
+    private enum PreviewPhase {
+        case editing
+        case searching
+    }
 
     init(payload: SharedImagePayload, apiClient: (any APIClientProtocol)? = nil) {
         self.payload = payload
@@ -27,18 +34,20 @@ struct SharedImportReviewView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: DesignTokens.spacingL) {
-                imageSection
-                explanationText
-                errorBanner
+        Group {
+            switch phase {
+            case .searching:
+                LoadingSearchView(
+                    previewImage: searchingPreviewThumb,
+                    message: String(localized: "Recherche des annonces similaires…")
+                )
+                .navigationTitle(String(localized: "Review"))
+                .navigationBarTitleDisplayMode(.inline)
+            case .editing:
+                editingContent
             }
-            .padding(.horizontal, DesignTokens.spacingM)
-            .padding(.top, DesignTokens.spacingS)
         }
         .background(DesignTokens.backgroundColor)
-        .navigationTitle(String(localized: "Review"))
-        .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             viewModel.setSearchHistoryService(.shared)
             loadSourceImageIfNeeded()
@@ -56,10 +65,33 @@ struct SharedImportReviewView: View {
                 }
             }
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            bottomActionBar
-                .background(.ultraThinMaterial)
+        .onChange(of: viewModel.searchState) { _, new in
+            if case .error = new {
+                phase = .editing
+            }
         }
+    }
+
+    private var editingContent: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: DesignTokens.spacingL) {
+                imageSection
+                explanationText
+                errorBanner
+
+                PrimaryActionButton(
+                    title: String(localized: "Analyser"),
+                    action: { runSearch() },
+                    isDisabled: sourceUIImage == nil
+                )
+                .padding(.top, DesignTokens.spacingS)
+            }
+            .padding(.horizontal, DesignTokens.spacingM)
+            .padding(.top, DesignTokens.spacingS)
+            .padding(.bottom, DesignTokens.spacingXL)
+        }
+        .navigationTitle(String(localized: "Review"))
+        .navigationBarTitleDisplayMode(.inline)
     }
 
     private var imageSection: some View {
@@ -67,13 +99,12 @@ struct SharedImportReviewView: View {
             if let ui = sourceUIImage {
                 VStack(alignment: .leading, spacing: DesignTokens.spacingS) {
                     PhotosPicker(selection: $photoPickerItem, matching: .images) {
-                        VStack(spacing: DesignTokens.spacingXS) {
+                        VStack(alignment: .leading, spacing: DesignTokens.spacingXS) {
                             SquareCropEditorRepresentable(image: ui) { controller in
                                 cropController = controller
                             }
                             .id(cropKey)
                             .frame(height: 360)
-                            .clipShape(RoundedRectangle(cornerRadius: DesignTokens.cornerRadiusM))
 
                             Text(String(localized: "Appuie pour changer la photo · déplace et pince pour cadrer."))
                                 .font(DesignTokens.captionFont)
@@ -128,30 +159,6 @@ struct SharedImportReviewView: View {
         }
     }
 
-    @ViewBuilder
-    private var bottomActionBar: some View {
-        VStack(spacing: DesignTokens.spacingS) {
-            switch viewModel.searchState {
-            case .loading:
-                AnalysisLoadingView()
-                    .padding(.vertical, DesignTokens.spacingS)
-            case .idle, .error, .success:
-                Button {
-                    runSearch()
-                } label: {
-                    Text(String(localized: "Analyser"))
-                        .frame(maxWidth: .infinity)
-                        .padding(DesignTokens.spacingM)
-                }
-                .buttonStyle(BalibuButtonStyle())
-                .disabled(sourceUIImage == nil)
-            }
-        }
-        .padding(.horizontal, DesignTokens.spacingM)
-        .padding(.top, DesignTokens.spacingS)
-        .padding(.bottom, DesignTokens.spacingXS)
-    }
-
     private func loadSourceImageIfNeeded() {
         guard sourceUIImage == nil,
               let url = payload.imageURL,
@@ -169,6 +176,8 @@ struct SharedImportReviewView: View {
             viewModel.setErrorMessage(String(localized: "Impossible d’exporter la zone sélectionnée."))
             return
         }
+        searchingPreviewThumb = cropped
+        phase = .searching
         viewModel.startSearch(croppedImage: cropped) { session in
             router.navigateToResults(session: session)
         }

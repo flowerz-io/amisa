@@ -55,15 +55,15 @@ final class ScanCropFrameOverlayView: UIView {
         super.init(frame: frame)
         backgroundColor = .clear
         isUserInteractionEnabled = false
-        dimLayer.fillColor = UIColor.black.withAlphaComponent(0.08).cgColor
+        dimLayer.fillColor = UIColor.black.withAlphaComponent(0.06).cgColor
         dimLayer.fillRule = .evenOdd
         layer.addSublayer(dimLayer)
-        cornersLayer.strokeColor = UIColor.label.cgColor
         cornersLayer.fillColor = UIColor.clear.cgColor
-        cornersLayer.lineWidth = 2.25
+        cornersLayer.lineWidth = 5
         cornersLayer.lineCap = .round
         cornersLayer.lineJoin = .round
         layer.addSublayer(cornersLayer)
+        applyCropCornerStrokeColor()
     }
 
     required init?(coder: NSCoder) {
@@ -73,6 +73,16 @@ final class ScanCropFrameOverlayView: UIView {
     func setCropHoleFrame(_ rect: CGRect) {
         holeFrame = rect
         setNeedsLayout()
+    }
+
+    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        super.traitCollectionDidChange(previousTraitCollection)
+        applyCropCornerStrokeColor()
+    }
+
+    private func applyCropCornerStrokeColor() {
+        let dark = traitCollection.userInterfaceStyle == .dark
+        cornersLayer.strokeColor = (dark ? UIColor.white : UIColor.black).cgColor
     }
 
     override func layoutSubviews() {

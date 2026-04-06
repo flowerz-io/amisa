@@ -38,7 +38,7 @@ final class ShareSquareCropEditorViewController: UIViewController {
     private let sourceImage: UIImage
     private let scrollView = UIScrollView()
     private let imageView = UIImageView()
-    private let overlayView = ShareCropDimmingOverlayView()
+    private let overlayView = ShareCropFrameOverlayView()
 
     private var cropSide: CGFloat = 280
     private var lastLaidOutSize: CGSize = .zero
@@ -56,7 +56,7 @@ final class ShareSquareCropEditorViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = UIColor.secondarySystemGroupedBackground
+        view.backgroundColor = .clear
 
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.delegate = self
@@ -203,14 +203,31 @@ extension ShareSquareCropEditorViewController: UIScrollViewDelegate {
     }
 }
 
-private final class ShareCropDimmingOverlayView: UIView {
+private enum ShareCropFrameGeometry {
+    static func cornerLength(forSide side: CGFloat) -> CGFloat {
+        min(28, max(18, side * 0.12))
+    }
+}
+
+/// Aligné sur `ScanCropFrameOverlayView` (app native) : voile léger + coins en L.
+private final class ShareCropFrameOverlayView: UIView {
     private var holeFrame: CGRect = .zero
-    private var shapeLayer: CAShapeLayer?
+    private let dimLayer = CAShapeLayer()
+    private let cornersLayer = CAShapeLayer()
 
     override init(frame: CGRect) {
         super.init(frame: frame)
         backgroundColor = .clear
         isUserInteractionEnabled = false
+        dimLayer.fillColor = UIColor.black.withAlphaComponent(0.06).cgColor
+        dimLayer.fillRule = .evenOdd
+        layer.addSublayer(dimLayer)
+        cornersLayer.fillColor = UIColor.clear.cgColor
+        cornersLayer.lineWidth = 5
+        cornersLayer.lineCap = .round
+        cornersLayer.lineJoin = .round
+        layer.addSublayer(cornersLayer)
+        applyCropCornerStrokeColor()
     }
 
     required init?(coder: NSCoder) {
@@ -222,19 +239,39 @@ private final class ShareCropDimmingOverlayView: UIView {
         setNeedsLayout()
     }
 
+    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        super.traitCollectionDidChange(previousTraitCollection)
+        applyCropCornerStrokeColor()
+    }
+
+    private func applyCropCornerStrokeColor() {
+        let dark = traitCollection.userInterfaceStyle == .dark
+        cornersLayer.strokeColor = (dark ? UIColor.white : UIColor.black).cgColor
+    }
+
     override func layoutSubviews() {
         super.layoutSubviews()
         let path = UIBezierPath(rect: bounds)
         path.append(UIBezierPath(rect: holeFrame).reversing())
+        dimLayer.path = path.cgPath
+        dimLayer.frame = bounds
 
-        if shapeLayer == nil {
-            let layer = CAShapeLayer()
-            layer.fillColor = UIColor.black.withAlphaComponent(0.45).cgColor
-            layer.fillRule = .evenOdd
-            self.layer.addSublayer(layer)
-            shapeLayer = layer
-        }
-        shapeLayer?.path = path.cgPath
-        shapeLayer?.frame = bounds
+        let L = ShareCropFrameGeometry.cornerLength(forSide: min(holeFrame.width, holeFrame.height))
+        let r = holeFrame
+        let cgPath = CGMutablePath()
+        cgPath.move(to: CGPoint(x: r.minX, y: r.minY + L))
+        cgPath.addLine(to: CGPoint(x: r.minX, y: r.minY))
+        cgPath.addLine(to: CGPoint(x: r.minX + L, y: r.minY))
+        cgPath.move(to: CGPoint(x: r.maxX - L, y: r.minY))
+        cgPath.addLine(to: CGPoint(x: r.maxX, y: r.minY))
+        cgPath.addLine(to: CGPoint(x: r.maxX, y: r.minY + L))
+        cgPath.move(to: CGPoint(x: r.maxX, y: r.maxY - L))
+        cgPath.addLine(to: CGPoint(x: r.maxX, y: r.maxY))
+        cgPath.addLine(to: CGPoint(x: r.maxX - L, y: r.maxY))
+        cgPath.move(to: CGPoint(x: r.minX + L, y: r.maxY))
+        cgPath.addLine(to: CGPoint(x: r.minX, y: r.maxY))
+        cgPath.addLine(to: CGPoint(x: r.minX, y: r.maxY - L))
+        cornersLayer.path = cgPath
+        cornersLayer.frame = bounds
     }
 }

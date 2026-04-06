@@ -7,17 +7,19 @@
 
 import SwiftUI
 
-struct AnalysisLoadingView: View {
+/// Bloc réutilisable : animation providers + barre + texte.
+struct LoadingProgressBlock: View {
+    let message: String
     @State private var progress: CGFloat = 0
     @State private var progressTimer: Timer?
 
     var body: some View {
         VStack(spacing: DesignTokens.spacingM) {
-            ProviderLoadingLogosView()
+            ProviderLoadingAnimationView()
 
             progressBar
 
-            Text(String(localized: "Recherche des annonces similaires…"))
+            Text(message)
                 .font(DesignTokens.bodyFont)
                 .foregroundStyle(DesignTokens.textSecondary)
                 .multilineTextAlignment(.center)
@@ -43,7 +45,7 @@ struct AnalysisLoadingView: View {
         }
         .frame(height: 8)
         .animation(.easeInOut(duration: 0.2), value: progress)
-        .accessibilityLabel(String(localized: "Recherche des annonces similaires…"))
+        .accessibilityLabel(message)
     }
 
     private func startProgressSimulation() {
@@ -56,6 +58,16 @@ struct AnalysisLoadingView: View {
         }
     }
 }
+
+struct AnalysisLoadingView: View {
+    var message: String = String(localized: "Recherche des annonces similaires…")
+
+    var body: some View {
+        LoadingProgressBlock(message: message)
+    }
+}
+
+typealias ProviderLoadingAnimationView = ProviderLoadingLogosView
 
 /// Compatibilité : ancien nom utilisé dans les call sites.
 typealias LoadingView = AnalysisLoadingView

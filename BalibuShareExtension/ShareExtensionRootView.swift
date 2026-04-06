@@ -2,7 +2,7 @@
 //  ShareExtensionRootView.swift
 //  BalibuShareExtension
 //
-//  UI SwiftUI minimaliste pour le flux partage.
+//  UI SwiftUI minimaliste pour le flux partage (alignée visuellement sur la Preview native).
 //
 
 import SwiftUI
@@ -27,7 +27,7 @@ struct ShareExtensionRootView: View {
                     }
                 }
         }
-        .tint(.primary)
+        .tint(Color.accentColor)
         .task {
             model.startLoading()
         }
@@ -65,45 +65,35 @@ struct ShareExtensionRootView: View {
         case .crop(let uiImage):
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text(String(localized: "Recadrer"))
-                        .font(.headline)
-
                     ShareSquareCropRepresentable(image: uiImage) { controller in
                         model.cropController = controller
                     }
                     .frame(height: 360)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                     Text(String(localized: "Déplace et zoome pour cadrer l’article dans le carré."))
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
-                    Button {
-                        model.commitCropAndPrepareImport()
-                    } label: {
-                        Text(String(localized: "Enregistrer"))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                    }
-                    .buttonStyle(.borderedProminent)
+                    Text(String(localized: "Nous analysons l’image et cherchons des articles similaires sur les marketplaces."))
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                    ShareExtensionPrimaryActionButton(
+                        title: String(localized: "Enregistrer"),
+                        action: { model.commitCropAndPrepareImport() }
+                    )
+                    .padding(.top, 4)
                 }
-                .padding()
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 24)
             }
+            .background(Color(.systemGroupedBackground))
 
         case .confirmReady:
-            Group {
-                if model.notificationScheduleOutcome == nil {
-                    VStack(spacing: 16) {
-                        ProgressView()
-                        Text(String(localized: "Préparation…"))
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else {
-                    confirmReadyContent(model: model)
-                }
-            }
+            confirmReadyContent(model: model)
 
         case .error(let message):
             VStack(spacing: 16) {
@@ -122,41 +112,35 @@ struct ShareExtensionRootView: View {
 
     @ViewBuilder
     private func confirmReadyContent(model: ShareFlowModel) -> some View {
-        VStack(spacing: 24) {
-            if let preview = model.confirmPreviewImage {
-                Image(uiImage: preview)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 96, height: 96)
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .strokeBorder(Color.secondary.opacity(0.2), lineWidth: 1)
-                    )
-            }
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 48))
-                .foregroundStyle(.secondary)
-            Text(String(localized: "Recherche enregistrée"))
-                .font(.title2.weight(.semibold))
+        ScrollView {
+            VStack(spacing: 24) {
+                if let preview = model.confirmPreviewImage {
+                    Image(uiImage: preview)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 120, height: 120)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
+                }
 
-            notificationSupplementText(for: model.notificationScheduleOutcome)
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
+                ShareExtensionAnalysisLoadingView()
 
-            Button {
-                model.finishAndDismissExtension()
-            } label: {
-                Text(String(localized: "Terminé"))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
+                notificationSupplementText(for: model.notificationScheduleOutcome)
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+
+                ShareExtensionPrimaryActionButton(
+                    title: String(localized: "Terminé"),
+                    action: { model.finishAndDismissExtension() }
+                )
             }
-            .buttonStyle(.borderedProminent)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 24)
+            .frame(maxWidth: .infinity)
         }
-        .padding()
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.systemGroupedBackground))
     }
 
     @ViewBuilder

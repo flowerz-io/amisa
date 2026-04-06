@@ -107,23 +107,22 @@ struct RightTabCapsule: View {
 
 struct ScanFloatingButton: View {
     var action: () -> Void
-    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         Button(action: action) {
             ZStack {
                 Circle()
-                    .fill(.ultraThinMaterial)
+                    .fill(Color.accentColor)
                     .overlay(
-                        Circle().stroke(Color.primary.opacity(0.18), lineWidth: 1)
+                        Circle().stroke(Color.white.opacity(0.22), lineWidth: 1)
                     )
 
                 Image(systemName: "camera.viewfinder")
                     .font(.system(size: 24, weight: .semibold))
-                    .foregroundStyle(BalibuSemanticColors.scanButtonIconForeground(colorScheme: colorScheme))
+                    .foregroundStyle(Color.white)
             }
             .frame(width: 60, height: 60)
-            .shadow(color: Color.black.opacity(0.1), radius: 12, x: 0, y: 6)
+            .shadow(color: Color.black.opacity(0.12), radius: 12, x: 0, y: 6)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(String(localized: "Scanner ou photographier"))
