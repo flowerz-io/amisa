@@ -19,7 +19,7 @@ function ebayItemsToListings(items: EbaySearchItem[]): MarketplaceListingDTO[] {
       imageUrl: item.imageUrl,
       thumbnailUrl: item.thumbnailUrl ?? item.imageUrl,
       listingUrl: item.listingUrl,
-      ...(item.brand ? { brand: item.brand } : {}),
+      brand: item.brand,
       ...(item.size ? { size: item.size } : {}),
       ...(item.condition ? { condition: item.condition } : {}),
       ...(item.publishedAtRelative ? { publishedAtRelative: item.publishedAtRelative } : {}),

@@ -1,10 +1,3 @@
-//
-//  MainTabContainerView.swift
-//  Balibu
-//
-//  Tab bar : Rechercher / Favoris / Réglages + bouton scan flottant (hors onglets).
-//
-
 import SwiftUI
 import Combine
 import UIKit
@@ -14,117 +7,154 @@ struct MainTabContainerView: View {
     let appDelegate: BalibuAppDelegate
     @Environment(\.scenePhase) private var scenePhase
     @State private var showCameraCapture = false
-    @State private var bottomSafeInset: CGFloat = 34
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            TabView(selection: $router.selectedTab) {
-                NavigationStack(path: $router.path) {
-                    SearchHomeView(searchHistoryService: .shared)
-                        .environmentObject(router)
-                        .navigationDestination(for: AppRoute.self) { route in
-                            switch route {
-                            case .home:
-                                EmptyView()
-                            case .sharedImportReview(let payload):
-                                SharedImportReviewView(payload: payload)
-                            case .shareImportProcessing(let payload):
-                                ShareImportProcessingView(payload: payload)
-                            case .results(let session):
-                                ResultsView(session: session)
-                            case .searchHistory:
-                                SearchHistoryView()
-                            }
-                        }
-                }
-                .tabItem {
-                    Label(String(localized: "Rechercher"), systemImage: "magnifyingglass")
-                }
-                .tag(0)
-
-                NavigationStack {
-                    FavoritesView()
-                        .environmentObject(router)
-                }
-                .tabItem {
-                    Label(String(localized: "Favoris"), systemImage: "heart.fill")
-                }
-                .tag(1)
-
-                NavigationStack {
-                    SettingsView()
-                }
-                .tabItem {
-                    Label(String(localized: "Réglages"), systemImage: "gearshape.fill")
-                }
-                .tag(2)
+        mainContent
+            .overlay(alignment: .bottom) {
+                bottomNavigationRow
             }
-            .tint(.accentColor)
-
-            floatingScanButton
-        }
-        .fullScreenCover(isPresented: $showCameraCapture) {
-            CameraCaptureView { payload in
-                showCameraCapture = false
-                router.navigateToSharedImportReview(payload: payload)
+            .fullScreenCover(isPresented: $showCameraCapture) {
+                CameraCaptureView { payload in
+                    showCameraCapture = false
+                    router.navigateToSharedImportReview(payload: payload)
+                }
             }
-        }
-        .onAppear {
-            appDelegate.router = router
-            refreshBottomSafeInset()
-            Task { await NotificationManager.shared.refreshAuthorizationStatus() }
-            router.processPendingShareImportIfNeeded()
-            if router.path.isEmpty {
-                checkPendingLegacySharedPayload()
-            }
-        }
-        .onChange(of: scenePhase) { _, newPhase in
-            if newPhase == .active {
+            .onAppear {
+                appDelegate.router = router
+                Task { await NotificationManager.shared.refreshAuthorizationStatus() }
                 router.processPendingShareImportIfNeeded()
-            }
-        }
-    }
-
-    private var floatingScanButton: some View {
-        Button {
-            showCameraCapture = true
-        } label: {
-            Image(systemName: "camera.viewfinder")
-                .font(.system(size: 24, weight: .semibold))
-                .foregroundStyle(.primary)
-                .frame(width: 60, height: 60)
-                .background {
-                    Circle()
-                        .fill(.ultraThinMaterial)
-                        .shadow(color: .black.opacity(0.22), radius: 12, y: 5)
+                if router.path.isEmpty {
+                    checkPendingLegacySharedPayload()
                 }
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase == .active {
+                    router.processPendingShareImportIfNeeded()
+                }
+            }
+    }
+
+    private var mainContent: some View {
+        ZStack {
+            NavigationStack(path: $router.path) {
+                SearchHomeView(searchHistoryService: .shared)
+                    .environmentObject(router)
+                    .navigationDestination(for: AppRoute.self) { route in
+                        switch route {
+                        case .home:
+                            EmptyView()
+                        case .sharedImportReview(let payload):
+                            SharedImportReviewView(payload: payload)
+                        case .shareImportProcessing(let payload):
+                            ShareImportProcessingView(payload: payload)
+                        case .results(let session):
+                            ResultsView(session: session)
+                        case .searchHistory:
+                            SearchHistoryView()
+                        }
+                    }
+            }
+            .opacity(router.selectedTab == 0 ? 1 : 0)
+            .allowsHitTesting(router.selectedTab == 0)
+
+            NavigationStack {
+                FavoritesView()
+                    .environmentObject(router)
+            }
+            .opacity(router.selectedTab == 1 ? 1 : 0)
+            .allowsHitTesting(router.selectedTab == 1)
+
+            NavigationStack {
+                SettingsView()
+            }
+            .opacity(router.selectedTab == 2 ? 1 : 0)
+            .allowsHitTesting(router.selectedTab == 2)
         }
-        .buttonStyle(FloatingScanPressStyle())
+        .tint(.accentColor)
+    }
+
+    private var bottomNavigationRow: some View {
+        HStack(alignment: .center, spacing: 14) {
+            tabBarCapsule
+                .frame(maxWidth: .infinity)
+
+            scanFloatingButton
+        }
+        .padding(.horizontal, 24)
+        .padding(.bottom, bottomBarBottomPadding)
+    }
+
+    private var tabBarCapsule: some View {
+        HStack(spacing: 0) {
+            tabBarItem(tag: 0, title: String(localized: "Rechercher"), systemImage: "magnifyingglass")
+            tabBarItem(tag: 1, title: String(localized: "Favoris"), systemImage: "heart.fill")
+            tabBarItem(tag: 2, title: String(localized: "Réglages"), systemImage: "gearshape.fill")
+        }
+        .padding(.vertical, 10)
+        .padding(.horizontal, 6)
+        .background {
+            Capsule()
+                .fill(.ultraThinMaterial)
+        }
+    }
+
+    private func tabBarItem(tag: Int, title: String, systemImage: String) -> some View {
+        Button {
+            router.selectedTab = tag
+        } label: {
+            VStack(spacing: 4) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 20, weight: .regular))
+                Text(title)
+                    .font(.caption2)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 4)
+            .foregroundStyle(router.selectedTab == tag ? Color.accentColor : Color.secondary)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(router.selectedTab == tag ? [.isSelected] : [])
+    }
+
+    private var scanFloatingButton: some View {
+        Button(action: openCamera) {
+            ZStack {
+                Circle()
+                    .fill(.ultraThinMaterial)
+                    .overlay(
+                        Circle().stroke(Color.white.opacity(0.35), lineWidth: 1)
+                    )
+
+                Image(systemName: "viewfinder")
+                    .font(.system(size: 24, weight: .semibold))
+            }
+            .frame(width: 60, height: 60)
+            .shadow(color: .black.opacity(0.12), radius: 16, x: 0, y: 8)
+        }
+        .buttonStyle(.plain)
         .accessibilityLabel(String(localized: "Scanner ou photographier"))
-        .offset(x: 28)
-        .padding(.bottom, bottomSafeInset + 49 + 10)
     }
 
-    private func refreshBottomSafeInset() {
-        guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-              let window = scene.windows.first else { return }
-        bottomSafeInset = window.safeAreaInsets.bottom
+    private func openCamera() {
+        showCameraCapture = true
     }
 
-    /// Ancien flux : fichier seul sans deep link id (clé legacy UserDefaults).
+    private var bottomBarBottomPadding: CGFloat {
+        let bottomInset = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+            .first(where: \.isKeyWindow)?
+            .safeAreaInsets.bottom ?? 0
+
+        return max(12, bottomInset > 0 ? bottomInset - 4 : 12)
+    }
+
     private func checkPendingLegacySharedPayload() {
         let storage = ShareStorageService.shared
         guard let payload = storage.consumeLegacyFilenamePayload() else { return }
         router.navigateToSharedImportReview(payload: payload)
-    }
-}
-
-// MARK: - Animation press (style proche des FAB système)
-
-private struct FloatingScanPressStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.92 : 1)
-            .animation(.spring(response: 0.28, dampingFraction: 0.68), value: configuration.isPressed)
     }
 }

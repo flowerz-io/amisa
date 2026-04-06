@@ -8,6 +8,14 @@ import {
   type ProviderAvailabilityDTO,
 } from '../provider-availability.js';
 import { getAccessToken, getEbayApiBase } from './ebay-auth.js';
+import {
+  logEbayAspectsDebugSample,
+  logResolvedBrandSizeDebug,
+  resetEbayAspectDebugLogCounter,
+  resolveEbayBrand,
+  resolveEbaySize,
+  type EbayBrowseItemLike,
+} from './ebay-item-resolve.js';
 
 export type EbaySearchItem = {
   source: 'eBay';
@@ -20,7 +28,8 @@ export type EbaySearchItem = {
   imageUrl?: string;
   thumbnailUrl?: string;
   listingUrl: string;
-  brand?: string;
+  /** Toujours défini après mapping (ex. « No brand »). */
+  brand: string;
   size?: string;
   condition?: string;
   publishedAtRelative?: string;
@@ -54,9 +63,7 @@ type EbayImage = {
   imageUrl?: string;
 };
 
-type EbayItemSummary = {
-  itemId?: string;
-  title?: string;
+type EbayItemSummary = EbayBrowseItemLike & {
   itemWebUrl?: string;
   image?: EbayImage;
   price?: EbayPrice;
@@ -94,6 +101,11 @@ function mapItemSummary(summary: EbayItemSummary, rank: number): EbaySearchItem 
   const currency = (summary.price?.currency ?? 'EUR').toUpperCase();
   const img = summary.image?.imageUrl?.trim();
 
+  logEbayAspectsDebugSample(summary);
+  const brand = resolveEbayBrand(summary) ?? 'No brand';
+  const size = resolveEbaySize(summary);
+  logResolvedBrandSizeDebug(itemId, brand, size);
+
   return {
     source: 'eBay',
     sourceKey: 'ebay',
@@ -105,6 +117,8 @@ function mapItemSummary(summary: EbayItemSummary, rank: number): EbaySearchItem 
     imageUrl: img,
     thumbnailUrl: img,
     listingUrl,
+    brand,
+    ...(size ? { size } : {}),
     condition: summary.condition ?? summary.conditionId ?? undefined,
   };
 }
@@ -130,12 +144,16 @@ function finalizeResult(
 /**
  * URL informative pour les logs (même base que l’appel réel : q, limit, offset).
  */
+/** Ajoute shortDescription (et champs étendus) sans appel supplémentaire par item. */
+const EBAY_SEARCH_FIELDGROUPS = 'EXTENDED';
+
 export function buildEbaySearchUrl(query: string, page: number = 1, limitHint?: number): string {
   const limit = clampLimit(limitHint ?? EBAY_MAX_PER_PAGE);
   const p = Math.max(1, Math.floor(page));
   const offset = (p - 1) * limit;
   const q = encodeURIComponent(query.trim());
-  return `${getEbayApiBase()}/buy/browse/v1/item_summary/search?q=${q}&limit=${limit}&offset=${offset}`;
+  const fg = encodeURIComponent(EBAY_SEARCH_FIELDGROUPS);
+  return `${getEbayApiBase()}/buy/browse/v1/item_summary/search?q=${q}&limit=${limit}&offset=${offset}&fieldgroups=${fg}`;
 }
 
 export async function searchEbayByText(
@@ -147,7 +165,7 @@ export async function searchEbayByText(
   const page = Math.max(1, Math.floor(options?.page ?? 1));
   const offset = (page - 1) * limit;
 
-  const searchUrl = `${getEbayApiBase()}/buy/browse/v1/item_summary/search?q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}`;
+  const searchUrl = `${getEbayApiBase()}/buy/browse/v1/item_summary/search?q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}&fieldgroups=${encodeURIComponent(EBAY_SEARCH_FIELDGROUPS)}`;
   console.log('[EBAY_SEARCH_URL]', searchUrl);
 
   const token = await getAccessToken();
@@ -201,6 +219,7 @@ export async function searchEbayByText(
     }
 
     const summaries = data.itemSummaries ?? [];
+    resetEbayAspectDebugLogCounter();
     const items: EbaySearchItem[] = [];
     let rank = 0;
     for (const s of summaries) {
