@@ -9,30 +9,41 @@ struct MainTabContainerView: View {
     @State private var showCameraCapture = false
 
     var body: some View {
-        mainContent
-            .overlay(alignment: .bottom) {
-                BottomNavigationRow(router: router, onScan: { showCameraCapture = true })
+        ZStack(alignment: .bottom) {
+            mainContent
+                .padding(.bottom, Self.scrollContentBottomInset)
+
+            BottomNavigationRow(router: router, onScan: { showCameraCapture = true })
+                .padding(.horizontal, 20)
+                .padding(.bottom, Self.bottomBarAnchorPadding)
+        }
+        .ignoresSafeArea(.keyboard, edges: .bottom)
+        .ignoresSafeArea(.container, edges: .bottom)
+        .fullScreenCover(isPresented: $showCameraCapture) {
+            CameraCaptureView { payload in
+                showCameraCapture = false
+                router.navigateToSharedImportReview(payload: payload)
             }
-            .fullScreenCover(isPresented: $showCameraCapture) {
-                CameraCaptureView { payload in
-                    showCameraCapture = false
-                    router.navigateToSharedImportReview(payload: payload)
-                }
+        }
+        .onAppear {
+            appDelegate.router = router
+            Task { await NotificationManager.shared.refreshAuthorizationStatus() }
+            router.processPendingShareImportIfNeeded()
+            if router.path.isEmpty {
+                checkPendingLegacySharedPayload()
             }
-            .onAppear {
-                appDelegate.router = router
-                Task { await NotificationManager.shared.refreshAuthorizationStatus() }
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
                 router.processPendingShareImportIfNeeded()
-                if router.path.isEmpty {
-                    checkPendingLegacySharedPayload()
-                }
             }
-            .onChange(of: scenePhase) { _, newPhase in
-                if newPhase == .active {
-                    router.processPendingShareImportIfNeeded()
-                }
-            }
+        }
     }
+
+    /// Réserve de l’espace pour le scroll afin que le dernier contenu ne passe pas sous la barre flottante (indépendant du positionnement visuel de la barre).
+    private static let scrollContentBottomInset: CGFloat = 108
+    /// Marge entre le bord bas de l’écran (hors safe area) et la barre — ne doit pas servir à inset le contenu scrollable.
+    private static let bottomBarAnchorPadding: CGFloat = 6
 
     private var mainContent: some View {
         ZStack {

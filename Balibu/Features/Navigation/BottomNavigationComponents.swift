@@ -14,12 +14,6 @@ struct BottomNavigationRow: View {
             RightTabCapsule(router: router)
                 .frame(maxWidth: .infinity)
         }
-        .padding(.horizontal, 20)
-        .padding(.bottom, bottomBarBottomPadding)
-    }
-
-    private var bottomBarBottomPadding: CGFloat {
-        20
     }
 }
 
