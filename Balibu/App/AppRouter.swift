@@ -14,6 +14,9 @@ enum AppRoute: Hashable {
     case shareImportProcessing(payload: SharedImportPayload)
     case results(session: SearchSession)
     case searchHistory
+    /// Polling Railway jusqu’aux résultats (sessionId = pivot).
+    case remoteSessionLoading(sessionId: String)
+    case sharedSessionResumeFailed(message: String)
 }
 
 struct AppRouter: View {

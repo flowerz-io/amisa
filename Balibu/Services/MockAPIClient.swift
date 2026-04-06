@@ -26,6 +26,22 @@ struct MockAPIClient: APIClientProtocol {
         return AnalyzeSearchResponse.mock
     }
 
+    func startSearchSession(imageData: Data) async throws -> StartSearchSessionResponse {
+        try await Task.sleep(nanoseconds: UInt64(delaySeconds * 300_000_000))
+        return StartSearchSessionResponse(sessionId: "mock-session-\(UUID().uuidString.prefix(8))", status: "queued", searchQuery: nil)
+    }
+
+    func fetchSearchSessionStatus(sessionId: String) async throws -> SearchSessionPollResponse {
+        try await Task.sleep(nanoseconds: UInt64(delaySeconds * 400_000_000))
+        return SearchSessionPollResponse(
+            sessionId: sessionId,
+            status: "completed",
+            searchQuery: AnalyzeSearchResponse.mock.generatedQueries.first,
+            error: nil,
+            response: AnalyzeSearchResponse.mock
+        )
+    }
+
     func fetchVintedListingsPage(searchText: String, page: Int) async throws -> VintedListingsResponse {
         try await Task.sleep(nanoseconds: UInt64(delaySeconds * 500_000_000))
         guard page >= 2 else {

@@ -30,7 +30,7 @@ final class BalibuAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificati
             return
         }
         Task { @MainActor in
-            router?.processPendingShareImportFromNotification()
+            router?.handleShareResultsNotificationResponse(userInfo: response.notification.request.content.userInfo)
             completionHandler()
         }
     }

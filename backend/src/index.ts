@@ -16,6 +16,7 @@ import { ebayListingsRoute } from './routes/ebay-listings.js';
 import { leBonCoinListingsRoute } from './routes/leboncoin-listings.js';
 import { depopListingsRoute } from './routes/depop-listings.js';
 import { searchMoreRoute } from './routes/search-more.js';
+import { searchSessionsRoute } from './routes/search-sessions.js';
 import { PROVIDERS_ENABLED } from './providers-config.js';
 
 logVisionProviderDiagnostic();
@@ -36,6 +37,7 @@ const app = Fastify({ logger: true });
 await app.register(cors, { origin: true });
 
 app.register(analyzeSearchRoute, { prefix: '/' });
+app.register(searchSessionsRoute, { prefix: '/' });
 app.register(resolveSharedUrlRoute, { prefix: '/' });
 app.register(vintedListingsRoute, { prefix: '/' });
 app.register(grailedListingsRoute, { prefix: '/' });

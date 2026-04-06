@@ -31,6 +31,32 @@ enum ShareExtensionStorage {
     private static let shareImportStatusKey = "balibu.shareImportStatus"
     private static let shareImportStatusPending = "pending"
 
+    /// JPEG dans `SharedImages` uniquement (flux session Railway — sans clés d’import legacy).
+    static func saveJPEGToSharedImagesOnly(_ imageData: Data) throws -> String {
+        guard let dir = sharedImagesURL else {
+            throw ShareExtensionStorageError.containerUnavailable
+        }
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let fileName = "\(UUID().uuidString).jpg"
+        try imageData.write(to: dir.appendingPathComponent(fileName))
+        return fileName
+    }
+
+    /// Corps JSON brut d’un GET `/search-sessions/:id` (pour décodage dans l’app).
+    static func saveSessionResultJSON(_ data: Data, sessionId: String) throws -> String {
+        let fileName = "session-\(sessionId).json"
+        guard let base = FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: appGroupIdentifier
+        ) else {
+            throw ShareExtensionStorageError.containerUnavailable
+        }
+        let dir = base.appendingPathComponent("SessionResults", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let url = dir.appendingPathComponent(fileName)
+        try data.write(to: url)
+        return fileName
+    }
+
     /// Enregistre le JPEG final + JSON + id + statut `pending` (l’app consomme au prochain lancement).
     static func saveImport(payload: SharedImportPayload, imageData: Data) throws {
         guard let dir = sharedImagesURL else {

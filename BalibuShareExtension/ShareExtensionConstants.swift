@@ -14,8 +14,12 @@ enum ShareExtensionConstants {
     enum Notifications {
         static let shareResultsReadyCategory = "balibu.category.shareResultsReady"
         static let importIdUserInfoKey = "importId"
+        static let sessionIdUserInfoKey = "sessionId"
         static func shareResultsRequestIdentifier(importId: UUID) -> String {
             "balibu.shareResults.\(importId.uuidString)"
+        }
+        static func shareResultsRequestIdentifier(sessionId: String) -> String {
+            "balibu.shareResults.session.\(sessionId)"
         }
     }
 }

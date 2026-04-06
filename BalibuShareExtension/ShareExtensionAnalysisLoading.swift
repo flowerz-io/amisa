@@ -8,43 +8,6 @@
 import SwiftUI
 import UIKit
 
-private enum ShareExtensionProviderID: String, CaseIterable, Hashable {
-    case vinted, grailed, ebay, depop, leboncoin
-
-    var defaultsKey: String { "balibu.providers.enabled.\(rawValue)" }
-
-    var displayName: String {
-        switch self {
-        case .vinted: return "Vinted"
-        case .grailed: return "Grailed"
-        case .ebay: return "eBay"
-        case .depop: return "Depop"
-        case .leboncoin: return "Le Bon Coin"
-        }
-    }
-
-    var assetName: String {
-        switch self {
-        case .leboncoin: return "provider_leboncoin"
-        default: return "provider_\(rawValue)"
-        }
-    }
-
-    var defaultEnabled: Bool {
-        switch self {
-        case .leboncoin: return false
-        default: return true
-        }
-    }
-
-    var isEnabledInSettings: Bool {
-        if UserDefaults.standard.object(forKey: defaultsKey) == nil {
-            return defaultEnabled
-        }
-        return UserDefaults.standard.bool(forKey: defaultsKey)
-    }
-}
-
 private struct ShareExtensionProviderLogoView: View {
     let provider: ShareExtensionProviderID
     let logoHeight: CGFloat
@@ -88,10 +51,10 @@ private struct ShareExtensionProviderLogoAnimation: View {
                 Color.clear.frame(height: 36)
             } else {
                 HStack(spacing: 16) {
-                    ForEach(Array(providers.enumerated()), id: \.offset) { _, provider in
+                    ForEach(Array(providers.enumerated()), id: \.offset) { offset, provider in
                         let isActive = providers.count == 1
                             ? singleLogoPulse
-                            : index == activeIndex
+                            : offset == activeIndex
                         ShareExtensionProviderLogoView(
                             provider: provider,
                             logoHeight: 28,
@@ -168,7 +131,7 @@ struct ShareExtensionAnalysisLoadingView: View {
             .frame(height: 8)
             .animation(.easeInOut(duration: 0.2), value: progress)
 
-            Text(String(localized: "Analyse en cours..."))
+            Text(String(localized: "Recherche des annonces similaires…"))
                 .font(.body)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)

@@ -2,7 +2,7 @@
 //  ShareExtensionFlowModel.swift
 //  BalibuShareExtension
 //
-//  Machine à états : chargement → (sélection) → crop → confirmation → enregistrement App Group (pending).
+//  Machine à états : chargement → (sélection) → crop → confirmation + session Railway (App Group).
 //
 
 import Combine
@@ -33,10 +33,15 @@ final class ShareFlowModel: ObservableObject {
     /// Aperçu de l’image recadrée sur l’écran de confirmation.
     @Published private(set) var confirmPreviewImage: UIImage?
 
-    /// Résultat de la programmation de la notification locale après enregistrement.
+    /// Pendant l’appel POST /search-sessions (désactive le bouton Analyser).
+    @Published private(set) var isStartingRemoteSession = false
+
+    /// Résultat de la programmation de la notification locale après démarrage de session.
     @Published private(set) var notificationScheduleOutcome: ShareNotificationScheduleOutcome?
 
     private let linkResolver: ShareLinkResolving
+
+    private var sessionPollingTask: Task<Void, Never>?
 
     init(extensionContext: NSExtensionContext?, linkResolver: ShareLinkResolving = CompositeShareLinkResolver()) {
         self.extensionContext = extensionContext
@@ -90,37 +95,93 @@ final class ShareFlowModel: ObservableObject {
         phase = .crop(image)
     }
 
-    /// Après recadrage : enregistre dans l’App Group (pending) et passe à l’écran de confirmation.
-    func commitCropAndPrepareImport() {
+    /// Après recadrage : enregistre l’image dans l’App Group, lance Railway (`POST /search-sessions`), puis l’écran de chargement réel.
+    func commitCropAndStartBackendSearch() {
         guard let cropped = cropController?.exportCroppedImage(),
               let data = cropped.jpegData(compressionQuality: 0.88) else {
             phase = .error("Impossible d’exporter l’image recadrée.")
             return
         }
 
-        let importId = UUID()
-        let fileName = "\(importId.uuidString).jpg"
-        let payload = SharedImportPayload(
-            id: importId,
-            imageFileName: fileName,
-            createdAt: Date(),
-            sourceURL: linkSourceURL
-        )
+        isStartingRemoteSession = true
+        notificationScheduleOutcome = nil
+        sessionPollingTask?.cancel()
 
-        do {
-            try ShareExtensionStorage.saveImport(payload: payload, imageData: data)
-            confirmPreviewImage = cropped
-            notificationScheduleOutcome = nil
-            Task {
-                let outcome = await ShareExtensionNotificationScheduler.scheduleResultsReady(importId: importId)
+        Task {
+            do {
+                let fileName = try ShareExtensionStorage.saveJPEGToSharedImagesOnly(data)
+                let start = try await ShareExtensionSearchAPI.startSearchSession(imageData: data)
+
+                let pending = PendingSharedSearchSession(
+                    sessionId: start.sessionId,
+                    createdAt: Date(),
+                    source: "share_extension",
+                    status: start.status,
+                    previewImagePath: nil,
+                    originalImagePath: fileName,
+                    searchQuery: start.searchQuery,
+                    completedResultJSONFileName: nil
+                )
+                try SharedSearchSessionStore.shared.save(pending)
+
                 await MainActor.run {
-                    notificationScheduleOutcome = outcome
+                    confirmPreviewImage = cropped
                     phase = .confirmReady
                 }
+
+                let outcome = await ShareExtensionNotificationScheduler.scheduleResultsReady(sessionId: start.sessionId)
+                await MainActor.run {
+                    notificationScheduleOutcome = outcome
+                }
+
+                sessionPollingTask = Task {
+                    await Self.pollRemoteSession(sessionId: start.sessionId)
+                }
+            } catch {
+                await MainActor.run {
+                    phase = .error(String(localized: "Impossible de lancer l’analyse : \(error.localizedDescription)"))
+                }
             }
-        } catch {
-            phase = .error("Enregistrement impossible : \(error.localizedDescription)")
+            await MainActor.run {
+                isStartingRemoteSession = false
+            }
         }
+    }
+
+    private nonisolated static func pollRemoteSession(sessionId: String) async {
+        let maxIterations = 80
+        for _ in 0..<maxIterations {
+            if Task.isCancelled { return }
+            do {
+                let data = try await ShareExtensionSearchAPI.fetchSessionData(sessionId: sessionId)
+                let status = try ShareExtensionSearchAPI.statusString(from: data)
+                let query = Self.parseSearchQuery(from: data)
+                await MainActor.run {
+                    SharedSearchSessionStore.shared.updateStatus(status, searchQuery: query)
+                }
+                if status == "completed" {
+                    let fileName = try ShareExtensionStorage.saveSessionResultJSON(data, sessionId: sessionId)
+                    await MainActor.run {
+                        SharedSearchSessionStore.shared.updateCompletedResultJSONFileName(fileName)
+                        SharedSearchSessionStore.shared.updateStatus("completed", searchQuery: query)
+                    }
+                    return
+                }
+                if status == "failed" {
+                    await MainActor.run {
+                        SharedSearchSessionStore.shared.updateStatus("failed", searchQuery: query)
+                    }
+                    return
+                }
+            } catch {
+                // Erreur réseau transitoire : on continue à poller.
+            }
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+        }
+    }
+
+    private nonisolated static func parseSearchQuery(from jsonData: Data) -> String? {
+        (try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any])?["searchQuery"] as? String
     }
 
     /// Ferme l’extension après confirmation (aucune ouverture de l’app hôte).
@@ -129,6 +190,7 @@ final class ShareFlowModel: ObservableObject {
     }
 
     func cancelExtension() {
+        sessionPollingTask?.cancel()
         extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
     }
 }

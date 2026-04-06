@@ -81,8 +81,9 @@ struct ShareExtensionRootView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
 
                     ShareExtensionPrimaryActionButton(
-                        title: String(localized: "Enregistrer"),
-                        action: { model.commitCropAndPrepareImport() }
+                        title: String(localized: "Analyser"),
+                        action: { model.commitCropAndStartBackendSearch() },
+                        isDisabled: model.isStartingRemoteSession
                     )
                     .padding(.top, 4)
                 }

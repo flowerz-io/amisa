@@ -28,14 +28,20 @@ struct MainTabContainerView: View {
         .onAppear {
             appDelegate.router = router
             Task { await NotificationManager.shared.refreshAuthorizationStatus() }
-            router.processPendingShareImportIfNeeded()
-            if router.path.isEmpty {
-                checkPendingLegacySharedPayload()
+            Task {
+                await SharedSearchLaunchCoordinator.resumeIfNeeded(router: router, apiClient: APIConfig.apiClient)
+                router.processPendingShareImportIfNeeded()
+                if router.path.isEmpty {
+                    checkPendingLegacySharedPayload()
+                }
             }
         }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
-                router.processPendingShareImportIfNeeded()
+                Task {
+                    await SharedSearchLaunchCoordinator.resumeIfNeeded(router: router, apiClient: APIConfig.apiClient)
+                    router.processPendingShareImportIfNeeded()
+                }
             }
         }
     }
@@ -69,9 +75,14 @@ struct MainTabContainerView: View {
                             ResultsView(session: session)
                         case .searchHistory:
                             SearchHistoryView()
+                        case .remoteSessionLoading(let sessionId):
+                            RemoteSessionLoadingView(sessionId: sessionId)
+                        case .sharedSessionResumeFailed(let message):
+                            SharedSessionResumeFailedView(message: message)
                         }
                     }
             }
+            .environmentObject(router)
             .opacity(router.selectedTab == .search ? 1 : 0)
             .allowsHitTesting(router.selectedTab == .search)
 

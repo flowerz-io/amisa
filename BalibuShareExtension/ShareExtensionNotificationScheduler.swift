@@ -22,7 +22,26 @@ enum ShareExtensionNotificationScheduler {
         UNUserNotificationCenter.current()
     }
 
-    /// Programme une notification « résultats prêts » ; demande l’autorisation si besoin.
+    /// Pivot `sessionId` (aligné sur `BalibuNotificationIdentifiers.sessionIdUserInfoKey`).
+    static func scheduleResultsReady(sessionId: String) async -> ShareNotificationScheduleOutcome {
+        let content = UNMutableNotificationContent()
+        content.title = String(localized: "Balibu")
+        content.body = String(localized: "Touchez pour voir les résultats")
+        content.sound = .default
+        content.categoryIdentifier = ShareExtensionConstants.Notifications.shareResultsReadyCategory
+        content.userInfo = [ShareExtensionConstants.Notifications.sessionIdUserInfoKey: sessionId]
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        let request = UNNotificationRequest(
+            identifier: ShareExtensionConstants.Notifications.shareResultsRequestIdentifier(sessionId: sessionId),
+            content: content,
+            trigger: trigger
+        )
+
+        return await addRequest(request)
+    }
+
+    /// Rétrocompat : import local uniquement (ancien flux).
     static func scheduleResultsReady(importId: UUID) async -> ShareNotificationScheduleOutcome {
         let content = UNMutableNotificationContent()
         content.title = String(localized: "Balibu")
@@ -37,6 +56,11 @@ enum ShareExtensionNotificationScheduler {
             content: content,
             trigger: trigger
         )
+
+        return await addRequest(request)
+    }
+
+    private static func addRequest(_ request: UNNotificationRequest) async -> ShareNotificationScheduleOutcome {
 
         let settings = await center.notificationSettings()
 

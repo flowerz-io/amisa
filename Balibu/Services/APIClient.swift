@@ -14,6 +14,10 @@ protocol APIClientProtocol: Sendable {
     func analyzeAndSearch(image: UIImage) async throws -> AnalyzeSearchResponse
     func analyzeAndSearch(imageData: Data) async throws -> AnalyzeSearchResponse
     func analyzeTextSearch(query: String) async throws -> AnalyzeSearchResponse
+    /// Session async (Share Extension) : lance le pipeline côté Railway, retourne `sessionId`.
+    func startSearchSession(imageData: Data) async throws -> StartSearchSessionResponse
+    /// État et résultat d’une session (source de vérité Railway).
+    func fetchSearchSessionStatus(sessionId: String) async throws -> SearchSessionPollResponse
     /// Pages suivantes Vinted (page ≥ 2). La page 1 vient de `analyze-search`.
     func fetchVintedListingsPage(searchText: String, page: Int) async throws -> VintedListingsResponse
     /// Pagination multi-providers sans ré-analyse vision.
@@ -97,6 +101,56 @@ actor APIClient: APIClientProtocol {
             throw APIError.badRequest
         case 500:
             throw APIError.serverError
+        default:
+            throw APIError.unknown(statusCode: httpResponse.statusCode)
+        }
+    }
+
+    func startSearchSession(imageData: Data) async throws -> StartSearchSessionResponse {
+        let url = baseURL.appending(path: "search-sessions")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let enabledProviders = ProviderSettingsStore.enabledProviderBackendKeysSnapshot()
+        let body = AnalyzeSearchRequest(
+            imageBase64: imageData.base64EncodedString(),
+            enabledProviders: enabledProviders
+        )
+        request.httpBody = try JSONEncoder().encode(body)
+
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+        switch httpResponse.statusCode {
+        case 202:
+            return try decoder.decode(StartSearchSessionResponse.self, from: data)
+        case 413:
+            throw APIError.payloadTooLarge
+        case 400:
+            throw APIError.badRequest
+        case 500:
+            throw APIError.serverError
+        default:
+            throw APIError.unknown(statusCode: httpResponse.statusCode)
+        }
+    }
+
+    func fetchSearchSessionStatus(sessionId: String) async throws -> SearchSessionPollResponse {
+        let url = baseURL.appending(path: "search-sessions").appending(path: sessionId)
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+        switch httpResponse.statusCode {
+        case 200:
+            return try decoder.decode(SearchSessionPollResponse.self, from: data)
+        case 404:
+            throw APIError.sessionNotFound
         default:
             throw APIError.unknown(statusCode: httpResponse.statusCode)
         }
@@ -202,6 +256,7 @@ enum APIError: LocalizedError {
     case invalidResponse
     case badRequest
     case serverError
+    case sessionNotFound
     case lowConfidence
     case nonFashion
     case payloadTooLarge
@@ -216,6 +271,8 @@ enum APIError: LocalizedError {
             return "Image non exploitable"
         case .invalidResponse:
             return "Réponse invalide du serveur"
+        case .sessionNotFound:
+            return "Cette session de recherche n’existe plus ou a expiré."
         case .badRequest:
             return "Requête invalide. Vérifie l’image et réessaie."
         case .serverError:
