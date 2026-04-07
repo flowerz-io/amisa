@@ -39,3 +39,39 @@ struct ProviderAvailabilityMapDTO: Codable, Hashable {
         )
     }
 }
+
+/// Totaux backend par provider (différent des cartes déjà chargées).
+struct ProviderCountsDTO: Codable, Hashable {
+    var vinted: Int?
+    var grailed: Int?
+    var ebay: Int?
+    var leboncoin: Int?
+    var depop: Int?
+
+    func count(for providerKey: String) -> Int? {
+        switch MarketplaceSource.canonicalKey(from: providerKey) {
+        case "vinted": return vinted
+        case "grailed": return grailed
+        case "ebay": return ebay
+        case "leboncoin": return leboncoin
+        case "depop": return depop
+        default: return nil
+        }
+    }
+
+    /// Fusionne en donnant la priorité aux nouvelles valeurs non-nil.
+    func merged(with delta: ProviderCountsDTO?) -> ProviderCountsDTO {
+        guard let delta else { return self }
+        return ProviderCountsDTO(
+            vinted: delta.vinted ?? vinted,
+            grailed: delta.grailed ?? grailed,
+            ebay: delta.ebay ?? ebay,
+            leboncoin: delta.leboncoin ?? leboncoin,
+            depop: delta.depop ?? depop
+        )
+    }
+
+    var sum: Int {
+        [vinted, grailed, ebay, leboncoin, depop].compactMap { $0 }.reduce(0, +)
+    }
+}

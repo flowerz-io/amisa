@@ -3,6 +3,7 @@ import type {
   MarketplaceListingDTO,
   ProviderAvailabilityDTO,
   ProviderAvailabilityMap,
+  ProviderCountsMap,
   SearchMoreRequest,
   SearchMoreResponse,
 } from '../api/types.js';
@@ -26,6 +27,13 @@ import { isProviderEnabled } from '../providers-config.js';
 import { normalizeRequestedProviders } from '../provider-request.js';
 
 const DEFAULT_BATCH_SIZE = NEXT_BATCH_PER_PROVIDER;
+
+function toNonNegativeInt(value: number | undefined, fallback: number): number {
+  if (typeof value === 'number' && Number.isFinite(value) && value >= 0) {
+    return Math.floor(value);
+  }
+  return Math.max(0, Math.floor(fallback));
+}
 
 function vintedItemsToListings(items: VintedSearchItem[]): MarketplaceListingDTO[] {
   return items.map((item, index) => {
@@ -299,6 +307,7 @@ export async function searchMoreRoute(app: FastifyInstance) {
       requestedSet.has('ebay') && isProviderEnabled('ebay') && (ebayState?.hasMore ?? true);
     let ebayStopReason = ebayState ? 'already_exhausted' : 'missing_pagination_state_assumed_has_more';
     let ebayPagesFetched = 0;
+    let ebayTotalCount: number | undefined = ebayState?.totalCount;
     let ebayProviderAvailability: ProviderAvailabilityDTO | undefined;
     if (!requestedSet.has('ebay')) {
       console.log('[PROVIDER_DISABLED_BY_SETTINGS] provider=ebay search_more');
@@ -319,6 +328,7 @@ export async function searchMoreRoute(app: FastifyInstance) {
           ebayProviderAvailability =
             result.providerAvailability ??
             ebayToProviderAvailability(result.stopReason ?? 'ok', result.items.length, result.totalCount);
+          ebayTotalCount = result.totalCount ?? ebayTotalCount;
           pageItems = result.items;
           if (result.stopReason && result.stopReason !== 'ok') {
             console.log('[EBAY_STOP_REASON]', result.stopReason);
@@ -376,6 +386,7 @@ export async function searchMoreRoute(app: FastifyInstance) {
       isProviderEnabled('leboncoin');
     let leboncoinStopReason = leboncoinState ? 'already_exhausted' : 'missing_pagination_state';
     let leboncoinPagesFetched = 0;
+    let leboncoinTotalCount: number | undefined = leboncoinState?.totalCount;
     if (!requestedSet.has('leboncoin')) {
       console.log('[PROVIDER_DISABLED_BY_SETTINGS] provider=leboncoin search_more');
       hasMoreLeboncoin = false;
@@ -393,6 +404,7 @@ export async function searchMoreRoute(app: FastifyInstance) {
         try {
           const result = await searchLeBonCoinByTextBrowser(query, { page: leboncoinPage, limit: pageLimit });
           pageItems = result.items;
+          leboncoinTotalCount = result.totalCount ?? leboncoinTotalCount;
         } catch (err) {
           hasMoreLeboncoin = false;
           leboncoinStopReason = 'provider_error';
@@ -438,6 +450,7 @@ export async function searchMoreRoute(app: FastifyInstance) {
       requestedSet.has('depop') && isProviderEnabled('depop') && (depopState?.hasMore ?? true);
     let depopStopReason = depopState ? 'already_exhausted' : 'missing_pagination_state_assumed_has_more';
     let depopPagesFetched = 0;
+    let depopTotalCount: number | undefined = depopState?.totalCount;
     if (!requestedSet.has('depop')) {
       console.log('[PROVIDER_DISABLED_BY_SETTINGS] provider=depop search_more');
       hasMoreDepop = false;
@@ -457,6 +470,9 @@ export async function searchMoreRoute(app: FastifyInstance) {
           const result = await searchDepopByTextBrowser(query, { page: depopPage, limit: pageLimit });
           pageItems = result.items;
           detectedCards = result.detectedCards;
+          if (detectedCards > 0) {
+            depopTotalCount = Math.max(depopTotalCount ?? 0, detectedCards);
+          }
         } catch (err) {
           hasMoreDepop = false;
           depopStopReason = 'provider_error';
@@ -528,6 +544,20 @@ export async function searchMoreRoute(app: FastifyInstance) {
       console.log('[PROVIDER_AVAILABILITY]', JSON.stringify(providerAvailability));
     }
 
+    const totalVintedLoaded = body.pagination.vinted.loadedCount + nextVinted.length;
+    const totalGrailedLoaded = body.pagination.grailed.loadedCount + nextGrailed.length;
+    const totalEbayLoaded = (body.pagination.ebay?.loadedCount ?? 0) + nextEbay.length;
+    const totalLeboncoinLoaded = (body.pagination.leboncoin?.loadedCount ?? 0) + nextLeboncoin.length;
+    const totalDepopLoaded = (body.pagination.depop?.loadedCount ?? 0) + nextDepop.length;
+
+    const providerCounts: ProviderCountsMap = {
+      vinted: toNonNegativeInt(body.pagination.vinted.totalCount, totalVintedLoaded),
+      grailed: toNonNegativeInt(body.pagination.grailed.totalCount, totalGrailedLoaded),
+      ebay: toNonNegativeInt(ebayTotalCount, totalEbayLoaded),
+      leboncoin: toNonNegativeInt(leboncoinTotalCount, totalLeboncoinLoaded),
+      depop: toNonNegativeInt(depopTotalCount, totalDepopLoaded),
+    };
+
     return reply.send({
       listings: merged,
       vintedListings: nextVinted,
@@ -541,27 +571,32 @@ export async function searchMoreRoute(app: FastifyInstance) {
         vinted: {
           nextPage: vintedPage,
           hasMore: hasMoreVinted,
-          loadedCount: body.pagination.vinted.loadedCount + nextVinted.length,
+          loadedCount: totalVintedLoaded,
+          totalCount: providerCounts.vinted,
         },
         grailed: {
           nextPage: grailedPage,
           hasMore: hasMoreGrailed,
-          loadedCount: body.pagination.grailed.loadedCount + nextGrailed.length,
+          loadedCount: totalGrailedLoaded,
+          totalCount: providerCounts.grailed,
         },
         ebay: {
           nextPage: ebayPage,
           hasMore: hasMoreEbay,
-          loadedCount: (body.pagination.ebay?.loadedCount ?? 0) + nextEbay.length,
+          loadedCount: totalEbayLoaded,
+          totalCount: providerCounts.ebay,
         },
         leboncoin: {
           nextPage: leboncoinPage,
           hasMore: hasMoreLeboncoin,
-          loadedCount: (body.pagination.leboncoin?.loadedCount ?? 0) + nextLeboncoin.length,
+          loadedCount: totalLeboncoinLoaded,
+          totalCount: providerCounts.leboncoin,
         },
         depop: {
           nextPage: depopPage,
           hasMore: hasMoreDepop,
-          loadedCount: (body.pagination.depop?.loadedCount ?? 0) + nextDepop.length,
+          loadedCount: totalDepopLoaded,
+          totalCount: providerCounts.depop,
         },
       },
       hasMoreVinted,
@@ -569,6 +604,7 @@ export async function searchMoreRoute(app: FastifyInstance) {
       hasMoreEbay,
       hasMoreLeboncoin,
       hasMoreDepop,
+      providerCounts,
       ...(Object.keys(providerAvailability).length > 0 ? { providerAvailability } : {}),
     });
   });

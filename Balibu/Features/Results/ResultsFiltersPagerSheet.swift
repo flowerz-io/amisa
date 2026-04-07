@@ -11,6 +11,9 @@ struct ResultsFiltersPagerSheet: View {
     let availableProviders: [String]
     /// Statut serveur (ex. eBay bloqué par challenge).
     let providerAvailability: ProviderAvailabilityMapDTO?
+    /// Totaux backend par provider.
+    let providerCounts: ProviderCountsDTO
+    let countFormatter: (Int) -> String
     let onClose: () -> Void
 
     var body: some View {
@@ -104,10 +107,16 @@ struct ResultsFiltersPagerSheet: View {
             .frame(width: 72, alignment: .leading)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(label)
-                    .font(DesignTokens.body)
-                    .foregroundStyle(Color.primary)
-                    .lineLimit(1)
+                HStack(spacing: DesignTokens.spacingXS) {
+                    Text(label)
+                        .font(DesignTokens.body)
+                        .foregroundStyle(Color.primary)
+                        .lineLimit(1)
+                    Spacer(minLength: DesignTokens.spacingXS)
+                    Text("(\(countFormatter(providerCounts.count(for: key) ?? 0)))")
+                        .font(DesignTokens.body)
+                        .foregroundStyle(.secondary)
+                }
                 if temporarilyUnavailable {
                     Text(String(localized: "Indisponible temporairement"))
                         .font(DesignTokens.caption)

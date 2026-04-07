@@ -72,14 +72,17 @@ struct ResultsView: View {
                 }
 
                 VStack(alignment: .leading, spacing: DesignTokens.spacingS) {
-                    Text(
-                        String(
-                            format: String(localized: "%lld annonces"),
-                            Int64(viewModel.displayedListings.count)
-                        )
-                    )
-                    .font(DesignTokens.headline)
-                    .foregroundStyle(Color.primary)
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text("\(viewModel.formattedTotalListingsCount) annonces")
+                            .font(DesignTokens.headline)
+                            .foregroundStyle(Color.primary)
+
+                        if let formattedTime = viewModel.formattedInitialSearchTime {
+                            Text("(\(formattedTime))")
+                                .font(DesignTokens.caption)
+                                .foregroundStyle(Color.secondary)
+                        }
+                    }
 
                     if session.vintedSearchFailed {
                         Text(String(localized: "Le catalogue Vinted n’a pas pu être chargé pour cette recherche. Tu peux réessayer plus tard."))
@@ -147,6 +150,8 @@ struct ResultsView: View {
                 enabledProviderKeys: $viewModel.enabledProviderKeys,
                 availableProviders: viewModel.availableMarketplaceSources,
                 providerAvailability: viewModel.providerAvailabilityMap,
+                providerCounts: viewModel.providerCounts,
+                countFormatter: viewModel.formatListingsCount,
                 onClose: { showFiltersSheet = false }
             )
             .presentationDetents([.fraction(0.52), .large])

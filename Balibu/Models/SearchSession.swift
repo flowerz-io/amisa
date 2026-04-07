@@ -30,6 +30,10 @@ struct SearchSession: Identifiable, Equatable, Hashable {
     var rankingContext: SearchRankingContextDTO?
     /// Disponibilité providers (eBay bloqué, etc.) — renvoyé par l’API.
     var providerAvailability: ProviderAvailabilityMapDTO?
+    /// Compteurs totaux backend par provider.
+    var providerCounts: ProviderCountsDTO?
+    /// Temps backend (ms) pour la première vague de résultats.
+    var initialResponseTimeMs: Int?
     let mode: SearchSessionMode
 
     init(
@@ -45,6 +49,8 @@ struct SearchSession: Identifiable, Equatable, Hashable {
         paginationState: SearchPaginationStateDTO? = nil,
         rankingContext: SearchRankingContextDTO? = nil,
         providerAvailability: ProviderAvailabilityMapDTO? = nil,
+        providerCounts: ProviderCountsDTO? = nil,
+        initialResponseTimeMs: Int? = nil,
         mode: SearchSessionMode = .imageAnalysis
     ) {
         self.id = id
@@ -59,6 +65,8 @@ struct SearchSession: Identifiable, Equatable, Hashable {
         self.paginationState = paginationState
         self.rankingContext = rankingContext
         self.providerAvailability = providerAvailability
+        self.providerCounts = providerCounts
+        self.initialResponseTimeMs = initialResponseTimeMs
         self.mode = mode
     }
 
@@ -138,7 +146,8 @@ extension SearchSession {
 extension SearchSession: Codable {
     enum CodingKeys: String, CodingKey {
         case id, imageFileName, thumbnailImageURL, searchQuery, generatedQueries, attributes, listings, createdAt,
-             vintedSearchFailed, paginationState, rankingContext, providerAvailability, mode
+             vintedSearchFailed, paginationState, rankingContext, providerAvailability, providerCounts,
+             initialResponseTimeMs, mode
     }
 
     init(from decoder: Decoder) throws {
@@ -156,6 +165,8 @@ extension SearchSession: Codable {
         let paginationState = try c.decodeIfPresent(SearchPaginationStateDTO.self, forKey: .paginationState)
         let rankingContext = try c.decodeIfPresent(SearchRankingContextDTO.self, forKey: .rankingContext)
         let providerAvailability = try c.decodeIfPresent(ProviderAvailabilityMapDTO.self, forKey: .providerAvailability)
+        let providerCounts = try c.decodeIfPresent(ProviderCountsDTO.self, forKey: .providerCounts)
+        let initialResponseTimeMs = try c.decodeIfPresent(Int.self, forKey: .initialResponseTimeMs)
         let mode = try c.decodeIfPresent(SearchSessionMode.self, forKey: .mode) ?? .imageAnalysis
         self.init(
             id: id,
@@ -170,6 +181,8 @@ extension SearchSession: Codable {
             paginationState: paginationState,
             rankingContext: rankingContext,
             providerAvailability: providerAvailability,
+            providerCounts: providerCounts,
+            initialResponseTimeMs: initialResponseTimeMs,
             mode: mode
         )
     }
@@ -188,6 +201,8 @@ extension SearchSession: Codable {
         try c.encodeIfPresent(paginationState, forKey: .paginationState)
         try c.encodeIfPresent(rankingContext, forKey: .rankingContext)
         try c.encodeIfPresent(providerAvailability, forKey: .providerAvailability)
+        try c.encodeIfPresent(providerCounts, forKey: .providerCounts)
+        try c.encodeIfPresent(initialResponseTimeMs, forKey: .initialResponseTimeMs)
         try c.encode(mode, forKey: .mode)
     }
 }

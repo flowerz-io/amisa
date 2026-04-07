@@ -35,6 +35,7 @@ struct ProviderPaginationStateDTO: Codable, Hashable {
     let nextPage: Int
     let hasMore: Bool
     let loadedCount: Int
+    let totalCount: Int?
 }
 
 struct SearchPaginationStateDTO: Codable, Hashable {
@@ -70,4 +71,5 @@ struct SearchMoreResponse: Decodable {
     let hasMoreLeboncoin: Bool?
     let hasMoreDepop: Bool?
     let providerAvailability: ProviderAvailabilityMapDTO?
+    let providerCounts: ProviderCountsDTO?
 }

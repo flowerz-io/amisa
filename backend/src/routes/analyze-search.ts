@@ -47,6 +47,13 @@ function countBySource(listings: MarketplaceListingDTO[]): Record<string, number
   return acc;
 }
 
+function toNonNegativeInt(value: number | undefined, fallback: number): number {
+  if (typeof value === 'number' && Number.isFinite(value) && value >= 0) {
+    return Math.floor(value);
+  }
+  return Math.max(0, Math.floor(fallback));
+}
+
 function vintedItemsToListings(items: VintedSearchItem[]): MarketplaceListingDTO[] {
   return items.map((item, index) => {
     const idMatch = item.listingUrl.match(/\/items\/(\d+)/);
@@ -464,7 +471,8 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
     console.log('INITIAL_MERGED_COUNT', ranked.length);
     console.log('FINAL_COUNT', ranked.length);
     console.log('BY_SOURCE', JSON.stringify(countBySource(ranked)));
-    console.log('INITIAL_RESPONSE_TIME_MS', Date.now() - startedAt);
+    const initialResponseTimeMs = Date.now() - startedAt;
+    console.log('INITIAL_RESPONSE_TIME_MS', initialResponseTimeMs);
 
     const providerAvailability: ProviderAvailabilityMap = {};
     if (ebayProviderAvailability) {
@@ -473,6 +481,17 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
     if (Object.keys(providerAvailability).length > 0) {
       console.log('[PROVIDER_AVAILABILITY]', JSON.stringify(providerAvailability));
     }
+
+    const providerCounts = {
+      vinted: toNonNegativeInt(undefined, vintedListings.length),
+      grailed: toNonNegativeInt(undefined, grailedListings.length),
+      ebay: toNonNegativeInt(ebayTotalCount, ebayListings.length),
+      leboncoin: toNonNegativeInt(leboncoinTotalCount, leboncoinListings.length),
+      depop: toNonNegativeInt(
+        depopDetectedCards > 0 ? depopDetectedCards : undefined,
+        depopListings.length
+      ),
+    };
 
     const response: AnalyzeSearchResponse = {
       visionResult,
@@ -485,29 +504,36 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
           nextPage: 2,
           hasMore: vintedHasMore,
           loadedCount: vintedListings.length,
+          totalCount: providerCounts.vinted,
         },
         grailed: {
           nextPage: 2,
           hasMore: grailedHasMore,
           loadedCount: grailedListings.length,
+          totalCount: providerCounts.grailed,
         },
         ebay: {
           nextPage: 2,
           hasMore: ebayHasMore,
           loadedCount: ebayListings.length,
+          totalCount: providerCounts.ebay,
         },
         leboncoin: {
           nextPage: 2,
           hasMore: leboncoinHasMore,
           loadedCount: leboncoinListings.length,
+          totalCount: providerCounts.leboncoin,
         },
         depop: {
           nextPage: 2,
           hasMore: depopHasMore,
           loadedCount: depopListings.length,
+          totalCount: providerCounts.depop,
         },
       },
       rankingContext,
+      initialResponseTimeMs,
+      providerCounts,
       ...(vintedSearchFailed ? { vintedSearchFailed: true } : {}),
       ...(ebaySearchFailed ? { ebaySearchFailed: true } : {}),
       ...(leboncoinSearchFailed ? { leboncoinSearchFailed: true } : {}),

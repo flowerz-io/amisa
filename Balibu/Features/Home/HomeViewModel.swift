@@ -59,6 +59,8 @@ final class HomeViewModel: ObservableObject {
             paginationState: response.pagination,
             rankingContext: response.rankingContext,
             providerAvailability: response.providerAvailability,
+            providerCounts: response.providerCounts,
+            initialResponseTimeMs: response.initialResponseTimeMs,
             mode: .textQuery
         )
 

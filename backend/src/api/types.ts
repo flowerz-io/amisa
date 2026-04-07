@@ -72,6 +72,11 @@ export type ProviderAvailabilityMap = Partial<
   Record<'vinted' | 'grailed' | 'ebay' | 'leboncoin' | 'depop', ProviderAvailabilityDTO>
 >;
 
+/** Compteurs totaux remontés par provider (source backend/scraping). */
+export type ProviderCountsMap = Partial<
+  Record<'vinted' | 'grailed' | 'ebay' | 'leboncoin' | 'depop', number>
+>;
+
 export interface SearchRankingContextDTO {
   primaryQuery: string;
   probableBrand?: string;
@@ -87,6 +92,7 @@ export interface ProviderPaginationStateDTO {
   nextPage: number;
   hasMore: boolean;
   loadedCount: number;
+  totalCount?: number;
 }
 
 export interface SearchPaginationStateDTO {
@@ -117,6 +123,10 @@ export interface AnalyzeSearchResponse {
   depopSearchFailed?: boolean;
   /** Disponibilité par provider (anti-bot, erreur, vide légitime). */
   providerAvailability?: ProviderAvailabilityMap;
+  /** Temps backend (ms) pour obtenir la première vague de résultats. */
+  initialResponseTimeMs?: number;
+  /** Compteurs totaux par provider (pas seulement les cartes déjà chargées). */
+  providerCounts?: ProviderCountsMap;
   /** Présent uniquement quand DEBUG=1 ou NODE_ENV=development */
   debug?: {
     visionProvider: string;
@@ -151,6 +161,8 @@ export interface SearchMoreResponse {
   hasMoreDepop?: boolean;
   /** Mise à jour de la disponibilité (ex. eBay bloqué au scroll). */
   providerAvailability?: ProviderAvailabilityMap;
+  /** Compteurs totaux par provider mis à jour pendant la pagination. */
+  providerCounts?: ProviderCountsMap;
 }
 
 /** POST /vinted-listings — pagination sans ré-analyse vision */

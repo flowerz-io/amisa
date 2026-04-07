@@ -127,11 +127,11 @@ extension AnalyzeSearchResponse {
             pagination: SearchPaginationStateDTO(
                 primaryQuery: "Maison Margiela tabi boots black",
                 batchSizePerProvider: 50,
-                vinted: ProviderPaginationStateDTO(nextPage: 2, hasMore: true, loadedCount: 1),
-                grailed: ProviderPaginationStateDTO(nextPage: 2, hasMore: true, loadedCount: 1),
-                ebay: ProviderPaginationStateDTO(nextPage: 2, hasMore: true, loadedCount: 0),
-                leboncoin: ProviderPaginationStateDTO(nextPage: 2, hasMore: false, loadedCount: 0),
-                depop: ProviderPaginationStateDTO(nextPage: 2, hasMore: true, loadedCount: 0)
+                vinted: ProviderPaginationStateDTO(nextPage: 2, hasMore: true, loadedCount: 1, totalCount: 120),
+                grailed: ProviderPaginationStateDTO(nextPage: 2, hasMore: true, loadedCount: 1, totalCount: 1750),
+                ebay: ProviderPaginationStateDTO(nextPage: 2, hasMore: true, loadedCount: 0, totalCount: 116),
+                leboncoin: ProviderPaginationStateDTO(nextPage: 2, hasMore: false, loadedCount: 0, totalCount: 0),
+                depop: ProviderPaginationStateDTO(nextPage: 2, hasMore: true, loadedCount: 0, totalCount: 10)
             ),
             rankingContext: SearchRankingContextDTO(
                 primaryQuery: "Maison Margiela tabi boots black",
@@ -143,7 +143,9 @@ extension AnalyzeSearchResponse {
                 inferredModel: "Tabi",
                 itemTypeCanonical: "boots"
             ),
-            providerAvailability: nil
+            providerAvailability: nil,
+            initialResponseTimeMs: 58900,
+            providerCounts: ProviderCountsDTO(vinted: 120, grailed: 1750, ebay: 116, leboncoin: 0, depop: 10)
         )
     }
 }

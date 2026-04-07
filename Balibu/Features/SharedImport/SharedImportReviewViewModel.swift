@@ -83,7 +83,9 @@ final class SharedImportReviewViewModel: ObservableObject {
                     vintedSearchFailed: response.vintedSearchFailed ?? false,
                     paginationState: response.pagination,
                     rankingContext: response.rankingContext,
-                    providerAvailability: response.providerAvailability
+                    providerAvailability: response.providerAvailability,
+                    providerCounts: response.providerCounts,
+                    initialResponseTimeMs: response.initialResponseTimeMs
                 )
 
                 if let fileName = imagePersistence.saveImage(imageData) {

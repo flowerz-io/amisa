@@ -35,6 +35,10 @@ final class ResultsViewModel: ObservableObject {
     @Published var showStickyHeader: Bool = false
     /// Disponibilité providers (ex. eBay bloqué par challenge).
     @Published private(set) var providerAvailabilityMap: ProviderAvailabilityMapDTO?
+    /// Compteurs totaux backend par provider (source de vérité pour l’UI).
+    @Published private(set) var providerCounts: ProviderCountsDTO
+    /// Temps backend (ms) pour la première vague de résultats.
+    @Published private(set) var initialResponseTimeMs: Int?
     /// Historique debug : page Vinted courante (legacy + nouveau flow).
     @Published private(set) var currentPage: Int
     /// Liste vide au chargement mais requête Vinted disponible (favori) : première page à charger.
@@ -59,6 +63,8 @@ final class ResultsViewModel: ObservableObject {
         self.displayedListings = []
         self.paginationState = session.paginationState
         self.rankingContext = session.rankingContext
+        self.providerCounts = session.providerCounts ?? Self.providerCounts(from: session.paginationState)
+        self.initialResponseTimeMs = session.initialResponseTimeMs
 
         if let paginationState = session.paginationState {
             self.currentPage = max(1, paginationState.vinted.nextPage - 1)
@@ -202,6 +208,9 @@ final class ResultsViewModel: ObservableObject {
                 applyDisplayedFilters()
 
                 self.paginationState = response.pagination
+                providerCounts = providerCounts
+                    .merged(with: Self.providerCounts(from: response.pagination))
+                    .merged(with: response.providerCounts)
                 currentPage = max(1, response.pagination.vinted.nextPage - 1)
                 nextPageToFetch = response.pagination.vinted.nextPage
                 hasMoreVinted = response.hasMoreVinted
@@ -272,6 +281,31 @@ final class ResultsViewModel: ObservableObject {
         return ordered
     }
 
+    var totalListingsCount: Int {
+        let total = providerCounts.sum
+        return total > 0 ? total : displayedListings.count
+    }
+
+    func providerTotalCount(for source: String) -> Int {
+        providerCounts.count(for: source) ?? 0
+    }
+
+    func formatListingsCount(_ count: Int) -> String {
+        Self.frenchIntegerFormatter.string(from: NSNumber(value: count)) ?? "\(count)"
+    }
+
+    var formattedTotalListingsCount: String {
+        formatListingsCount(totalListingsCount)
+    }
+
+    var formattedInitialSearchTime: String? {
+        guard let ms = initialResponseTimeMs, ms >= 0 else { return nil }
+        let seconds = Double(ms) / 1000.0
+        let number = Self.frenchOneDecimalFormatter.string(from: NSNumber(value: seconds))
+            ?? String(format: "%.1f", seconds).replacingOccurrences(of: ".", with: ",")
+        return "\(number) s"
+    }
+
     private func applyDisplayedFilters() {
         displayedListings = allListings.filter { listing in
             if isEbayHiddenWhenBlocked(listing) { return false }
@@ -287,6 +321,33 @@ final class ResultsViewModel: ObservableObject {
     private func hasMoreFromAllProviders() -> Bool {
         hasMoreVinted || hasMoreGrailed || hasMoreEbay || hasMoreLeboncoin || hasMoreDepop
     }
+
+    private static func providerCounts(from pagination: SearchPaginationStateDTO?) -> ProviderCountsDTO {
+        ProviderCountsDTO(
+            vinted: pagination?.vinted.totalCount ?? pagination?.vinted.loadedCount,
+            grailed: pagination?.grailed.totalCount ?? pagination?.grailed.loadedCount,
+            ebay: pagination?.ebay?.totalCount ?? pagination?.ebay?.loadedCount,
+            leboncoin: pagination?.leboncoin?.totalCount ?? pagination?.leboncoin?.loadedCount,
+            depop: pagination?.depop?.totalCount ?? pagination?.depop?.loadedCount
+        )
+    }
+
+    private static let frenchIntegerFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.locale = Locale(identifier: "fr_FR")
+        formatter.numberStyle = .decimal
+        formatter.maximumFractionDigits = 0
+        return formatter
+    }()
+
+    private static let frenchOneDecimalFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.locale = Locale(identifier: "fr_FR")
+        formatter.numberStyle = .decimal
+        formatter.minimumFractionDigits = 1
+        formatter.maximumFractionDigits = 1
+        return formatter
+    }()
 
     private static func mergeUnique(existing: [MarketplaceListing], new: [MarketplaceListing]) -> [MarketplaceListing] {
         var seen = Set<String>()
