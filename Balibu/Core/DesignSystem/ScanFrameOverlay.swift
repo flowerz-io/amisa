@@ -50,6 +50,7 @@ final class ScanCropFrameOverlayView: UIView {
     private var holeFrame: CGRect = .zero
     private let dimLayer = CAShapeLayer()
     private let cornersLayer = CAShapeLayer()
+    private var didRegisterTraitChanges = false
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -64,6 +65,7 @@ final class ScanCropFrameOverlayView: UIView {
         cornersLayer.lineJoin = .round
         layer.addSublayer(cornersLayer)
         applyCropCornerStrokeColor()
+        registerForUserInterfaceStyleChangesIfNeeded()
     }
 
     required init?(coder: NSCoder) {
@@ -75,9 +77,13 @@ final class ScanCropFrameOverlayView: UIView {
         setNeedsLayout()
     }
 
-    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
-        super.traitCollectionDidChange(previousTraitCollection)
-        applyCropCornerStrokeColor()
+    private func registerForUserInterfaceStyleChangesIfNeeded() {
+        guard !didRegisterTraitChanges else { return }
+        didRegisterTraitChanges = true
+        guard #available(iOS 17.0, *) else { return }
+        registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: Self, _) in
+            self.applyCropCornerStrokeColor()
+        }
     }
 
     private func applyCropCornerStrokeColor() {

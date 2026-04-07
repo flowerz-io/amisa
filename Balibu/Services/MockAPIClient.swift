@@ -80,6 +80,13 @@ struct MockAPIClient: APIClientProtocol {
 
     func fetchSearchMore(request: SearchMoreRequest) async throws -> SearchMoreResponse {
         try await Task.sleep(nanoseconds: UInt64(delaySeconds * 500_000_000))
+        let nextCounts = ProviderCountsDTO(
+            vinted: (request.pagination.vinted.totalCount ?? request.pagination.vinted.loadedCount) + 2,
+            grailed: request.pagination.grailed.totalCount ?? request.pagination.grailed.loadedCount,
+            ebay: request.pagination.ebay?.totalCount ?? request.pagination.ebay?.loadedCount,
+            leboncoin: request.pagination.leboncoin?.totalCount ?? request.pagination.leboncoin?.loadedCount,
+            depop: request.pagination.depop?.totalCount ?? request.pagination.depop?.loadedCount
+        )
         return SearchMoreResponse(
             listings: [],
             vintedListings: [],
@@ -93,7 +100,8 @@ struct MockAPIClient: APIClientProtocol {
             hasMoreEbay: false,
             hasMoreLeboncoin: false,
             hasMoreDepop: false,
-            providerAvailability: nil
+            providerAvailability: nil,
+            providerCounts: nextCounts
         )
     }
 }

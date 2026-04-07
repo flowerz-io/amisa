@@ -25,7 +25,7 @@ enum HomeDiscoveryFeedBuilder {
 
         let ordered = imageSessions.sorted { sessionWeight($0) > sessionWeight($1) }
 
-        var perSessionQueues: [[MarketplaceListing]] = ordered.map { session in
+        let perSessionQueues: [[MarketplaceListing]] = ordered.map { session in
             var rng = SeededGenerator(seed: UInt64(truncatingIfNeeded: session.id.hashValue))
             return session.listings.shuffled(using: &rng)
         }
