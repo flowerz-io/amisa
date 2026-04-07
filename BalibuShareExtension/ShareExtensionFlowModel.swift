@@ -9,97 +9,87 @@ import Combine
 import SwiftUI
 import UIKit
 
+enum ShareFlowState {
+    case resolvingInput
+    case imagePreview(sourceImage: UIImage)
+    case videoFramePicker(videoURL: URL)
+    case instagramLinkFallback(sharedURL: URL, previewImage: UIImage?)
+    case loadingAnalysis(image: UIImage)
+    case error(message: String)
+}
+
 @MainActor
 final class ShareFlowModel: ObservableObject {
-    enum Phase {
-        case loading
-        case loadingLink
-        case pickCandidates([UIImage])
-        case crop(UIImage)
-        case confirmReady
-        case error(String)
-    }
-
-    @Published private(set) var phase: Phase = .loading
+    @Published private(set) var state: ShareFlowState = .resolvingInput
+    @Published private(set) var isStartingRemoteSession = false
+    @Published private(set) var notificationScheduleOutcome: ShareNotificationScheduleOutcome?
+    @Published private(set) var chosenImageSourceLabel: String?
 
     weak var extensionContext: NSExtensionContext?
-
-    /// Référence au contrôleur de crop (export JPEG).
     weak var cropController: ShareSquareCropEditorViewController?
 
-    /// URL de page d’origine si import lien (métadonnées payload).
     private(set) var linkSourceURL: String?
 
-    /// Aperçu de l’image recadrée sur l’écran de confirmation.
-    @Published private(set) var confirmPreviewImage: UIImage?
-
-    /// Pendant l’appel POST /search-sessions (désactive le bouton Analyser).
-    @Published private(set) var isStartingRemoteSession = false
-
-    /// Résultat de la programmation de la notification locale après démarrage de session.
-    @Published private(set) var notificationScheduleOutcome: ShareNotificationScheduleOutcome?
-
+    private let inputResolver: SharedInputResolver
     private let linkResolver: ShareLinkResolving
-
+    private let clipboardResolver: ClipboardImageResolver
     private var sessionPollingTask: Task<Void, Never>?
 
-    init(extensionContext: NSExtensionContext?, linkResolver: ShareLinkResolving = CompositeShareLinkResolver()) {
+    init(
+        extensionContext: NSExtensionContext?,
+        inputResolver: SharedInputResolver = SharedInputResolver(),
+        linkResolver: ShareLinkResolving = BackendShareLinkResolver(),
+        clipboardResolver: ClipboardImageResolver = ClipboardImageResolver()
+    ) {
         self.extensionContext = extensionContext
+        self.inputResolver = inputResolver
         self.linkResolver = linkResolver
+        self.clipboardResolver = clipboardResolver
     }
 
     func startLoading() {
-        phase = .loading
-        Task { await loadSharedContent() }
+        state = .resolvingInput
+        Task { await resolveInitialInput() }
     }
 
-    private func loadSharedContent() async {
-        guard let ctx = extensionContext else {
-            phase = .error("Contexte de partage indisponible.")
+    func setImageForPreview(_ image: UIImage, sourceLabel: String) {
+        chosenImageSourceLabel = sourceLabel
+        state = .imagePreview(sourceImage: image)
+    }
+
+    func setPickedVideoFrame(_ image: UIImage) {
+        setImageForPreview(image, sourceLabel: String(localized: "Frame vidéo"))
+    }
+
+    func useClipboardImage() {
+        guard let image = clipboardResolver.resolveImage() else {
+            state = .error(message: String(localized: "Aucune image exploitable dans le presse-papiers."))
             return
         }
+        setImageForPreview(image, sourceLabel: String(localized: "Image collée"))
+    }
 
-        guard let content = await ShareItemExtractor.extractContent(from: ctx) else {
-            phase = .error("Aucune image ou lien exploitable.")
-            return
-        }
-
-        switch content {
-        case .image(let data):
-            guard let ui = UIImage(data: data) else {
-                phase = .error("Image illisible.")
-                return
-            }
-            linkSourceURL = nil
-            phase = .crop(ui)
-
-        case .link(let url):
-            linkSourceURL = url.absoluteString
-            phase = .loadingLink
+    func useLinkPreview(for sharedURL: URL) {
+        state = .resolvingInput
+        Task {
             do {
-                let images = try await linkResolver.loadCandidateImages(from: url)
-                if images.count == 1, let first = images.first {
-                    phase = .crop(first)
-                } else if images.count > 1 {
-                    phase = .pickCandidates(images)
-                } else {
-                    phase = .error("Aucune image trouvée pour ce lien.")
+                let images = try await linkResolver.loadCandidateImages(from: sharedURL)
+                guard let first = images.first else {
+                    state = .error(message: String(localized: "Aucun aperçu image exploitable pour ce lien."))
+                    return
                 }
+                setImageForPreview(first, sourceLabel: String(localized: "Aperçu du lien"))
             } catch {
-                phase = .error(error.localizedDescription)
+                state = .error(message: error.localizedDescription)
             }
         }
-    }
-
-    func selectCandidate(_ image: UIImage) {
-        phase = .crop(image)
     }
 
     /// Après recadrage : enregistre l’image dans l’App Group, lance Railway (`POST /search-sessions`), puis l’écran de chargement réel.
     func commitCropAndStartBackendSearch() {
         guard let cropped = cropController?.exportCroppedImage(),
               let data = cropped.jpegData(compressionQuality: 0.88) else {
-            phase = .error("Impossible d’exporter l’image recadrée.")
+            state = .error(message: "Impossible d’exporter l’image recadrée.")
             return
         }
 
@@ -123,10 +113,8 @@ final class ShareFlowModel: ObservableObject {
                     completedResultJSONFileName: nil
                 )
                 try SharedSearchSessionStore.shared.save(pending)
-
                 await MainActor.run {
-                    confirmPreviewImage = cropped
-                    phase = .confirmReady
+                    state = .loadingAnalysis(image: cropped)
                 }
 
                 let outcome = await ShareExtensionNotificationScheduler.scheduleResultsReady(sessionId: start.sessionId)
@@ -139,12 +127,36 @@ final class ShareFlowModel: ObservableObject {
                 }
             } catch {
                 await MainActor.run {
-                    phase = .error(String(localized: "Impossible de lancer l’analyse : \(error.localizedDescription)"))
+                    state = .error(message: String(localized: "Impossible de lancer l’analyse : \(error.localizedDescription)"))
                 }
             }
             await MainActor.run {
                 isStartingRemoteSession = false
             }
+        }
+    }
+
+    private func resolveInitialInput() async {
+        guard let ctx = extensionContext else {
+            state = .error(message: "Contexte de partage indisponible.")
+            return
+        }
+
+        let resolution = await inputResolver.resolve(from: ctx)
+        switch resolution.kind {
+        case .image(let image):
+            linkSourceURL = nil
+            setImageForPreview(image, sourceLabel: String(localized: "Image partagée"))
+        case .video(let videoURL):
+            linkSourceURL = nil
+            chosenImageSourceLabel = nil
+            state = .videoFramePicker(videoURL: videoURL)
+        case .url(let url):
+            linkSourceURL = url.absoluteString
+            chosenImageSourceLabel = nil
+            state = .instagramLinkFallback(sharedURL: url, previewImage: resolution.previewImage)
+        case .unknown:
+            state = .error(message: "Aucune image, vidéo ou URL exploitable.")
         }
     }
 

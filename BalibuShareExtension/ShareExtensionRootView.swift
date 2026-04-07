@@ -6,9 +6,11 @@
 //
 
 import SwiftUI
+import PhotosUI
 
 struct ShareExtensionRootView: View {
     @StateObject private var model: ShareFlowModel
+    @State private var isShowingPhotoPicker = false
 
     init(extensionContext: NSExtensionContext?) {
         _model = StateObject(wrappedValue: ShareFlowModel(extensionContext: extensionContext))
@@ -35,34 +37,17 @@ struct ShareExtensionRootView: View {
 
     @ViewBuilder
     private var content: some View {
-        switch model.phase {
-        case .loading:
+        switch model.state {
+        case .resolvingInput:
             VStack(spacing: 16) {
                 ProgressView()
-                Text(String(localized: "Chargement…"))
+                Text(String(localized: "Préparation du partage…"))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-        case .loadingLink:
-            VStack(spacing: 16) {
-                ProgressView()
-                Text(String(localized: "Récupération de l’image depuis le lien…"))
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-        case .pickCandidates(let images):
-            ShareCandidatePickerView(images: images) { selected in
-                model.selectCandidate(selected)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-        case .crop(let uiImage):
+        case .imagePreview(let uiImage):
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     ShareSquareCropRepresentable(image: uiImage) { controller in
@@ -74,6 +59,12 @@ struct ShareExtensionRootView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
+
+                    if let source = model.chosenImageSourceLabel {
+                        Text(source)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
 
                     Text(String(localized: "Nous analysons l’image et cherchons des articles similaires sur les marketplaces."))
                         .font(.body)
@@ -93,7 +84,30 @@ struct ShareExtensionRootView: View {
             }
             .background(Color(.systemGroupedBackground))
 
-        case .confirmReady:
+        case .videoFramePicker(let videoURL):
+            VideoFramePickerView(
+                videoURL: videoURL,
+                onSelectFrame: { model.setPickedVideoFrame($0) },
+                onCancel: { model.cancelExtension() }
+            )
+
+        case .instagramLinkFallback(let sharedURL, let previewImage):
+            InstagramLinkFallbackView(
+                sharedURL: sharedURL,
+                previewImage: previewImage,
+                onPasteImage: { model.useClipboardImage() },
+                onPickFromPhotos: { isShowingPhotoPicker = true },
+                onUseLinkPreview: { model.useLinkPreview(for: sharedURL) },
+                onCancel: { model.cancelExtension() }
+            )
+            .sheet(isPresented: $isShowingPhotoPicker) {
+                SharePhotoPickerSheet { image in
+                    guard let image else { return }
+                    model.setImageForPreview(image, sourceLabel: String(localized: "Image Photos"))
+                }
+            }
+
+        case .loadingAnalysis:
             confirmReadyContent(model: model)
 
         case .error(let message):
@@ -115,7 +129,7 @@ struct ShareExtensionRootView: View {
     private func confirmReadyContent(model: ShareFlowModel) -> some View {
         ScrollView {
             VStack(spacing: 24) {
-                if let preview = model.confirmPreviewImage {
+                if case .loadingAnalysis(let preview) = model.state {
                     Image(uiImage: preview)
                         .resizable()
                         .scaledToFill()
@@ -159,34 +173,43 @@ struct ShareExtensionRootView: View {
     }
 }
 
-// MARK: - Sélection si plusieurs images (MVP : grille simple)
+private struct SharePhotoPickerSheet: UIViewControllerRepresentable {
+    let onSelect: (UIImage?) -> Void
 
-private struct ShareCandidatePickerView: View {
-    let images: [UIImage]
-    let onSelect: (UIImage) -> Void
+    func makeUIViewController(context: Context) -> PHPickerViewController {
+        var config = PHPickerConfiguration(photoLibrary: .shared())
+        config.filter = .images
+        config.selectionLimit = 1
+        let picker = PHPickerViewController(configuration: config)
+        picker.delegate = context.coordinator
+        return picker
+    }
 
-    private let columns = [GridItem(.adaptive(minimum: 100), spacing: 12)]
+    func updateUIViewController(_ uiViewController: PHPickerViewController, context: Context) {}
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(String(localized: "Choisir une image"))
-                .font(.headline)
-            LazyVGrid(columns: columns, spacing: 12) {
-                ForEach(0..<images.count, id: \.self) { idx in
-                    Button {
-                        onSelect(images[idx])
-                    } label: {
-                        Image(uiImage: images[idx])
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 100, height: 100)
-                            .clipped()
-                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    }
-                    .buttonStyle(.plain)
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onSelect: onSelect)
+    }
+
+    final class Coordinator: NSObject, PHPickerViewControllerDelegate {
+        let onSelect: (UIImage?) -> Void
+
+        init(onSelect: @escaping (UIImage?) -> Void) {
+            self.onSelect = onSelect
+        }
+
+        func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+            picker.dismiss(animated: true)
+            guard let first = results.first else {
+                onSelect(nil)
+                return
+            }
+            first.itemProvider.loadObject(ofClass: UIImage.self) { object, _ in
+                let image = object as? UIImage
+                DispatchQueue.main.async {
+                    self.onSelect(image)
                 }
             }
         }
-        .padding()
     }
 }
