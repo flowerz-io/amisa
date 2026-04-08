@@ -21,14 +21,32 @@ enum SharedSourcePlatform {
 enum SharedSourcePlatformDetector {
     static func detect(from providers: [NSItemProvider], url: URL?) -> SharedSourcePlatform {
         if let url {
-            if isTikTok(url) { return .tiktok }
-            if isInstagram(url) { return .instagram }
-            if isPinterest(url) { return .pinterest }
+            let host = url.host?.lowercased() ?? "(nil)"
+            print("[SHARE_URL_HOST] \(host)")
+
+            if isTikTok(url) {
+                print("[SHARE_SOURCE_TIKTOK_DETECTED]")
+                print("[SHARE_SOURCE_PLATFORM] tiktok")
+                return .tiktok
+            }
+            if isInstagram(url) {
+                print("[SHARE_SOURCE_PLATFORM] instagram")
+                return .instagram
+            }
+            if isPinterest(url) {
+                print("[SHARE_SOURCE_PLATFORM] pinterest")
+                return .pinterest
+            }
+            print("[SHARE_SOURCE_PLATFORM] generic (host=\(host))")
         }
         // Certaines apps injectent leur nom dans le suggestedName ou les typeIdentifiers.
         for provider in providers {
             let types = provider.registeredTypeIdentifiers.joined(separator: " ").lowercased()
-            if types.contains("tiktok") { return .tiktok }
+            if types.contains("tiktok") {
+                print("[SHARE_SOURCE_TIKTOK_DETECTED] (via typeIdentifier)")
+                print("[SHARE_SOURCE_PLATFORM] tiktok")
+                return .tiktok
+            }
             if types.contains("instagram") { return .instagram }
             if types.contains("pinterest") { return .pinterest }
         }
