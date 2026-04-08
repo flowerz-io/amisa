@@ -10,79 +10,47 @@ import SwiftUI
 import UIKit
 
 enum ShareFlowState {
-    case resolvingInput
-    case imagePreview(sourceImage: UIImage)
+    case resolving
+    case preview(image: UIImage)
     case videoFramePicker(videoURL: URL)
-    case instagramLinkFallback(sharedURL: URL, previewImage: UIImage?)
-    case loadingAnalysis(image: UIImage)
+    case loading(image: UIImage)
     case error(message: String)
 }
 
 @MainActor
 final class ShareFlowModel: ObservableObject {
-    @Published private(set) var state: ShareFlowState = .resolvingInput
+    @Published private(set) var state: ShareFlowState = .resolving
     @Published private(set) var isStartingRemoteSession = false
     @Published private(set) var notificationScheduleOutcome: ShareNotificationScheduleOutcome?
-    @Published private(set) var chosenImageSourceLabel: String?
 
     weak var extensionContext: NSExtensionContext?
     weak var cropController: ShareSquareCropEditorViewController?
 
-    private(set) var linkSourceURL: String?
-
     private let inputResolver: SharedInputResolver
     private let linkResolver: ShareLinkResolving
-    private let clipboardResolver: ClipboardImageResolver
     private var sessionPollingTask: Task<Void, Never>?
 
     init(
         extensionContext: NSExtensionContext?,
         inputResolver: SharedInputResolver = SharedInputResolver(),
-        linkResolver: ShareLinkResolving = BackendShareLinkResolver(),
-        clipboardResolver: ClipboardImageResolver = ClipboardImageResolver()
+        linkResolver: ShareLinkResolving = BackendShareLinkResolver()
     ) {
         self.extensionContext = extensionContext
         self.inputResolver = inputResolver
         self.linkResolver = linkResolver
-        self.clipboardResolver = clipboardResolver
     }
 
     func startLoading() {
-        state = .resolvingInput
+        state = .resolving
         Task { await resolveInitialInput() }
     }
 
-    func setImageForPreview(_ image: UIImage, sourceLabel: String) {
-        chosenImageSourceLabel = sourceLabel
-        state = .imagePreview(sourceImage: image)
+    func setImageForPreview(_ image: UIImage) {
+        state = .preview(image: image)
     }
 
     func setPickedVideoFrame(_ image: UIImage) {
-        setImageForPreview(image, sourceLabel: String(localized: "Frame vidéo"))
-    }
-
-    func useClipboardImage() {
-        guard let image = clipboardResolver.resolveImage() else {
-            state = .error(message: String(localized: "Aucune image exploitable dans le presse-papiers."))
-            return
-        }
-        setImageForPreview(image, sourceLabel: String(localized: "Image collée"))
-    }
-
-    func useLinkPreview(for sharedURL: URL) {
-        state = .resolvingInput
-        Task {
-            do {
-                let images = try await linkResolver.loadCandidateImages(from: sharedURL)
-                guard let first = images.first else {
-                    state = .error(message: String(localized: "Aucun aperçu image exploitable pour ce lien."))
-                    return
-                }
-                setImageForPreview(first, sourceLabel: String(localized: "Aperçu du lien"))
-            } catch {
-                state = .error(message: error.localizedDescription)
-            }
-        }
+        setImageForPreview(image)
     }
 
     /// Après recadrage : enregistre l’image dans l’App Group, lance Railway (`POST /search-sessions`), puis l’écran de chargement réel.
@@ -114,7 +82,7 @@ final class ShareFlowModel: ObservableObject {
                 )
                 try SharedSearchSessionStore.shared.save(pending)
                 await MainActor.run {
-                    state = .loadingAnalysis(image: cropped)
+                    state = .loading(image: cropped)
                 }
 
                 let outcome = await ShareExtensionNotificationScheduler.scheduleResultsReady(sessionId: start.sessionId)
@@ -145,16 +113,33 @@ final class ShareFlowModel: ObservableObject {
         let resolution = await inputResolver.resolve(from: ctx)
         switch resolution.kind {
         case .image(let image):
-            linkSourceURL = nil
-            setImageForPreview(image, sourceLabel: String(localized: "Image partagée"))
+            setImageForPreview(image)
         case .video(let videoURL):
-            linkSourceURL = nil
-            chosenImageSourceLabel = nil
-            state = .videoFramePicker(videoURL: videoURL)
+            if let preview = resolution.previewImage {
+                // Priorité à la preview si déjà disponible (TikTok vidéo, etc.)
+                setImageForPreview(preview)
+            } else {
+                state = .videoFramePicker(videoURL: videoURL)
+            }
         case .url(let url):
-            linkSourceURL = url.absoluteString
-            chosenImageSourceLabel = nil
-            state = .instagramLinkFallback(sharedURL: url, previewImage: resolution.previewImage)
+            if let preview = resolution.previewImage {
+                setImageForPreview(preview)
+                return
+            }
+            // Fallback backend pour récupérer une image depuis le lien.
+            if resolution.platform == .tiktok {
+                print("[TIKTOK_FALLBACK_USED]")
+            }
+            do {
+                let images = try await linkResolver.loadCandidateImages(from: url)
+                if let first = images.first {
+                    setImageForPreview(first)
+                } else {
+                    state = .error(message: "Aucune image exploitable dans ce partage.")
+                }
+            } catch {
+                state = .error(message: "Aucune image exploitable dans ce partage.")
+            }
         case .unknown:
             state = .error(message: "Aucune image, vidéo ou URL exploitable.")
         }

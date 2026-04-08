@@ -9,6 +9,61 @@ import Foundation
 import UniformTypeIdentifiers
 import UIKit
 
+// MARK: - Plateforme source
+
+enum SharedSourcePlatform {
+    case instagram
+    case pinterest
+    case tiktok
+    case generic
+}
+
+enum SharedSourcePlatformDetector {
+    static func detect(from providers: [NSItemProvider], url: URL?) -> SharedSourcePlatform {
+        if let url {
+            if isTikTok(url) { return .tiktok }
+            if isInstagram(url) { return .instagram }
+            if isPinterest(url) { return .pinterest }
+        }
+        // Certaines apps injectent leur nom dans le suggestedName ou les typeIdentifiers.
+        for provider in providers {
+            let types = provider.registeredTypeIdentifiers.joined(separator: " ").lowercased()
+            if types.contains("tiktok") { return .tiktok }
+            if types.contains("instagram") { return .instagram }
+            if types.contains("pinterest") { return .pinterest }
+        }
+        return .generic
+    }
+
+    static func isTikTok(_ url: URL) -> Bool {
+        guard let host = url.host?.lowercased() else { return false }
+        return host == "tiktok.com"
+            || host == "www.tiktok.com"
+            || host == "m.tiktok.com"
+            || host == "vm.tiktok.com"
+            || host.hasSuffix(".tiktok.com")
+    }
+
+    static func isInstagram(_ url: URL) -> Bool {
+        guard let host = url.host?.lowercased() else { return false }
+        return host == "instagram.com"
+            || host == "www.instagram.com"
+            || host == "m.instagram.com"
+            || host == "instagr.am"
+            || host.hasSuffix(".instagram.com")
+    }
+
+    static func isPinterest(_ url: URL) -> Bool {
+        guard let host = url.host?.lowercased() else { return false }
+        return host == "pinterest.com"
+            || host == "www.pinterest.com"
+            || host == "pin.it"
+            || host.hasSuffix(".pinterest.com")
+    }
+}
+
+// MARK: - Résolution d'entrée
+
 enum SharedInputKind {
     case image(UIImage)
     case video(URL)
@@ -18,6 +73,7 @@ enum SharedInputKind {
 
 struct SharedInputResolution {
     let kind: SharedInputKind
+    let platform: SharedSourcePlatform
     let previewImage: UIImage?
 }
 
@@ -27,16 +83,18 @@ final class SharedInputResolver {
               let items = context.inputItems as? [NSExtensionItem],
               !items.isEmpty else {
             print("[SHARE_INPUT_UNKNOWN]")
-            return SharedInputResolution(kind: .unknown, previewImage: nil)
+            return SharedInputResolution(kind: .unknown, platform: .generic, previewImage: nil)
         }
 
         var firstImage: UIImage?
         var firstVideoURL: URL?
         var firstURL: URL?
         var fallbackPreviewImage: UIImage?
+        var allProviders: [NSItemProvider] = []
 
         for item in items {
             guard let attachments = item.attachments else { continue }
+            allProviders.append(contentsOf: attachments)
             for provider in attachments {
                 if firstImage == nil, let image = await loadImage(from: provider) {
                     firstImage = image
@@ -53,21 +111,48 @@ final class SharedInputResolver {
             }
         }
 
+        let platform = SharedSourcePlatformDetector.detect(from: allProviders, url: firstURL)
+        logPlatform(platform)
+
         if let firstImage {
             print("[SHARE_INPUT_IMAGE]")
-            return SharedInputResolution(kind: .image(firstImage), previewImage: nil)
+            logPlatformImageFound(platform, found: true)
+            return SharedInputResolution(kind: .image(firstImage), platform: platform, previewImage: nil)
         }
         if let firstVideoURL {
             print("[SHARE_INPUT_VIDEO]")
-            return SharedInputResolution(kind: .video(firstVideoURL), previewImage: nil)
+            logPlatformVideoFound(platform)
+            return SharedInputResolution(kind: .video(firstVideoURL), platform: platform, previewImage: fallbackPreviewImage)
         }
         if let firstURL {
             print("[SHARE_INPUT_URL]")
-            return SharedInputResolution(kind: .url(firstURL), previewImage: fallbackPreviewImage)
+            logPlatformImageFound(platform, found: fallbackPreviewImage != nil)
+            return SharedInputResolution(kind: .url(firstURL), platform: platform, previewImage: fallbackPreviewImage)
         }
 
         print("[SHARE_INPUT_UNKNOWN]")
-        return SharedInputResolution(kind: .unknown, previewImage: nil)
+        return SharedInputResolution(kind: .unknown, platform: platform, previewImage: nil)
+    }
+
+    // MARK: - Logs plateforme
+
+    private func logPlatform(_ platform: SharedSourcePlatform) {
+        switch platform {
+        case .tiktok:    print("[SHARE_SOURCE_TIKTOK]")
+        case .instagram: print("[SHARE_SOURCE_INSTAGRAM]")
+        case .pinterest: print("[SHARE_SOURCE_PINTEREST]")
+        case .generic:   print("[SHARE_SOURCE_GENERIC]")
+        }
+    }
+
+    private func logPlatformImageFound(_ platform: SharedSourcePlatform, found: Bool) {
+        guard platform == .tiktok else { return }
+        print(found ? "[TIKTOK_PREVIEW_IMAGE_FOUND]" : "[TIKTOK_FALLBACK_USED]")
+    }
+
+    private func logPlatformVideoFound(_ platform: SharedSourcePlatform) {
+        guard platform == .tiktok else { return }
+        print("[TIKTOK_NATIVE_VIDEO_FOUND]")
     }
 
     private func loadImage(from provider: NSItemProvider) async -> UIImage? {
@@ -89,7 +174,8 @@ final class SharedInputResolver {
     }
 
     private func loadPreviewImage(from provider: NSItemProvider) async -> UIImage? {
-        guard provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) else { return nil }
+        // loadPreviewImage fonctionne sur tout type de provider (URL incluse),
+        // iOS peut fournir une miniature même pour un lien TikTok / Instagram.
         return await withCheckedContinuation { continuation in
             provider.loadPreviewImage(options: nil) { image, _ in
                 continuation.resume(returning: image as? UIImage)

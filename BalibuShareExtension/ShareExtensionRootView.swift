@@ -6,11 +6,9 @@
 //
 
 import SwiftUI
-import PhotosUI
 
 struct ShareExtensionRootView: View {
     @StateObject private var model: ShareFlowModel
-    @State private var isShowingPhotoPicker = false
 
     init(extensionContext: NSExtensionContext?) {
         _model = StateObject(wrappedValue: ShareFlowModel(extensionContext: extensionContext))
@@ -38,7 +36,7 @@ struct ShareExtensionRootView: View {
     @ViewBuilder
     private var content: some View {
         switch model.state {
-        case .resolvingInput:
+        case .resolving:
             VStack(spacing: 16) {
                 ProgressView()
                 Text(String(localized: "Préparation du partage…"))
@@ -47,7 +45,7 @@ struct ShareExtensionRootView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-        case .imagePreview(let uiImage):
+        case .preview(let uiImage):
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     ShareSquareCropRepresentable(image: uiImage) { controller in
@@ -59,12 +57,6 @@ struct ShareExtensionRootView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
-
-                    if let source = model.chosenImageSourceLabel {
-                        Text(source)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
 
                     Text(String(localized: "Nous analysons l’image et cherchons des articles similaires sur les marketplaces."))
                         .font(.body)
@@ -91,23 +83,7 @@ struct ShareExtensionRootView: View {
                 onCancel: { model.cancelExtension() }
             )
 
-        case .instagramLinkFallback(let sharedURL, let previewImage):
-            InstagramLinkFallbackView(
-                sharedURL: sharedURL,
-                previewImage: previewImage,
-                onPasteImage: { model.useClipboardImage() },
-                onPickFromPhotos: { isShowingPhotoPicker = true },
-                onUseLinkPreview: { model.useLinkPreview(for: sharedURL) },
-                onCancel: { model.cancelExtension() }
-            )
-            .sheet(isPresented: $isShowingPhotoPicker) {
-                SharePhotoPickerSheet { image in
-                    guard let image else { return }
-                    model.setImageForPreview(image, sourceLabel: String(localized: "Image Photos"))
-                }
-            }
-
-        case .loadingAnalysis:
+        case .loading:
             confirmReadyContent(model: model)
 
         case .error(let message):
@@ -129,7 +105,7 @@ struct ShareExtensionRootView: View {
     private func confirmReadyContent(model: ShareFlowModel) -> some View {
         ScrollView {
             VStack(spacing: 24) {
-                if case .loadingAnalysis(let preview) = model.state {
+                if case .loading(let preview) = model.state {
                     Image(uiImage: preview)
                         .resizable()
                         .scaledToFill()
@@ -169,47 +145,6 @@ struct ShareExtensionRootView: View {
             Text(String(localized: "La notification n’a pas pu être planifiée (\(message)). Ouvre Balibu pour lancer la recherche — ton analyse est enregistrée."))
         case .none:
             EmptyView()
-        }
-    }
-}
-
-private struct SharePhotoPickerSheet: UIViewControllerRepresentable {
-    let onSelect: (UIImage?) -> Void
-
-    func makeUIViewController(context: Context) -> PHPickerViewController {
-        var config = PHPickerConfiguration(photoLibrary: .shared())
-        config.filter = .images
-        config.selectionLimit = 1
-        let picker = PHPickerViewController(configuration: config)
-        picker.delegate = context.coordinator
-        return picker
-    }
-
-    func updateUIViewController(_ uiViewController: PHPickerViewController, context: Context) {}
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(onSelect: onSelect)
-    }
-
-    final class Coordinator: NSObject, PHPickerViewControllerDelegate {
-        let onSelect: (UIImage?) -> Void
-
-        init(onSelect: @escaping (UIImage?) -> Void) {
-            self.onSelect = onSelect
-        }
-
-        func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
-            picker.dismiss(animated: true)
-            guard let first = results.first else {
-                onSelect(nil)
-                return
-            }
-            first.itemProvider.loadObject(ofClass: UIImage.self) { object, _ in
-                let image = object as? UIImage
-                DispatchQueue.main.async {
-                    self.onSelect(image)
-                }
-            }
         }
     }
 }

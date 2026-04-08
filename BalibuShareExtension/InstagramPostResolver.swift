@@ -8,14 +8,10 @@
 import Foundation
 import UIKit
 
+/// Alias conservé pour compatibilité avec les usages existants.
 enum InstagramURLDetector {
     static func isInstagram(_ url: URL) -> Bool {
-        guard let host = url.host?.lowercased() else { return false }
-        return host == "instagram.com"
-            || host == "www.instagram.com"
-            || host == "m.instagram.com"
-            || host == "instagr.am"
-            || host.hasSuffix(".instagram.com")
+        SharedSourcePlatformDetector.isInstagram(url)
     }
 }
 
