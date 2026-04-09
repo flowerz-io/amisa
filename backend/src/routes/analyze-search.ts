@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import type { AnalyzeSearchRequest, AnalyzeSearchResponse } from '../api/types.js';
 import { mockVisionProvider } from '../vision/mock-provider.js';
 import { openaiVisionProvider } from '../vision/openai-provider.js';
+import { geminiVisionProvider } from '../vision/gemini-provider.js';
 import { generateSearchQueriesFromVision } from '../services/search-query-generator.js';
 import {
   buildVintedSearchUrl,
@@ -26,7 +27,9 @@ import { isProviderEnabled, type ProviderKey } from '../providers-config.js';
 import { KNOWN_PROVIDERS, normalizeRequestedProviders } from '../provider-request.js';
 
 const visionProvider =
-  visionProviderName === 'openai' ? openaiVisionProvider : mockVisionProvider;
+  visionProviderName === 'gemini' ? geminiVisionProvider :
+  visionProviderName === 'openai' ? openaiVisionProvider :
+  mockVisionProvider;
 
 /** Limite côté appli (après décodage base64). Les clients ciblent ~500 Ko ; marge pour proxies. */
 const MAX_IMAGE_BYTES = 6 * 1024 * 1024;
