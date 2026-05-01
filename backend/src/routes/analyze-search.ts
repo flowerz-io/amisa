@@ -1,8 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import type { AnalyzeSearchRequest, AnalyzeSearchResponse } from '../api/types.js';
-import { mockVisionProvider } from '../vision/mock-provider.js';
-import { openaiVisionProvider } from '../vision/openai-provider.js';
-import { geminiVisionProvider } from '../vision/gemini-provider.js';
+import { analyzeWithFallback } from '../vision/vision-orchestrator.js';
 import { generateSearchQueriesFromVision } from '../services/search-query-generator.js';
 import {
   buildVintedSearchUrl,
@@ -26,10 +24,6 @@ import { INITIAL_RETURN_PER_PROVIDER, NEXT_BATCH_PER_PROVIDER } from '../marketp
 import { isProviderEnabled, type ProviderKey } from '../providers-config.js';
 import { KNOWN_PROVIDERS, normalizeRequestedProviders } from '../provider-request.js';
 
-const visionProvider =
-  visionProviderName === 'gemini' ? geminiVisionProvider :
-  visionProviderName === 'openai' ? openaiVisionProvider :
-  mockVisionProvider;
 
 /** Limite côté appli (après décodage base64). Les clients ciblent ~500 Ko ; marge pour proxies. */
 const MAX_IMAGE_BYTES = 6 * 1024 * 1024;
@@ -171,6 +165,7 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
     let rawOutput: string | undefined;
     let generatedQueries: string[] = [];
     let primaryQuery = '';
+    let usedVisionProvider: string = visionProviderName;
 
     if (isTextSearch) {
       primaryQuery = textQuery;
@@ -206,14 +201,14 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
 
       console.log(`[VISION_PROVIDER_USED] ${visionProviderName}`);
       try {
-        const analyzed = await visionProvider.analyzeFashionItem(imageBuffer);
+        const analyzed = await analyzeWithFallback(imageBuffer);
         visionResult = analyzed.visionResult;
         rawOutput = analyzed.rawOutput;
+        usedVisionProvider = analyzed.usedProvider;
       } catch (err) {
         request.log.error(err, 'Vision provider failed');
-        console.error('[OPENAI_VISION_FAILED]', err);
         return reply.status(502).send({
-          error: 'openai_error',
+          error: 'vision_error',
           message: 'Vision analysis failed',
         } as unknown as AnalyzeSearchResponse);
       }
@@ -544,7 +539,7 @@ export async function analyzeSearchRoute(app: FastifyInstance) {
       ...(Object.keys(providerAvailability).length > 0 ? { providerAvailability } : {}),
       ...(isDebug && {
         debug: {
-          visionProvider: visionProviderName,
+          visionProvider: usedVisionProvider,
           rawVisionOutput: rawOutput ?? JSON.stringify(visionResult),
           normalizedVisionResult: visionResult,
           generatedSearchQueries: generatedQueries,

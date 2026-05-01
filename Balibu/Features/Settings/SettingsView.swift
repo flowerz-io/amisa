@@ -8,6 +8,8 @@ import SwiftUI
 struct SettingsView: View {
     @StateObject private var providerSettings = ProviderSettingsStore.shared
     @ObservedObject private var runtimeAvailability = ProviderRuntimeAvailabilityStore.shared
+    @AppStorage("balibu.hasCompletedOnboarding") private var hasCompletedOnboarding = true
+    @State private var showOnboarding = false
 
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
@@ -43,6 +45,12 @@ struct SettingsView: View {
                 } label: {
                     Label(String(localized: "Comment ça marche"), systemImage: "questionmark.circle")
                 }
+
+                Button {
+                    showOnboarding = true
+                } label: {
+                    Label(String(localized: "Revoir l'introduction"), systemImage: "sparkles")
+                }
             } header: {
                 Text(String(localized: "Aide"))
             }
@@ -76,6 +84,12 @@ struct SettingsView: View {
         }
         .navigationTitle(String(localized: "Réglages"))
         .navigationBarTitleDisplayMode(.large)
+        .fullScreenCover(isPresented: $showOnboarding) {
+            OnboardingRootView {
+                hasCompletedOnboarding = true
+                showOnboarding = false
+            }
+        }
     }
 
     private func providerRow(_ provider: ProviderMetadata) -> some View {

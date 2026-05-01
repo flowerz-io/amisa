@@ -23,7 +23,17 @@ struct AppRouter: View {
     @ObservedObject var router: Router
     let appDelegate: BalibuAppDelegate
 
+    @AppStorage("balibu.hasCompletedOnboarding") private var hasCompletedOnboarding = false
+
     var body: some View {
         MainTabContainerView(router: router, appDelegate: appDelegate)
+            .fullScreenCover(isPresented: Binding(
+                get: { !hasCompletedOnboarding },
+                set: { _ in }
+            )) {
+                OnboardingRootView {
+                    hasCompletedOnboarding = true
+                }
+            }
     }
 }

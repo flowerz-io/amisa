@@ -165,7 +165,6 @@ export const geminiVisionProvider: VisionProvider = {
 
     const rawContent = result.response.text();
     if (!rawContent) {
-      console.log('[GEMINI_ANALYSIS_FAILED] empty_response');
       throw new Error('Gemini Vision returned empty response');
     }
 
@@ -175,7 +174,6 @@ export const geminiVisionProvider: VisionProvider = {
     try {
       parsed = JSON.parse(content) as ParsedVision;
     } catch (err) {
-      console.log('[GEMINI_ANALYSIS_FAILED] json_parse_error', err);
       throw new Error(`Gemini Vision JSON parse error: ${err}`);
     }
 
