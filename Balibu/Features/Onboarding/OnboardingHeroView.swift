@@ -55,14 +55,12 @@ struct OnboardingHeroView: View {
         ZStack {
             Color.black.ignoresSafeArea()
 
-            // Ambient glow top-left
             Circle()
                 .fill(Color.accentColor.opacity(0.18))
                 .frame(width: 380)
                 .blur(radius: 80)
                 .offset(x: -90, y: -160)
 
-            // Ambient glow bottom-right
             Circle()
                 .fill(Color.purple.opacity(0.12))
                 .frame(width: 320)
@@ -93,7 +91,7 @@ struct OnboardingHeroView: View {
             .scaleEffect(0.84)
             .opacity(0.6)
 
-            // Center foreground card — sharp, biggest
+            // Center foreground card — sharp
             FloatingListingCard(
                 listing: OnboardingMockListing.samples[0],
                 phase: .init(floatAmplitude: 14, rotationDeg: -2, xOffset: 0, yOffset: 0)
@@ -111,23 +109,23 @@ struct OnboardingHeroView: View {
         }
     }
 
-    // MARK: - Headline
+    // MARK: - Headline (left-aligned)
 
     private var headlineBlock: some View {
-        VStack(spacing: 12) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("Trouve instantanément\nles pièces que tu vois")
-                .font(.system(size: 32, weight: .bold, design: .default))
+                .font(.system(size: 32, weight: .bold))
                 .foregroundStyle(.white)
-                .multilineTextAlignment(.center)
+                .multilineTextAlignment(.leading)
                 .lineSpacing(2)
 
             Text("Importe une photo ou partage une image depuis Pinterest, Instagram ou TikTok. Balibu retrouve les annonces similaires sur les marketplaces.")
                 .font(.system(size: 15, weight: .regular))
                 .foregroundStyle(Color.white.opacity(0.62))
-                .multilineTextAlignment(.center)
+                .multilineTextAlignment(.leading)
                 .lineSpacing(3)
-                .padding(.horizontal, 8)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - CTA
@@ -179,47 +177,19 @@ private struct FloatingListingCard: View {
 
     private var cardContent: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Product image area
-            ZStack(alignment: .topTrailing) {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: listing.gradientColors,
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(height: 110)
-                    .overlay {
-                        // Bottom scrim for readability
-                        LinearGradient(
-                            colors: [.clear, .black.opacity(0.25)],
-                            startPoint: .center,
-                            endPoint: .bottom
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    }
+            // Product image via asset (gradient fallback)
+            OnboardingAssetImage(
+                name: listing.imageName,
+                fallbackColors: listing.gradientColors
+            )
+            .frame(height: 110)
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
-                // Marketplace badge with brand color dot
-                HStack(spacing: 3) {
-                    Circle()
-                        .fill(listing.sourceColor)
-                        .frame(width: 6, height: 6)
-                    Text(listing.source)
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(.white)
-                }
-                .padding(.horizontal, 7)
-                .padding(.vertical, 3)
-                .background(Color.black.opacity(0.52))
-                .clipShape(Capsule())
-                .padding(7)
-            }
-
+            // Info row
             VStack(alignment: .leading, spacing: 2) {
                 Text(listing.brand)
                     .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(0.50))
+                    .foregroundStyle(Color.white.opacity(0.48))
                     .lineLimit(1)
 
                 Text(listing.title)
@@ -227,20 +197,27 @@ private struct FloatingListingCard: View {
                     .foregroundStyle(Color.white.opacity(0.92))
                     .lineLimit(1)
 
-                HStack(spacing: 6) {
-                    Text(listing.price)
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(Color.accentColor)
+                HStack(alignment: .center) {
+                    HStack(spacing: 6) {
+                        Text(listing.price)
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(Color.accentColor)
 
-                    if let size = listing.size {
-                        Text(size)
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(Color.white.opacity(0.45))
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
-                            .background(Color.white.opacity(0.10))
-                            .clipShape(Capsule())
+                        if let size = listing.size {
+                            Text(size)
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundStyle(Color.white.opacity(0.40))
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 2)
+                                .background(Color.white.opacity(0.08))
+                                .clipShape(Capsule())
+                        }
                     }
+
+                    Spacer()
+
+                    // Marketplace logo bottom-right
+                    marketplaceLogo
                 }
             }
             .padding(.horizontal, 10)
@@ -252,6 +229,27 @@ private struct FloatingListingCard: View {
         .overlay {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(Color.white.opacity(0.14), lineWidth: 1)
+        }
+    }
+
+    @ViewBuilder
+    private var marketplaceLogo: some View {
+        let logoName = "logo_\(listing.source.lowercased())"
+        if UIImage(named: logoName) != nil {
+            Image(logoName)
+                .resizable()
+                .scaledToFit()
+                .frame(height: 14)
+                .opacity(0.70)
+        } else {
+            HStack(spacing: 3) {
+                Circle()
+                    .fill(listing.sourceColor)
+                    .frame(width: 5, height: 5)
+                Text(listing.source)
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(Color.white.opacity(0.58))
+            }
         }
     }
 }

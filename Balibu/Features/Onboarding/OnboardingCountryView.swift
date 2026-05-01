@@ -16,14 +16,14 @@ struct OnboardingCountryView: View {
             Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
 
             VStack(spacing: 0) {
-                Spacer(minLength: 80)
+                Spacer(minLength: 120)
 
                 headerBlock
                     .padding(.horizontal, 28)
                     .opacity(appeared ? 1 : 0)
                     .offset(y: appeared ? 0 : 20)
 
-                Spacer(minLength: 40)
+                Spacer(minLength: 20)
 
                 countryGrid
 
@@ -47,7 +47,7 @@ struct OnboardingCountryView: View {
 
     private var headerBlock: some View {
         VStack(spacing: 8) {
-            Text("Dans quel pays\nfais-tu tes achats ?")
+            Text("Depuis quelle zone\nfais-tu tes achats ?")
                 .font(.system(size: 28, weight: .bold))
                 .foregroundStyle(.primary)
                 .multilineTextAlignment(.center)
@@ -64,16 +64,16 @@ struct OnboardingCountryView: View {
 
     private var countryGrid: some View {
         let columns = [
-            GridItem(.flexible(), spacing: 12),
-            GridItem(.flexible(), spacing: 12),
+            GridItem(.flexible(), spacing: 10),
+            GridItem(.flexible(), spacing: 10),
         ]
 
-        return LazyVGrid(columns: columns, spacing: 12) {
+        return LazyVGrid(columns: columns, spacing: 10) {
             ForEach(Array(OnboardingCountry.allCases.enumerated()), id: \.element.id) { idx, country in
                 countryPill(country, index: idx)
             }
         }
-        .padding(.horizontal, 24)
+        .padding(.horizontal, 20)
     }
 
     private func countryPill(_ country: OnboardingCountry, index: Int) -> some View {
@@ -91,7 +91,7 @@ struct OnboardingCountryView: View {
                     .foregroundStyle(isSelected ? .white : .primary)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
+            .padding(.vertical, 11)
             .background {
                 if isSelected {
                     RoundedRectangle(cornerRadius: 16, style: .continuous)

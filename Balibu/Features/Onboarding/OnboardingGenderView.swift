@@ -2,7 +2,7 @@
 //  OnboardingGenderView.swift
 //  Balibu
 //
-//  Étape 2 — sélection du genre avec deux cartes premium full-height.
+//  Étape 2 — sélection du genre avec deux cartes full-height.
 //
 
 import SwiftUI
@@ -10,7 +10,6 @@ import SwiftUI
 struct OnboardingGenderView: View {
     @ObservedObject var model: OnboardingFlowModel
     @State private var appeared = false
-    @State private var pressedGender: OnboardingGender?
     @Namespace private var ns
 
     var body: some View {
@@ -19,7 +18,9 @@ struct OnboardingGenderView: View {
 
             VStack(spacing: 0) {
                 headerText
-                    .padding(.top, 96)
+                    // 128pt from top ensures clearance above the progress bar
+                    // even on Dynamic Island devices (safe area ~59pt + bar at 56pt)
+                    .padding(.top, 128)
                     .padding(.horizontal, 28)
                     .opacity(appeared ? 1 : 0)
                     .offset(y: appeared ? 0 : 24)
@@ -86,12 +87,14 @@ struct OnboardingGenderView: View {
                 VStack(spacing: 16) {
                     Spacer()
 
-                    // Outfit emoji collage
-                    outfitCollage(for: gender, isSelected: isSelected)
+                    // SF Symbol pictogram (neutre, sans connotation vestimentaire)
+                    Image(systemName: gender.icon)
+                        .font(.system(size: 56, weight: .light))
+                        .foregroundStyle(isSelected ? .white : Color.primary.opacity(0.65))
                         .phaseAnimator([false, true]) { view, up in
-                            view.offset(y: up ? -6 : 0)
+                            view.offset(y: up ? -5 : 0)
                                 .scaleEffect(up ? 1.04 : 1.0)
-                        } animation: { _ in .easeInOut(duration: 3.0) }
+                        } animation: { _ in .easeInOut(duration: 3.2) }
 
                     Text(gender.displayName)
                         .font(.system(size: 20, weight: .bold))
@@ -103,13 +106,13 @@ struct OnboardingGenderView: View {
                 // Selection ring
                 if isSelected {
                     RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .stroke(Color.white.opacity(0.5), lineWidth: 2)
+                        .stroke(Color.white.opacity(0.55), lineWidth: 2.5)
                         .matchedGeometryEffect(id: "selection_ring", in: ns)
                 }
             }
-        .frame(maxWidth: .infinity)
-        .frame(height: 260)
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .frame(maxWidth: .infinity)
+            .frame(height: 260)
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .stroke(isSelected ? Color.clear : Color(uiColor: .separator), lineWidth: 1)
@@ -130,39 +133,12 @@ struct OnboardingGenderView: View {
         .animation(.spring(response: 0.38, dampingFraction: 0.72), value: isSelected)
     }
 
-    // MARK: - Outfit collage
-
-    @ViewBuilder
-    private func outfitCollage(for gender: OnboardingGender, isSelected: Bool) -> some View {
-        let emojis = gender.outfitEmojis
-        let tint: Color = isSelected ? .white : Color.primary.opacity(0.75)
-
-        VStack(spacing: 2) {
-            Text(emojis[0])
-                .font(.system(size: 54))
-                .shadow(color: .black.opacity(0.20), radius: 6)
-
-            HStack(spacing: 8) {
-                if emojis.count > 1 {
-                    Text(emojis[1])
-                        .font(.system(size: 36))
-                }
-                if emojis.count > 2 {
-                    Text(emojis[2])
-                        .font(.system(size: 32))
-                }
-            }
-        }
-        .colorMultiply(isSelected ? .white : tint)
-    }
-
     // MARK: - Action
 
     private func selectGender(_ gender: OnboardingGender) {
         withAnimation(.spring(response: 0.38, dampingFraction: 0.72)) {
             model.gender = gender
         }
-        // Auto-advance after brief confirmation moment
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
             model.advance()
         }

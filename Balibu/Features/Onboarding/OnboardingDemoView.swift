@@ -2,7 +2,7 @@
 //  OnboardingDemoView.swift
 //  Balibu
 //
-//  Étapes 4+5 — sélection d'un look + animation de scan premium.
+//  Étapes 4+5 — sélection look + scan + résultats.
 //
 
 import SwiftUI
@@ -10,9 +10,9 @@ import SwiftUI
 // MARK: - Demo phase
 
 private enum DemoPhase {
-    case picking    // grille de looks
-    case scanning   // animation scan sur le look sélectionné
-    case results    // cartes marketplace mock
+    case picking
+    case scanning
+    case results
 }
 
 // MARK: - Main view
@@ -22,6 +22,13 @@ struct OnboardingDemoView: View {
     @State private var phase: DemoPhase = .picking
     @State private var appeared = false
     @Namespace private var ns
+
+    private var currentResults: [OnboardingMockResult] {
+        guard let idx = model.selectedDemoIndex, idx < model.demoItems.count else {
+            return model.demoItems.first?.category.results ?? []
+        }
+        return model.demoItems[idx].category.results
+    }
 
     var body: some View {
         ZStack {
@@ -58,7 +65,7 @@ struct OnboardingDemoView: View {
 
     private var pickerContent: some View {
         VStack(spacing: 0) {
-            Spacer(minLength: 80)
+            Spacer(minLength: 120)
 
             VStack(spacing: 8) {
                 Text("Choisis un look\nà analyser")
@@ -76,7 +83,7 @@ struct OnboardingDemoView: View {
             .offset(y: appeared ? 0 : 20)
             .padding(.horizontal, 28)
 
-            Spacer(minLength: 32)
+            Spacer(minLength: 28)
 
             lookGrid
                 .padding(.horizontal, 20)
@@ -90,7 +97,7 @@ struct OnboardingDemoView: View {
 
         return LazyVGrid(columns: columns, spacing: 12) {
             ForEach(model.demoItems) { item in
-                DemoLookCard(item: item, namespace: ns) {
+                DemoLookCard(item: item) {
                     selectItem(item)
                 }
                 .opacity(appeared ? 1 : 0)
@@ -108,15 +115,11 @@ struct OnboardingDemoView: View {
 
     private var scanContent: some View {
         VStack(spacing: 0) {
-            Spacer(minLength: 80)
+            Spacer(minLength: 120)
 
-            if let selected = model.selectedDemoIndex,
-               selected < model.demoItems.count {
-                let item = model.demoItems[selected]
-
-                ScanAnimationCard(item: item, namespace: ns)
+            if let idx = model.selectedDemoIndex, idx < model.demoItems.count {
+                ScanAnimationCard(item: model.demoItems[idx])
                     .frame(width: 260, height: 300)
-                    .padding(.horizontal, 40)
             }
 
             VStack(spacing: 6) {
@@ -138,47 +141,55 @@ struct OnboardingDemoView: View {
 
     private var resultsContent: some View {
         VStack(spacing: 0) {
-            Spacer(minLength: 80)
-
-            VStack(spacing: 8) {
+            // Fixed header
+            VStack(spacing: 6) {
                 Text("+240 annonces similaires\ntrouvées ✓")
-                    .font(.system(size: 26, weight: .bold))
+                    .font(.system(size: 24, weight: .bold))
                     .foregroundStyle(.primary)
                     .multilineTextAlignment(.center)
                     .lineSpacing(2)
 
-                Text("Les meilleures pièces repérées sur Vinted, Grailed, eBay et Depop.")
-                    .font(.system(size: 14))
+                Text("Les meilleures pièces sur Vinted, Grailed, eBay et Depop.")
+                    .font(.system(size: 13))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
-            .padding(.horizontal, 28)
+            .padding(.horizontal, 24)
+            .padding(.top, 120)
+            .padding(.bottom, 16)
 
-            Spacer(minLength: 24)
+            // Scrollable 2-column grid
+            ScrollView(showsIndicators: false) {
+                let columns = [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
 
-            mockResultsCarousel
+                LazyVGrid(columns: columns, spacing: 10) {
+                    ForEach(currentResults) { result in
+                        ResultCard(result: result)
+                            .opacity(1)
+                            .animation(
+                                .spring(response: 0.5, dampingFraction: 0.76)
+                                    .delay(Double(result.id % 8) * 0.04),
+                                value: phase
+                            )
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 100) // space for pinned CTA
+            }
 
-            Spacer()
-
+            // Pinned CTA
             analyzeButton
                 .padding(.horizontal, 24)
-                .padding(.bottom, 44)
-        }
-    }
-
-    private var mockResultsCarousel: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 12) {
-                ForEach(Array(OnboardingMockListing.samples.enumerated()), id: \.element.id) { idx, listing in
-                    MockResultCard(listing: listing)
-                        .animation(
-                            .spring(response: 0.5, dampingFraction: 0.76).delay(Double(idx) * 0.08),
-                            value: phase
-                        )
-                }
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 4)
+                .padding(.bottom, 36)
+                .padding(.top, 12)
+                .background(
+                    LinearGradient(
+                        colors: [Color(uiColor: .systemGroupedBackground).opacity(0), Color(uiColor: .systemGroupedBackground)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .ignoresSafeArea()
+                )
         }
     }
 
@@ -217,11 +228,10 @@ struct OnboardingDemoView: View {
     }
 }
 
-// MARK: - Demo look card
+// MARK: - Demo look card (clean — image only, no emojis)
 
 private struct DemoLookCard: View {
     let item: OnboardingDemoItem
-    let namespace: Namespace.ID
     let action: () -> Void
 
     @State private var isPressed = false
@@ -229,28 +239,22 @@ private struct DemoLookCard: View {
     var body: some View {
         Button(action: action) {
             ZStack(alignment: .bottomLeading) {
-                // Gradient simulating a lifestyle photo
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: item.gradientColors,
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                // Look asset image with gradient fallback
+                OnboardingAssetImage(
+                    name: item.imageName,
+                    fallbackColors: item.gradientColors
+                )
+                .frame(height: 170)
+                .clipped()
 
-                // Bottom scrim for text legibility
+                // Bottom scrim
                 LinearGradient(
-                    colors: [.clear, .black.opacity(0.60)],
+                    colors: [.clear, .black.opacity(0.65)],
                     startPoint: .center,
                     endPoint: .bottom
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
 
-                // Outfit emojis layer
-                outfitEmojiLayer
-
-                // Look info at bottom
+                // Labels
                 VStack(alignment: .leading, spacing: 2) {
                     Text(item.label)
                         .font(.system(size: 13, weight: .bold))
@@ -258,59 +262,32 @@ private struct DemoLookCard: View {
 
                     Text(item.focusPiece)
                         .font(.system(size: 11))
-                        .foregroundStyle(.white.opacity(0.68))
+                        .foregroundStyle(.white.opacity(0.65))
                 }
                 .padding(10)
             }
             .frame(height: 170)
-            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
             .overlay {
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(.white.opacity(0.12), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(.white.opacity(0.08), lineWidth: 1)
             }
-            .shadow(color: item.gradientColors.first!.opacity(0.30), radius: 12, x: 0, y: 5)
+            .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 4)
             .scaleEffect(isPressed ? 0.93 : 1.0)
             .animation(.spring(response: 0.28, dampingFraction: 0.6), value: isPressed)
         }
         .buttonStyle(.plain)
         .simultaneousGesture(DragGesture(minimumDistance: 0)
             .onChanged { _ in isPressed = true }
-            .onEnded { _ in isPressed = false }
+            .onEnded   { _ in isPressed = false }
         )
-    }
-
-    private var outfitEmojiLayer: some View {
-        ZStack(alignment: .topTrailing) {
-            // Main outfit piece — centred, large
-            Text(item.outfitEmojis.first ?? "👗")
-                .font(.system(size: 54))
-                .shadow(color: .black.opacity(0.25), radius: 6)
-                .frame(maxWidth: .infinity, alignment: .center)
-                .padding(.top, 14)
-
-            // Secondary items pill top-right
-            if item.outfitEmojis.count > 1 {
-                HStack(spacing: 2) {
-                    ForEach(Array(item.outfitEmojis.dropFirst().enumerated()), id: \.offset) { _, emoji in
-                        Text(emoji)
-                            .font(.system(size: 18))
-                    }
-                }
-                .padding(.horizontal, 7)
-                .padding(.vertical, 4)
-                .background(.black.opacity(0.28))
-                .clipShape(Capsule())
-                .padding(8)
-            }
-        }
     }
 }
 
-// MARK: - Scan animation card
+// MARK: - Scan animation card (uses selected look's asset)
 
 private struct ScanAnimationCard: View {
     let item: OnboardingDemoItem
-    let namespace: Namespace.ID
 
     @State private var scanX: CGFloat = -130
     @State private var cornersAppeared = false
@@ -319,32 +296,23 @@ private struct ScanAnimationCard: View {
 
     var body: some View {
         ZStack {
-            // Same gradient as chosen look card
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: item.gradientColors,
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+            // Selected look photo (same as the card)
+            OnboardingAssetImage(
+                name: item.imageName,
+                fallbackColors: item.gradientColors
+            )
+            .clipped()
 
             // Bottom scrim
             LinearGradient(
-                colors: [.clear, .black.opacity(0.45)],
+                colors: [.clear, .black.opacity(0.40)],
                 startPoint: .center,
                 endPoint: .bottom
             )
-            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-
-            // Main outfit emoji
-            Text(item.outfitEmojis.first ?? "👗")
-                .font(.system(size: 96))
-                .shadow(radius: 12)
 
             // Scan overlay
             GeometryReader { geo in
-                // Vertical scan line sweeping left → right
+                // Vertical scan line
                 Rectangle()
                     .fill(
                         LinearGradient(
@@ -357,12 +325,11 @@ private struct ScanAnimationCard: View {
                     .blur(radius: 2)
                     .offset(x: geo.size.width / 2 + scanX)
 
-                // Scan corners
                 ScanCorners(visible: cornersAppeared)
                     .frame(width: geo.size.width, height: geo.size.height)
             }
 
-            // Focus label appears mid-scan
+            // Focus label mid-scan
             VStack {
                 Spacer()
                 if focusVisible {
@@ -448,81 +415,72 @@ private struct ScanCorners: View {
                     path.addLine(to: CGPoint(x: w - m, y: h - m - size))
                 }
             }
-            .stroke(
-                Color.accentColor,
-                style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round)
-            )
+            .stroke(Color.accentColor, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
         }
     }
 }
 
-// MARK: - Mock result card
+// MARK: - Result card (2-column grid)
 
-private struct MockResultCard: View {
-    let listing: OnboardingMockListing
+private struct ResultCard: View {
+    let result: OnboardingMockResult
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ZStack(alignment: .topTrailing) {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: listing.gradientColors,
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 148, height: 148)
+            // Product image
+            OnboardingAssetImage(
+                name: result.imageName,
+                fallbackColors: [Color(red: 0.18, green: 0.18, blue: 0.22), Color(red: 0.24, green: 0.22, blue: 0.28)]
+            )
+            .frame(height: 140)
+            .clipped()
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
-                // Marketplace badge with colored dot
-                HStack(spacing: 4) {
-                    Circle()
-                        .fill(listing.sourceColor)
-                        .frame(width: 7, height: 7)
-                    Text(listing.source)
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(.white)
-                }
-                .padding(.horizontal, 7)
-                .padding(.vertical, 4)
-                .background(Color.black.opacity(0.52))
-                .clipShape(Capsule())
-                .padding(7)
-            }
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(listing.brand)
+            // Info block
+            VStack(alignment: .leading, spacing: 3) {
+                Text(result.brand)
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
 
-                Text(listing.title)
+                Text(result.title)
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(.primary)
                     .lineLimit(1)
 
-                HStack(spacing: 6) {
-                    Text(listing.price)
-                        .font(.system(size: 14, weight: .bold))
+                HStack(alignment: .center, spacing: 4) {
+                    Text(result.price)
+                        .font(.system(size: 13, weight: .bold))
                         .foregroundStyle(Color.accentColor)
 
-                    if let size = listing.size {
+                    if let size = result.size {
                         Text(size)
-                            .font(.system(size: 10, weight: .medium))
+                            .font(.system(size: 9, weight: .medium))
                             .foregroundStyle(.secondary)
-                            .padding(.horizontal, 5)
+                            .padding(.horizontal, 4)
                             .padding(.vertical, 2)
                             .background(Color(uiColor: .tertiarySystemFill))
                             .clipShape(Capsule())
                     }
+
+                    Spacer()
+
+                    // Marketplace badge
+                    HStack(spacing: 3) {
+                        Circle()
+                            .fill(result.sourceColor)
+                            .frame(width: 5, height: 5)
+                        Text(result.source)
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
             .padding(.horizontal, 8)
-            .padding(.vertical, 8)
+            .padding(.vertical, 7)
         }
-        .frame(width: 148)
         .background(Color(uiColor: .secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 3)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .shadow(color: .black.opacity(0.06), radius: 6, x: 0, y: 2)
     }
 }

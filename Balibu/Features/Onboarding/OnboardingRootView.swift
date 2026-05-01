@@ -17,7 +17,7 @@ struct OnboardingRootView: View {
             stepContent
                 .transition(stepTransition)
 
-            if model.step != .hero {
+            if model.step != .hero && model.step != .paywall {
                 progressBar
                     .transition(.opacity.combined(with: .move(edge: .top)))
                     .zIndex(10)

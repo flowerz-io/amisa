@@ -2,8 +2,7 @@
 //  OnboardingPaywallView.swift
 //  Balibu
 //
-//  Paywall premium — conversion vers abonnement.
-//  Déclenché après la démo, moment psychologique clé.
+//  Paywall premium — tout visible sans scroll.
 //
 
 import SwiftUI
@@ -19,12 +18,11 @@ private struct PaywallFeature: Identifiable {
 }
 
 private let paywallFeatures: [PaywallFeature] = [
-    PaywallFeature(icon: "magnifyingglass.circle.fill",  iconColor: Color.accentColor,  title: "Analyses illimitées",              subtitle: "Scanne autant de looks que tu veux"),
-    PaywallFeature(icon: "storefront.fill",              iconColor: Color.blue,          title: "Recherche multi-marketplaces",     subtitle: "Vinted, Grailed, eBay, Depop et plus"),
-    PaywallFeature(icon: "bolt.fill",                    iconColor: Color.yellow,        title: "Résultats plus rapides",           subtitle: "Priorité dans la file d'analyse"),
-    PaywallFeature(icon: "bell.badge.fill",              iconColor: Color.orange,        title: "Alertes meilleures offres",        subtitle: "Notifié dès qu'un prix baisse"),
-    PaywallFeature(icon: "heart.fill",                   iconColor: Color.pink,          title: "Favoris & moodboards",             subtitle: "Sauvegarde tes pièces préférées"),
-    PaywallFeature(icon: "tag.fill",                     iconColor: Color.green,         title: "Comparateur de prix",              subtitle: "Le meilleur deal en un coup d'œil"),
+    PaywallFeature(icon: "magnifyingglass.circle.fill", iconColor: Color.accentColor, title: "Analyses illimitées",          subtitle: "Scanne autant de looks que tu veux"),
+    PaywallFeature(icon: "storefront.fill",             iconColor: Color.blue,        title: "Recherche multi-marketplaces", subtitle: "Vinted, Grailed, eBay, Depop et plus"),
+    PaywallFeature(icon: "bolt.fill",                   iconColor: Color.yellow,      title: "Résultats plus rapides",       subtitle: "Priorité dans la file d'analyse"),
+    PaywallFeature(icon: "bell.badge.fill",             iconColor: Color.orange,      title: "Alertes meilleures offres",    subtitle: "Notifié dès qu'un prix baisse"),
+    PaywallFeature(icon: "heart.fill",                  iconColor: Color.pink,        title: "Favoris & moodboards",         subtitle: "Sauvegarde tes pièces préférées"),
 ]
 
 // MARK: - Main view
@@ -32,49 +30,38 @@ private let paywallFeatures: [PaywallFeature] = [
 struct OnboardingPaywallView: View {
     @ObservedObject var model: OnboardingFlowModel
     @State private var appeared = false
-    @State private var ctaPressed = false
 
     var body: some View {
         ZStack {
             paywallBackground
 
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 0) {
-                    Spacer(minLength: 72)
+            VStack(spacing: 0) {
+                Spacer(minLength: 48)
 
-                    headerSection
-                        .padding(.horizontal, 28)
-                        .opacity(appeared ? 1 : 0)
-                        .offset(y: appeared ? 0 : 24)
+                headerSection
+                    .padding(.horizontal, 28)
+                    .opacity(appeared ? 1 : 0)
+                    .offset(y: appeared ? 0 : 20)
 
-                    Spacer(minLength: 28)
+                Spacer(minLength: 16).frame(maxHeight: 32)
 
-                    valuePropSection
-                        .padding(.horizontal, 28)
-                        .opacity(appeared ? 1 : 0)
-                        .offset(y: appeared ? 0 : 16)
+                featuresSection
+                    .padding(.horizontal, 20)
 
-                    Spacer(minLength: 20)
+                Spacer(minLength: 16).frame(maxHeight: 24)
 
-                    featuresSection
-                        .padding(.horizontal, 20)
+                pricingBadge
+                    .padding(.horizontal, 24)
+                    .opacity(appeared ? 1 : 0)
+                    .offset(y: appeared ? 0 : 10)
 
-                    Spacer(minLength: 36)
+                Spacer(minLength: 14).frame(maxHeight: 20)
 
-                    pricingBadge
-                        .padding(.horizontal, 28)
-                        .opacity(appeared ? 1 : 0)
-                        .offset(y: appeared ? 0 : 12)
+                ctaSection
+                    .padding(.horizontal, 24)
+                    .opacity(appeared ? 1 : 0)
 
-                    Spacer(minLength: 24)
-
-                    ctaSection
-                        .padding(.horizontal, 24)
-                        .opacity(appeared ? 1 : 0)
-                        .offset(y: appeared ? 0 : 16)
-
-                    Spacer(minLength: 48)
-                }
+                Spacer(minLength: 20)
             }
         }
         .ignoresSafeArea()
@@ -99,7 +86,6 @@ struct OnboardingPaywallView: View {
             )
             .ignoresSafeArea()
 
-            // Glow accent
             Circle()
                 .fill(Color.accentColor.opacity(0.15))
                 .frame(width: 400)
@@ -117,56 +103,37 @@ struct OnboardingPaywallView: View {
     // MARK: - Header
 
     private var headerSection: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 8) {
             Text("🔓")
-                .font(.system(size: 48))
+                .font(.system(size: 40))
                 .phaseAnimator([false, true]) { view, up in
-                    view.scaleEffect(up ? 1.12 : 1.0)
-                        .rotationEffect(.degrees(up ? 5 : 0))
+                    view.scaleEffect(up ? 1.10 : 1.0)
+                        .rotationEffect(.degrees(up ? 4 : 0))
                 } animation: { _ in .spring(response: 0.5, dampingFraction: 0.55) }
 
             Text("Débloque tes résultats")
-                .font(.system(size: 30, weight: .bold))
+                .font(.system(size: 28, weight: .bold))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
 
             Text("Essai gratuit de 3 jours. Annulable à tout moment.")
-                .font(.system(size: 15, weight: .regular))
-                .foregroundStyle(Color.white.opacity(0.65))
+                .font(.system(size: 14, weight: .regular))
+                .foregroundStyle(Color.white.opacity(0.60))
                 .multilineTextAlignment(.center)
-                .lineSpacing(3)
         }
-    }
-
-    // MARK: - Value proposition
-
-    private var valuePropSection: some View {
-        Text("Retrouve les pièces avant qu'elles disparaissent des marketplaces.")
-            .font(.system(size: 15, weight: .medium))
-            .foregroundStyle(Color.white.opacity(0.80))
-            .multilineTextAlignment(.center)
-            .lineSpacing(3)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-            .background(Color.white.opacity(0.07))
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Color.white.opacity(0.10), lineWidth: 1)
-            }
     }
 
     // MARK: - Features
 
     private var featuresSection: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 7) {
             ForEach(Array(paywallFeatures.enumerated()), id: \.element.id) { idx, feature in
                 FeatureRow(feature: feature)
                     .opacity(appeared ? 1 : 0)
-                    .offset(x: appeared ? 0 : 30)
+                    .offset(x: appeared ? 0 : 28)
                     .animation(
                         .spring(response: 0.5, dampingFraction: 0.76)
-                            .delay(Double(idx) * 0.06 + 0.25),
+                            .delay(Double(idx) * 0.055 + 0.22),
                         value: appeared
                     )
             }
@@ -180,40 +147,40 @@ struct OnboardingPaywallView: View {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text("3 jours gratuits")
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.system(size: 15, weight: .bold))
                         .foregroundStyle(.white)
 
                     Text("OFFERTS")
                         .font(.system(size: 10, weight: .heavy))
                         .foregroundStyle(Color.accentColor)
                         .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
+                        .padding(.vertical, 2)
                         .background(Color.accentColor.opacity(0.18))
                         .clipShape(Capsule())
                 }
 
                 Text("puis 7,99 € / mois")
-                    .font(.system(size: 14))
-                    .foregroundStyle(Color.white.opacity(0.55))
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.white.opacity(0.50))
             }
 
             Spacer()
 
-            VStack(alignment: .trailing, spacing: 2) {
+            VStack(alignment: .trailing, spacing: 1) {
                 Text("7,99 €")
-                    .font(.system(size: 22, weight: .bold))
+                    .font(.system(size: 20, weight: .bold))
                     .foregroundStyle(.white)
                 Text("/ mois")
-                    .font(.system(size: 12))
-                    .foregroundStyle(Color.white.opacity(0.5))
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.white.opacity(0.48))
             }
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 18)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 14)
         .background(Color.white.opacity(0.06))
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(Color.white.opacity(0.10), lineWidth: 1)
         }
     }
@@ -221,8 +188,8 @@ struct OnboardingPaywallView: View {
     // MARK: - CTA
 
     private var ctaSection: some View {
-        VStack(spacing: 12) {
-            // Primary CTA with shimmer
+        VStack(spacing: 10) {
+            // Primary CTA with shimmer — toujours visible
             Button {
                 model.complete()
             } label: {
@@ -230,21 +197,20 @@ struct OnboardingPaywallView: View {
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .fill(Color.accentColor)
 
-                    // Shimmer overlay
                     ShimmerOverlay()
                         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
 
                     HStack(spacing: 8) {
                         Image(systemName: "sparkles")
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.system(size: 15, weight: .semibold))
                         Text("Essayer gratuitement 3 jours")
                             .font(.system(size: 17, weight: .semibold))
                     }
                     .foregroundStyle(.white)
                 }
                 .frame(maxWidth: .infinity)
-                .frame(height: 56)
-                .shadow(color: Color.accentColor.opacity(0.45), radius: 18, x: 0, y: 7)
+                .frame(height: 54)
+                .shadow(color: Color.accentColor.opacity(0.45), radius: 16, x: 0, y: 6)
             }
             .buttonStyle(BouncyButtonStyle())
 
@@ -254,56 +220,56 @@ struct OnboardingPaywallView: View {
             } label: {
                 Text("Continuer avec la version gratuite")
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(Color.white.opacity(0.45))
+                    .foregroundStyle(Color.white.opacity(0.40))
             }
 
             // Legal
-            Text("Sans engagement. Annulable à tout moment depuis les réglages App Store.")
+            Text("Sans engagement. Annulable depuis les réglages App Store.")
                 .font(.system(size: 11))
-                .foregroundStyle(Color.white.opacity(0.28))
+                .foregroundStyle(Color.white.opacity(0.25))
                 .multilineTextAlignment(.center)
-                .padding(.top, 4)
+                .padding(.top, 2)
         }
     }
 }
 
-// MARK: - Feature row
+// MARK: - Feature row (compact)
 
 private struct FeatureRow: View {
     let feature: PaywallFeature
 
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 12) {
             ZStack {
                 Circle()
                     .fill(feature.iconColor.opacity(0.15))
-                    .frame(width: 42, height: 42)
+                    .frame(width: 36, height: 36)
 
                 Image(systemName: feature.icon)
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(feature.iconColor)
             }
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 1) {
                 Text(feature.title)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(.white)
 
                 Text(feature.subtitle)
-                    .font(.system(size: 13))
-                    .foregroundStyle(Color.white.opacity(0.5))
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.white.opacity(0.48))
             }
 
             Spacer()
 
             Image(systemName: "checkmark")
-                .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(Color.green.opacity(0.7))
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(Color.green.opacity(0.70))
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
         .background(Color.white.opacity(0.05))
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
@@ -313,13 +279,9 @@ private struct ShimmerOverlay: View {
     @State private var phase: CGFloat = -200
 
     var body: some View {
-        GeometryReader { geo in
+        GeometryReader { _ in
             LinearGradient(
-                colors: [
-                    .clear,
-                    .white.opacity(0.18),
-                    .clear,
-                ],
+                colors: [.clear, .white.opacity(0.16), .clear],
                 startPoint: .leading,
                 endPoint: .trailing
             )
