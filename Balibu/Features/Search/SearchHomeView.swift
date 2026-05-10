@@ -2,8 +2,6 @@
 //  SearchHomeView.swift
 //  Balibu
 //
-//  Onglet « Recherche » : aide, barre de recherche, recherches texte récentes.
-//
 
 import SwiftUI
 import Combine
@@ -23,25 +21,28 @@ struct SearchHomeView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: DesignTokens.spacingL) {
-                hintLine
+            VStack(alignment: .leading, spacing: 20) {
                 searchBar
+                    .padding(.horizontal, 24)
+
+                hintLine
+                    .padding(.horizontal, 24)
+
                 recentTextSearchesSection
+                    .padding(.horizontal, 24)
             }
-            .padding(DesignTokens.spacingL)
+            .padding(.top, 12)
+            .padding(.bottom, 120)
         }
-        .background(DesignTokens.backgroundColor)
-        .toolbar(.hidden, for: .navigationBar)
+        .background(Color(.systemGroupedBackground))
+        .navigationTitle(String(localized: "Recherche"))
+        .navigationBarTitleDisplayMode(.large)
         .sheet(isPresented: $showNotificationOnboarding, onDismiss: {
-            if !notificationEducationCompleted {
-                notificationEducationCompleted = true
-            }
+            if !notificationEducationCompleted { notificationEducationCompleted = true }
         }) {
             NotificationOnboardingSheet(educationCompleted: $notificationEducationCompleted)
         }
-        .onChange(of: router.path.count) { _, _ in
-            viewModel.loadRecentSessions()
-        }
+        .onChange(of: router.path.count) { _, _ in viewModel.loadRecentSessions() }
         .onAppear {
             viewModel.loadRecentSessions()
             Task {
@@ -66,6 +67,8 @@ struct SearchHomeView: View {
             Text(textSearchAlert ?? "")
         }
     }
+
+    // MARK: - Composants
 
     private var searchBar: some View {
         HStack(spacing: DesignTokens.spacingS) {
@@ -93,7 +96,7 @@ struct SearchHomeView: View {
     }
 
     private var hintLine: some View {
-        Text(String(localized: "Saisis un mot-clé pour chercher sur les marketplaces activées dans Réglages (Profil). Utilise le bouton scan pour une analyse à partir d’une photo."))
+        Text(String(localized: "Saisis un mot-clé pour chercher sur les marketplaces activées dans Réglages. Utilise le bouton scan pour une analyse à partir d'une photo."))
             .font(DesignTokens.captionFont)
             .foregroundStyle(DesignTokens.textSecondary)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -104,7 +107,7 @@ struct SearchHomeView: View {
             if viewModel.recentTextOnlySessions.isEmpty {
                 EmptyStateView(
                     icon: "clock.arrow.circlepath",
-                    title: String(localized: "Aucune recherche texte récente"),
+                    title: String(localized: "Aucune recherche récente"),
                     message: String(localized: "Lance une recherche depuis la barre ci-dessus.")
                 )
             } else {

@@ -24,7 +24,7 @@ final class ShareFlowModel: ObservableObject {
     @Published private(set) var notificationScheduleOutcome: ShareNotificationScheduleOutcome?
 
     weak var extensionContext: NSExtensionContext?
-    weak var cropController: ShareSquareCropEditorViewController?
+    weak var cropController: GoogleLensCropViewController?
 
     private let inputResolver: SharedInputResolver
     private let linkResolver: ShareLinkResolving

@@ -3,6 +3,7 @@
 //  Balibu
 //
 //  Étapes 4+5 — sélection look + scan + résultats.
+//  Data : OnboardingMockData.lookOptions / fakeResults(for:)
 //
 
 import SwiftUI
@@ -21,13 +22,17 @@ struct OnboardingDemoView: View {
     @ObservedObject var model: OnboardingFlowModel
     @State private var phase: DemoPhase = .picking
     @State private var appeared = false
-    @Namespace private var ns
+    @State private var showCTA = false
+    @State private var ctaPulse = false
 
-    private var currentResults: [OnboardingMockResult] {
-        guard let idx = model.selectedDemoIndex, idx < model.demoItems.count else {
-            return model.demoItems.first?.category.results ?? []
-        }
-        return model.demoItems[idx].category.results
+    private var selectedLook: OnboardingLookOptionData? {
+        guard let id = model.selectedLookId else { return nil }
+        return OnboardingMockData.lookOptions.first { $0.id == id }
+    }
+
+    private var currentResults: [OnboardingFakeResultData] {
+        let lookId = model.selectedLookId ?? OnboardingMockData.lookOptions.first?.id ?? "leather"
+        return OnboardingMockData.fakeResults(for: lookId)
     }
 
     var body: some View {
@@ -65,23 +70,15 @@ struct OnboardingDemoView: View {
 
     private var pickerContent: some View {
         VStack(spacing: 0) {
-            Spacer(minLength: 120)
+            Spacer(minLength: 195) // 30% de plus, identique sur toutes les pages
 
-            VStack(spacing: 8) {
-                Text("Choisis un look\nà analyser")
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundStyle(.primary)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(2)
-
-                Text("Balibu va retrouver les pièces similaires pour toi.")
-                    .font(.system(size: 15))
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-            }
+            OnboardingStepHeader(
+                currentStep: 3,
+                title: "Choisis un look\nà analyser",
+                subtitle: "Balibu va retrouver les pièces similaires pour toi."
+            )
             .opacity(appeared ? 1 : 0)
             .offset(y: appeared ? 0 : 20)
-            .padding(.horizontal, 28)
 
             Spacer(minLength: 28)
 
@@ -104,7 +101,7 @@ struct OnboardingDemoView: View {
                 .offset(y: appeared ? 0 : 30)
                 .animation(
                     .spring(response: 0.5, dampingFraction: 0.76)
-                        .delay(Double(item.id) * 0.07 + 0.2),
+                        .delay(Double(model.demoItems.firstIndex(where: { $0.id == item.id }) ?? 0) * 0.07 + 0.2),
                     value: appeared
                 )
             }
@@ -115,10 +112,10 @@ struct OnboardingDemoView: View {
 
     private var scanContent: some View {
         VStack(spacing: 0) {
-            Spacer(minLength: 120)
+            Spacer(minLength: 195)
 
-            if let idx = model.selectedDemoIndex, idx < model.demoItems.count {
-                ScanAnimationCard(item: model.demoItems[idx])
+            if let look = selectedLook {
+                ScanAnimationCard(item: look)
                     .frame(width: 260, height: 300)
             }
 
@@ -140,56 +137,110 @@ struct OnboardingDemoView: View {
     // MARK: - Phase 3: Results
 
     private var resultsContent: some View {
-        VStack(spacing: 0) {
-            // Fixed header
-            VStack(spacing: 6) {
-                Text("+240 annonces similaires\ntrouvées ✓")
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundStyle(.primary)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(2)
+        // GeometryReader pour lire safeAreaInsets et synchroniser la position du header
+        // avec la barre de progression rendue par OnboardingRootView (safeAreaTop + 12).
+        GeometryReader { geo in
+            let safeTop = geo.safeAreaInsets.top
+            // Progress bar bottom = safeTop + 12 (padding) + 4 (barre height)
+            let progressBarBottom = safeTop + 16
+            // Texte header : 32 px de marge sous la progress bar
+            let headerTextPaddingTop = progressBarBottom + 34
+            // Hauteur du header : texte (~70) + spacing + marge bas (4)
+            let headerHeight = max(180, headerTextPaddingTop + 86)
 
-                Text("Les meilleures pièces sur Vinted, Grailed, eBay et Depop.")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-            .padding(.horizontal, 24)
-            .padding(.top, 120)
-            .padding(.bottom, 16)
+            let columns = [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
+            // Trigger CTA : premier item de l'avant-dernière ligne (grille 2 col → -4)
+            let penultimateTriggerIndex = max(currentResults.count - 4, 0)
 
-            // Scrollable 2-column grid
-            ScrollView(showsIndicators: false) {
-                let columns = [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
-
-                LazyVGrid(columns: columns, spacing: 10) {
-                    ForEach(currentResults) { result in
-                        ResultCard(result: result)
-                            .opacity(1)
-                            .animation(
-                                .spring(response: 0.5, dampingFraction: 0.76)
-                                    .delay(Double(result.id % 8) * 0.04),
-                                value: phase
-                            )
+            ZStack(alignment: .top) {
+                // Grille scrollable — padding top = headerHeight → première carte sous le header.
+                NoBounceScrollView(bounces: !showCTA) {
+                    LazyVGrid(columns: columns, spacing: 10) {
+                        ForEach(currentResults) { result in
+                            ResultCard(result: result)
+                                .onAppear {
+                                    guard !showCTA else { return }
+                                    if let idx = currentResults.firstIndex(where: { $0.id == result.id }),
+                                       idx == penultimateTriggerIndex {
+                                        withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
+                                            showCTA = true
+                                        }
+                                    }
+                                }
+                        }
                     }
+                    .padding(.horizontal, 16)
+                    .padding(.top, headerHeight)
+                    .padding(.bottom, 40)
                 }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 100) // space for pinned CTA
-            }
 
-            // Pinned CTA
-            analyzeButton
+                // Header sticky — blur iOS + couche sombre ~50%.
+                VStack(spacing: 12) {
+                    Text("240 annonces\nsimilaires trouvées ✓")
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundStyle(.primary)
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(4)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text("Sur Vinted, Grailed, eBay et Depop.")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+                .padding(.top, headerTextPaddingTop)
+                .padding(.bottom, 4)
                 .padding(.horizontal, 24)
-                .padding(.bottom, 36)
-                .padding(.top, 12)
+                .frame(maxWidth: .infinity, alignment: .top)
+                .frame(height: headerHeight, alignment: .top)
                 .background(
+                    ZStack {
+                        Rectangle().fill(.ultraThinMaterial)
+                        Color.black.opacity(0.50)
+                    }
+                    .ignoresSafeArea(edges: .top)
+                )
+                .overlay(
                     LinearGradient(
-                        colors: [Color(uiColor: .systemGroupedBackground).opacity(0), Color(uiColor: .systemGroupedBackground)],
+                        colors: [Color.black.opacity(0.2), Color.clear],
                         startPoint: .top,
                         endPoint: .bottom
                     )
-                    .ignoresSafeArea()
                 )
+                .allowsHitTesting(false)
+            }
+            .overlay(alignment: .bottom) {
+                if showCTA {
+                    ctaOverlay
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
+        }
+    }
+
+    // MARK: - CTA overlay (apparaît après scroll)
+
+    private var ctaOverlay: some View {
+        VStack(spacing: 0) {
+            // Gradient fondu transparent → fond
+            LinearGradient(
+                colors: [
+                    Color(uiColor: .systemGroupedBackground).opacity(0),
+                    Color(uiColor: .systemGroupedBackground).opacity(0.96)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: 72)
+            .allowsHitTesting(false)
+
+            // Bouton sur fond mat
+            analyzeButton
+                .padding(.horizontal, 24)
+                .padding(.top, 8)
+                .padding(.bottom, 36)
+                .background(Color(uiColor: .systemGroupedBackground))
         }
     }
 
@@ -211,56 +262,57 @@ struct OnboardingDemoView: View {
             .shadow(color: Color.accentColor.opacity(0.4), radius: 14, x: 0, y: 5)
         }
         .buttonStyle(BouncyButtonStyle())
+        .scaleEffect(ctaPulse ? 1.035 : 1.0)
+        .onAppear {
+            withAnimation(.easeInOut(duration: 1.4).repeatForever(autoreverses: true)) {
+                ctaPulse = true
+            }
+        }
     }
 
     // MARK: - Actions
 
-    private func selectItem(_ item: OnboardingDemoItem) {
-        model.selectedDemoIndex = item.id
+    private func selectItem(_ item: OnboardingLookOptionData) {
+        showCTA = false                    // reset CTA pour la prochaine session résultats
+        model.isDemoInResultsPhase = false // reset barre de progression → étape 3
+        model.selectedLookId = item.id
         withAnimation(.spring(response: 0.5, dampingFraction: 0.84)) {
             phase = .scanning
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.6) {
             withAnimation(.spring(response: 0.52, dampingFraction: 0.84)) {
                 phase = .results
+                model.isDemoInResultsPhase = true  // → barre passe à l'étape 4
             }
         }
     }
 }
 
-// MARK: - Demo look card (clean — image only, no emojis)
+// MARK: - Demo look card
 
 private struct DemoLookCard: View {
-    let item: OnboardingDemoItem
+    let item: OnboardingLookOptionData
     let action: () -> Void
-
     @State private var isPressed = false
 
     var body: some View {
         Button(action: action) {
             ZStack(alignment: .bottomLeading) {
-                // Look asset image with gradient fallback
-                OnboardingAssetImage(
-                    name: item.imageName,
-                    fallbackColors: item.gradientColors
-                )
-                .frame(height: 170)
-                .clipped()
+                OnboardingAssetImageView(imageName: item.imageName)
+                    .frame(height: 170)
+                    .clipped()
 
-                // Bottom scrim
                 LinearGradient(
                     colors: [.clear, .black.opacity(0.65)],
                     startPoint: .center,
                     endPoint: .bottom
                 )
 
-                // Labels
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(item.label)
+                    Text(item.title)
                         .font(.system(size: 13, weight: .bold))
                         .foregroundStyle(.white)
-
-                    Text(item.focusPiece)
+                    Text(item.subtitle)
                         .font(.system(size: 11))
                         .foregroundStyle(.white.opacity(0.65))
                 }
@@ -284,10 +336,11 @@ private struct DemoLookCard: View {
     }
 }
 
-// MARK: - Scan animation card (uses selected look's asset)
+// MARK: - Scan animation card
+// Utilise item.scanLabel (champ indépendant de subtitle)
 
 private struct ScanAnimationCard: View {
-    let item: OnboardingDemoItem
+    let item: OnboardingLookOptionData
 
     @State private var scanX: CGFloat = -130
     @State private var cornersAppeared = false
@@ -296,23 +349,16 @@ private struct ScanAnimationCard: View {
 
     var body: some View {
         ZStack {
-            // Selected look photo (same as the card)
-            OnboardingAssetImage(
-                name: item.imageName,
-                fallbackColors: item.gradientColors
-            )
-            .clipped()
+            OnboardingAssetImageView(imageName: item.imageName)
+                .clipped()
 
-            // Bottom scrim
             LinearGradient(
                 colors: [.clear, .black.opacity(0.40)],
                 startPoint: .center,
                 endPoint: .bottom
             )
 
-            // Scan overlay
             GeometryReader { geo in
-                // Vertical scan line
                 Rectangle()
                     .fill(
                         LinearGradient(
@@ -329,14 +375,14 @@ private struct ScanAnimationCard: View {
                     .frame(width: geo.size.width, height: geo.size.height)
             }
 
-            // Focus label mid-scan
             VStack {
                 Spacer()
                 if focusVisible {
+                    // Pastille avec scanLabel (pas subtitle)
                     HStack(spacing: 5) {
                         Image(systemName: "viewfinder")
                             .font(.system(size: 11, weight: .semibold))
-                        Text(item.focusPiece)
+                        Text(item.scanLabel)
                             .font(.system(size: 12, weight: .semibold))
                     }
                     .foregroundStyle(.white)
@@ -420,23 +466,20 @@ private struct ScanCorners: View {
     }
 }
 
-// MARK: - Result card (2-column grid)
+// MARK: - Result card (non cliquable)
 
 private struct ResultCard: View {
-    let result: OnboardingMockResult
+    let result: OnboardingFakeResultData
+
+    private let resultProviderLogoSize: CGFloat = 18  // 12 × 1.5
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Product image
-            OnboardingAssetImage(
-                name: result.imageName,
-                fallbackColors: [Color(red: 0.18, green: 0.18, blue: 0.22), Color(red: 0.24, green: 0.22, blue: 0.28)]
-            )
-            .frame(height: 140)
-            .clipped()
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            OnboardingAssetImageView(imageName: result.imageName)
+                .frame(height: 140)
+                .clipped()
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
-            // Info block
             VStack(alignment: .leading, spacing: 3) {
                 Text(result.brand)
                     .font(.system(size: 10, weight: .semibold))
@@ -464,16 +507,7 @@ private struct ResultCard: View {
                     }
 
                     Spacer()
-
-                    // Marketplace badge
-                    HStack(spacing: 3) {
-                        Circle()
-                            .fill(result.sourceColor)
-                            .frame(width: 5, height: 5)
-                        Text(result.source)
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundStyle(.secondary)
-                    }
+                    providerLogo
                 }
             }
             .padding(.horizontal, 8)
@@ -482,5 +516,21 @@ private struct ResultCard: View {
         .background(Color(uiColor: .secondarySystemGroupedBackground))
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .shadow(color: .black.opacity(0.06), radius: 6, x: 0, y: 2)
+        .allowsHitTesting(false)
+    }
+
+    @ViewBuilder
+    private var providerLogo: some View {
+        if UIImage(named: result.providerLogoName) != nil {
+            Image(result.providerLogoName)
+                .resizable()
+                .scaledToFit()
+                .frame(height: resultProviderLogoSize)
+                .opacity(0.72)
+        } else {
+            Text(result.providerLogoName.replacingOccurrences(of: "provider_", with: ""))
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(.secondary)
+        }
     }
 }

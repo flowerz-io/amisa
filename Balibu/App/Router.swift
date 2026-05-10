@@ -6,12 +6,42 @@ final class Router: ObservableObject {
     @Published var path = NavigationPath()
     @Published var selectedTab: MainTab = .home
 
+    /// Onglet d'origine avant de naviguer vers le tab .search.
+    /// Restauré automatiquement quand path revient à vide.
+    @Published var sourceTab: MainTab? = nil
+
+    /// Contrôle l'ouverture de la caméra depuis MainTabContainerView.
+    /// Utilisé par goBackToCamera() pour revenir à la caméra depuis Review.
+    @Published var showCameraCapture = false
+
+    /// Masque la tab bar flottante (Review, modes plein écran).
+    /// Supprime aussi le padding bas du contenu pour que la vue remplisse l'écran.
+    @Published var isTabBarHidden = false
+
+    // MARK: - Source tab helpers
+
+    private func saveSourceTabIfNeeded() {
+        if selectedTab != .search {
+            sourceTab = selectedTab
+        }
+    }
+
+    func restoreSourceTabIfNeeded() {
+        guard path.isEmpty, let source = sourceTab else { return }
+        selectedTab = source
+        sourceTab = nil
+    }
+
+    // MARK: - Navigation
+
     func navigateToSharedImportReview(payload: SharedImportPayload) {
+        saveSourceTabIfNeeded()
         selectedTab = .search
         path.append(AppRoute.sharedImportReview(payload: payload))
     }
 
     func navigateToShareImportProcessing(payload: SharedImportPayload) {
+        saveSourceTabIfNeeded()
         selectedTab = .search
         path.append(AppRoute.shareImportProcessing(payload: payload))
     }
@@ -24,11 +54,13 @@ final class Router: ObservableObject {
     }
 
     func navigateToResults(session: SearchSession) {
+        saveSourceTabIfNeeded()
         selectedTab = .search
         path.append(AppRoute.results(session: session))
     }
 
     func navigateToResultsFromFavorite(session: SearchSession) {
+        saveSourceTabIfNeeded()
         selectedTab = .search
         path.append(AppRoute.results(session: session))
     }
@@ -44,6 +76,7 @@ final class Router: ObservableObject {
     }
 
     func navigateToRemoteSessionLoading(sessionId: String) {
+        saveSourceTabIfNeeded()
         selectedTab = .search
         path.append(AppRoute.remoteSessionLoading(sessionId: sessionId))
     }
@@ -61,6 +94,12 @@ final class Router: ObservableObject {
         if !path.isEmpty {
             path.removeLast()
         }
+    }
+
+    /// Depuis Review : dépile la route courante et rouvre la caméra.
+    func goBackToCamera() {
+        if !path.isEmpty { path.removeLast() }
+        showCameraCapture = true
     }
 
     func navigateToSearchHistory() {

@@ -6,22 +6,35 @@ struct MainTabContainerView: View {
     @ObservedObject var router: Router
     let appDelegate: BalibuAppDelegate
     @Environment(\.scenePhase) private var scenePhase
-    @State private var showCameraCapture = false
 
     var body: some View {
         ZStack(alignment: .bottom) {
+            // mainContent remplit tout l'écran (y compris sous la tab bar).
+            // safeAreaInset réserve l'espace de scroll en bas sans créer de zone morte blanche.
             mainContent
-                .padding(.bottom, Self.scrollContentBottomInset)
+                .ignoresSafeArea(edges: .bottom)
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    Color.clear
+                        .frame(height: router.isTabBarHidden ? 0 : Self.scrollContentBottomInset)
+                }
 
-            BottomNavigationRow(router: router, onScan: { showCameraCapture = true })
-                .padding(.horizontal, 20)
-                .padding(.bottom, Self.bottomBarAnchorPadding)
+            if !router.isTabBarHidden {
+                BottomNavigationRow(router: router, onScan: { router.showCameraCapture = true })
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, Self.bottomBarAnchorPadding)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
         }
+        .animation(.easeInOut(duration: 0.22), value: router.isTabBarHidden)
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .ignoresSafeArea(.container, edges: .bottom)
-        .fullScreenCover(isPresented: $showCameraCapture) {
+        // Restaure l'onglet d'origine quand le NavigationStack revient à la racine
+        .onChange(of: router.path.count) { _, newCount in
+            if newCount == 0 { router.restoreSourceTabIfNeeded() }
+        }
+        .fullScreenCover(isPresented: $router.showCameraCapture) {
             CameraCaptureView { payload in
-                showCameraCapture = false
+                router.showCameraCapture = false
                 router.navigateToSharedImportReview(payload: payload)
             }
         }

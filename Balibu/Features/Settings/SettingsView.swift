@@ -6,10 +6,9 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @StateObject private var providerSettings = ProviderSettingsStore.shared
-    @ObservedObject private var runtimeAvailability = ProviderRuntimeAvailabilityStore.shared
     @AppStorage("balibu.hasCompletedOnboarding") private var hasCompletedOnboarding = true
     @State private var showOnboarding = false
+    @Environment(\.dismiss) private var dismiss
 
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
@@ -20,69 +19,78 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        List {
-            Section {
-                NavigationLink {
-                    notificationSettingsPlaceholder
-                } label: {
-                    Label(String(localized: "Notifications"), systemImage: "bell.badge")
-                }
-            } header: {
-                Text(String(localized: "Général"))
-            }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 28) {
 
-            Section {
-                NavigationLink {
-                    aboutPlaceholder
-                } label: {
-                    Label(String(localized: "À propos"), systemImage: "info.circle")
-                }
-            }
-
-            Section {
-                NavigationLink {
-                    howItWorksDetail
-                } label: {
-                    Label(String(localized: "Comment ça marche"), systemImage: "questionmark.circle")
+                // MARK: Compte
+                lumaSection("Compte") {
+                    lumaNavLink(icon: "person.crop.circle.fill", color: .blue, label: "Paramètres du compte") {
+                        AccountSettingsView()
+                    }
+                    // Déconnexion
+                    if AuthManager.shared.isAuthenticated {
+                        lumaDivider()
+                    lumaAction(icon: "rectangle.portrait.and.arrow.right", color: .red, label: "Se déconnecter", labelColor: .red) {
+                            Task {
+                                await AuthManager.shared.signOut()
+                                dismiss()
+                            }
+                        }
+                    }
                 }
 
-                Button {
-                    showOnboarding = true
-                } label: {
-                    Label(String(localized: "Revoir l'introduction"), systemImage: "sparkles")
+                // MARK: Préférences
+                lumaSection("Préférences") {
+                    lumaNavLink(icon: "bell.fill",              color: .red,    label: "Notifications") { NotificationsSettingsView() }
+                    lumaDivider()
+                    lumaNavLink(icon: "circle.lefthalf.filled", color: .gray,   label: "Apparence")     { AppearanceSettingsView()    }
+                    lumaDivider()
+                    lumaNavLink(icon: "storefront.fill",        color: .orange, label: "Providers")      { ProvidersSettingsView()     }
                 }
-            } header: {
-                Text(String(localized: "Aide"))
-            }
 
-            Section {
-                ForEach(ProviderCatalog.all) { provider in
-                    providerRow(provider)
+                // MARK: Ressources
+                lumaSection("Ressources") {
+                    lumaExternalLink(icon: "bubble.left.and.bubble.right.fill", color: .teal,
+                                     label: "Contacter le support",
+                                     url: "mailto:jonas@flowerz.io")
+                    lumaDivider()
+                    lumaExternalLink(icon: "star.fill", color: .yellow,
+                                     label: "Évaluer sur l'App Store",
+                                     // TODO: remplacer APP_ID quand l'app sera publiée
+                                     url: "https://apps.apple.com/app/idAPP_ID?action=write-review")
+                    lumaDivider()
+                    lumaExternalLink(icon: "camera.fill",
+                                     color: Color(red: 0.85, green: 0.2, blue: 0.5),
+                                     label: "Balibu sur Instagram",
+                                     url: "https://instagram.com/balibu.app",
+                                     useAsset: "BalibuInstagramIcon")
+                    lumaDivider()
+                    lumaExternalLink(icon: "bird.fill", color: .black,
+                                     label: "Balibu sur X",
+                                     url: "https://x.com/balibu.app",
+                                     useAsset: "BalibuXIcon")
                 }
-            } header: {
-                Text(String(localized: "Providers"))
-            } footer: {
-                Text(String(localized: "Ces interrupteurs contrôlent les providers réellement exécutés côté backend."))
-            }
 
-            Section {
-                HStack {
-                    Text(String(localized: "Version"))
-                    Spacer()
-                    Text(appVersion)
-                        .foregroundStyle(.secondary)
+                // MARK: Application
+                lumaSection("Application") {
+                    lumaAction(icon: "sparkles", color: .purple, label: "Revoir l'introduction") {
+                        showOnboarding = true
+                    }
+                    lumaDivider()
+                    lumaNavLink(icon: "info.circle.fill", color: .blue, label: "À propos") { aboutPlaceholder }
+                    lumaDivider()
+                    lumaInfoRow(icon: "tag.fill",    color: .mint,  label: "Version", value: appVersion)
+                    lumaDivider()
+                    lumaInfoRow(icon: "hammer.fill", color: .brown, label: "Build",   value: build)
                 }
-                HStack {
-                    Text(String(localized: "Build"))
-                    Spacer()
-                    Text(build)
-                        .foregroundStyle(.secondary)
-                }
-            } header: {
-                Text(String(localized: "Application"))
+
             }
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+            .padding(.bottom, 40)
         }
-        .navigationTitle(String(localized: "Réglages"))
+        .background(Color(uiColor: .systemGroupedBackground))
+        .navigationTitle("Réglages")
         .navigationBarTitleDisplayMode(.large)
         .fullScreenCover(isPresented: $showOnboarding) {
             OnboardingRootView {
@@ -92,114 +100,135 @@ struct SettingsView: View {
         }
     }
 
-    private func providerRow(_ provider: ProviderMetadata) -> some View {
-        let ebayBlocked = provider.id == .ebay && runtimeAvailability.ebay?.status == .blocked_by_challenge
+    // MARK: - Luma section
 
-        return VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: DesignTokens.spacingS) {
-                ProviderLogoView(
-                    source: provider.logoSourceName,
-                    fallbackLabel: provider.displayName,
-                    logoHeight: 18,
-                    logoMaxWidth: 72
-                )
-                .frame(width: 72, alignment: .leading)
-
-                Text(provider.displayName)
-                    .font(DesignTokens.bodyFont)
-
-                Spacer()
-
-                Toggle(
-                    "",
-                    isOn: Binding(
-                        get: { providerSettings.isEnabled(provider.id) },
-                        set: { providerSettings.setEnabled($0, for: provider.id) }
-                    )
-                )
-                .labelsHidden()
-            }
-            if ebayBlocked {
-                Text(String(localized: "Indisponible temporairement (protection eBay). Les autres sources fonctionnent normalement."))
-                    .font(DesignTokens.captionFont)
-                    .foregroundStyle(DesignTokens.textSecondary)
-            }
+    private func lumaSection<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title.uppercased())
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .padding(.leading, 4)
+            VStack(spacing: 0) { content() }
+                .background(.regularMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         }
     }
 
-    private var notificationSettingsPlaceholder: some View {
-        VStack(alignment: .leading, spacing: DesignTokens.spacingM) {
-            Text(String(localized: "Les préférences de notification se gèrent dans l’accueil et dans Réglages système."))
-                .font(DesignTokens.bodyFont)
-                .foregroundStyle(DesignTokens.textSecondary)
+    // MARK: - Row variants
+
+    private func lumaNavLink<Destination: View>(
+        icon: String, color: Color, label: String,
+        @ViewBuilder destination: () -> Destination
+    ) -> some View {
+        NavigationLink(destination: destination()) {
+            lumaRowContent(icon: icon, color: color, label: label, trailing: .chevron)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func lumaAction(
+        icon: String, color: Color, label: String, labelColor: Color = .primary,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            lumaRowContent(icon: icon, color: color, label: label, labelColor: labelColor, trailing: .none)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func lumaExternalLink(
+        icon: String, color: Color, label: String, url: String, useAsset: String? = nil
+    ) -> some View {
+        Button {
+            if let u = URL(string: url) { UIApplication.shared.open(u) }
+        } label: {
+            lumaRowContent(icon: icon, color: color, label: label, trailing: .external, assetIcon: useAsset)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func lumaInfoRow(icon: String, color: Color, label: String, value: String) -> some View {
+        HStack(spacing: 12) {
+            lumaSquircle(icon: icon, color: color)
+            Text(label).font(.system(size: 16)).foregroundStyle(.primary)
             Spacer()
+            Text(value).font(.system(size: 15)).foregroundStyle(.secondary)
         }
-        .padding(DesignTokens.spacingL)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(DesignTokens.backgroundColor)
-        .navigationTitle(String(localized: "Notifications"))
-        .navigationBarTitleDisplayMode(.inline)
+        .padding(.horizontal, 16)
+        .frame(height: 52)
     }
+
+    private enum TrailingIcon { case chevron, external, none }
+
+    private func lumaRowContent(
+        icon: String, color: Color, label: String,
+        labelColor: Color = .primary,
+        trailing: TrailingIcon,
+        assetIcon: String? = nil
+    ) -> some View {
+        HStack(spacing: 12) {
+            if let asset = assetIcon, UIImage(named: asset) != nil {
+                Image(asset)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 32, height: 32)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            } else {
+                lumaSquircle(icon: icon, color: color)
+            }
+            Text(label).font(.system(size: 16)).foregroundStyle(labelColor)
+            Spacer()
+            switch trailing {
+            case .chevron:
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.tertiary)
+            case .external:
+                Image(systemName: "arrow.up.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.tertiary)
+            case .none:
+                EmptyView()
+            }
+        }
+        .padding(.horizontal, 16)
+        .frame(height: 52)
+        .contentShape(Rectangle())
+    }
+
+    private func lumaSquircle(icon: String, color: Color) -> some View {
+        RoundedRectangle(cornerRadius: 8, style: .continuous)
+            .fill(color)
+            .frame(width: 32, height: 32)
+            .overlay {
+                Image(systemName: icon)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.white)
+            }
+    }
+
+    private func lumaDivider() -> some View {
+        Divider().padding(.leading, 56)
+    }
+
+    // MARK: - Inline destinations
 
     private var aboutPlaceholder: some View {
         VStack(alignment: .leading, spacing: DesignTokens.spacingM) {
-            Text("Balibu")
-                .font(DesignTokens.titleFont)
-            Text(String(localized: "Trouve des pièces similaires sur les marketplaces à partir d’une image."))
+            Text("Balibu").font(DesignTokens.titleFont)
+            Text("Trouve des pièces similaires sur les marketplaces à partir d'une image.")
                 .font(DesignTokens.bodyFont)
                 .foregroundStyle(DesignTokens.textSecondary)
             Spacer()
         }
         .padding(DesignTokens.spacingL)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(DesignTokens.backgroundColor)
-        .navigationTitle(String(localized: "À propos"))
+        .background(Color(uiColor: .systemGroupedBackground))
+        .navigationTitle("À propos")
         .navigationBarTitleDisplayMode(.inline)
-    }
-
-    private var howItWorksDetail: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: DesignTokens.spacingL) {
-                Text(String(localized: "Trois étapes"))
-                    .font(DesignTokens.headlineFont)
-                    .foregroundStyle(DesignTokens.textPrimary)
-
-                VStack(alignment: .leading, spacing: DesignTokens.spacingM) {
-                    howItWorksStep(number: 1, text: String(localized: "Repère une pièce dans une app ou sur le web."))
-                    howItWorksStep(number: 2, text: String(localized: "Partage vers Balibu ou importe une photo depuis l’accueil."))
-                    howItWorksStep(number: 3, text: String(localized: "Balibu analyse l’image et propose des annonces similaires sur les marketplaces activées. Tu peux aussi lancer une recherche directement par mot-clé."))
-                }
-                .padding(DesignTokens.spacingM)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(DesignTokens.cardBackground)
-                .clipShape(RoundedRectangle(cornerRadius: DesignTokens.cornerRadiusM, style: .continuous))
-            }
-            .padding(DesignTokens.spacingL)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(DesignTokens.backgroundColor)
-        .navigationTitle(String(localized: "Comment ça marche"))
-        .navigationBarTitleDisplayMode(.inline)
-    }
-
-    private func howItWorksStep(number: Int, text: String) -> some View {
-        HStack(alignment: .top, spacing: DesignTokens.spacingM) {
-            Text("\(number)")
-                .font(.system(.caption, design: .monospaced).weight(.semibold))
-                .foregroundStyle(DesignTokens.textSecondary)
-                .frame(width: 22, height: 22, alignment: .center)
-                .background(DesignTokens.accentMuted)
-                .clipShape(Circle())
-
-            Text(text)
-                .font(DesignTokens.bodyFont)
-                .foregroundStyle(DesignTokens.textPrimary)
-        }
     }
 }
 
 #Preview {
-    NavigationStack {
-        SettingsView()
-    }
+    NavigationStack { SettingsView() }
 }

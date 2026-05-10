@@ -4,8 +4,11 @@ import UIKit
 struct ProfileView: View {
     @EnvironmentObject private var router: Router
     @ObservedObject private var store = ProfileStore.shared
-    @State private var showEditProfile = false
-    @State private var showSettings = false
+    @ObservedObject private var auth  = AuthManager.shared
+    @State private var showEditProfile   = false
+    @State private var showSettings      = false
+    @State private var showAuthSheet     = false
+    @State private var showAllAnalyses   = false
 
     private let moodColumns = [
         GridItem(.adaptive(minimum: 72), spacing: 6),
@@ -20,51 +23,142 @@ struct ProfileView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: DesignTokens.spacingXL) {
-                ProfileHeaderView(
-                    store: store,
-                    onEditProfile: { showEditProfile = true },
-                    onSettings: { showSettings = true }
-                )
+            VStack(alignment: .leading, spacing: 32) {
+                if auth.isAuthenticated {
+                    ProfileHeaderView(
+                        store: store,
+                        onEditProfile: { showEditProfile = true },
+                        onSettings:    { showSettings = true }
+                    )
+                } else {
+                    guestHeader
+                }
 
                 moodboardSection
             }
-            .padding(DesignTokens.spacingL)
+            .padding(.horizontal, 24)
+            .padding(.top, 12)
+            .padding(.bottom, 120)
         }
-        .background(DesignTokens.backgroundColor)
-        .toolbar(.hidden, for: .navigationBar)
-        .sheet(isPresented: $showEditProfile) {
-            NavigationStack {
-                EditProfileView()
+        .background(Color(.systemGroupedBackground))
+        .navigationTitle(String(localized: "Profil"))
+        .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { showSettings = true } label: {
+                    Image(systemName: "gearshape.fill")
+                        .foregroundStyle(Color.primary)
+                }
+                .accessibilityLabel(String(localized: "Réglages"))
             }
+        }
+        .sheet(isPresented: $showEditProfile) {
+            NavigationStack { EditProfileView() }
         }
         .sheet(isPresented: $showSettings) {
             NavigationStack {
                 SettingsView()
                     .toolbar {
                         ToolbarItem(placement: .cancellationAction) {
-                            Button(String(localized: "Fermer")) {
-                                showSettings = false
-                            }
+                            Button(String(localized: "Fermer")) { showSettings = false }
+                        }
+                    }
+            }
+        }
+        .sheet(isPresented: $showAuthSheet) {
+            AuthBottomSheet(onSignedIn: { showAuthSheet = false })
+                .presentationDetents([.height(560)])
+                .presentationCornerRadius(32)
+                .presentationBackground(.ultraThinMaterial)
+        }
+        .sheet(isPresented: $showAllAnalyses) {
+            NavigationStack {
+                AllPhotoAnalysesView()
+                    .environmentObject(router)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Fermer") { showAllAnalyses = false }
                         }
                     }
             }
         }
     }
 
+    // MARK: - Guest header (non connecté)
+
+    private var guestHeader: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 16) {
+                Circle()
+                    .fill(DesignTokens.accentMuted)
+                    .frame(width: 72, height: 72)
+                    .overlay {
+                        Image(systemName: "person.fill")
+                            .font(.system(size: 30))
+                            .foregroundStyle(DesignTokens.textSecondary)
+                    }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Non connecté")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(DesignTokens.textPrimary)
+
+                    Text("Connecte-toi pour retrouver tes\nanalyses sur tous tes appareils.")
+                        .font(.system(size: 13))
+                        .foregroundStyle(DesignTokens.textSecondary)
+                        .lineSpacing(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            Button {
+                showAuthSheet = true
+            } label: {
+                Label("Se connecter", systemImage: "person.badge.plus")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 13)
+                    .background(Color.accentColor)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(DesignTokens.spacingM)
+        .background(DesignTokens.backgroundSecondary)
+        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.cornerRadiusL, style: .continuous))
+    }
+
+    // MARK: - Moodboard
+
     private var moodboardSection: some View {
         VStack(alignment: .leading, spacing: DesignTokens.spacingS) {
-            Text(String(localized: "Tes analyses photo"))
-                .font(DesignTokens.headlineFont)
-                .foregroundStyle(DesignTokens.textPrimary)
+            HStack {
+                Text(String(localized: "Tes analyses photo"))
+                    .font(DesignTokens.headlineFont)
+                    .foregroundStyle(DesignTokens.textPrimary)
+                Spacer()
+                if !scannedSessions.isEmpty {
+                    Button {
+                        showAllAnalyses = true
+                    } label: {
+                        Text("Voir tout (\(scannedSessions.count))")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(Color.accentColor)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
 
             if scannedSessions.isEmpty {
-                Text(String(localized: "Aucun scan pour l’instant."))
+                Text(String(localized: "Aucun scan pour l'instant."))
                     .font(DesignTokens.captionFont)
                     .foregroundStyle(DesignTokens.textSecondary)
             } else {
+                // Preview : 3 lignes max (≈ 12 photos en grille 4 colonnes)
+                let previewSessions = Array(scannedSessions.prefix(12))
                 LazyVGrid(columns: moodColumns, spacing: 6) {
-                    ForEach(scannedSessions) { session in
+                    ForEach(previewSessions) { session in
                         Button {
                             router.navigateToResults(session: session)
                         } label: {

@@ -24,9 +24,19 @@ struct AppRouter: View {
     let appDelegate: BalibuAppDelegate
 
     @AppStorage("balibu.hasCompletedOnboarding") private var hasCompletedOnboarding = false
+    @AppStorage("balibu.colorScheme") private var colorSchemeRaw: Int = 0
+
+    private var preferredScheme: ColorScheme? {
+        switch colorSchemeRaw {
+        case 1: return .light
+        case 2: return .dark
+        default: return nil
+        }
+    }
 
     var body: some View {
         MainTabContainerView(router: router, appDelegate: appDelegate)
+            .preferredColorScheme(preferredScheme)
             .fullScreenCover(isPresented: Binding(
                 get: { !hasCompletedOnboarding },
                 set: { _ in }

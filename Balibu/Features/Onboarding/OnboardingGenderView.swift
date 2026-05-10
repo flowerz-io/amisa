@@ -17,13 +17,15 @@ struct OnboardingGenderView: View {
             Color(uiColor: .systemBackground).ignoresSafeArea()
 
             VStack(spacing: 0) {
-                headerText
-                    // 128pt from top ensures clearance above the progress bar
-                    // even on Dynamic Island devices (safe area ~59pt + bar at 56pt)
-                    .padding(.top, 128)
-                    .padding(.horizontal, 28)
-                    .opacity(appeared ? 1 : 0)
-                    .offset(y: appeared ? 0 : 24)
+                Spacer(minLength: 195) // 30% de plus que l'ancienne valeur, identique sur toutes les pages
+
+                OnboardingStepHeader(
+                    currentStep: 1,
+                    title: "Tu recherches\nprincipalement pour :",
+                    subtitle: "On adapte les résultats, les tailles et les suggestions."
+                )
+                .opacity(appeared ? 1 : 0)
+                .offset(y: appeared ? 0 : 24)
 
                 Spacer(minLength: 28)
 
@@ -37,23 +39,6 @@ struct OnboardingGenderView: View {
             withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.1)) {
                 appeared = true
             }
-        }
-    }
-
-    // MARK: - Header
-
-    private var headerText: some View {
-        VStack(spacing: 8) {
-            Text("Tu recherches\nprincipalement pour :")
-                .font(.system(size: 28, weight: .bold))
-                .foregroundStyle(.primary)
-                .multilineTextAlignment(.center)
-                .lineSpacing(2)
-
-            Text("On adapte les résultats, les tailles et les suggestions.")
-                .font(.system(size: 15, weight: .regular))
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
         }
     }
 

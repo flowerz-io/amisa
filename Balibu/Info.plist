@@ -18,9 +18,5 @@
 			</array>
 		</dict>
 	</array>
-	<key>NSCameraUsageDescription</key>
-	<string>Balibu utilise la caméra pour photographier une pièce et trouver des annonces similaires.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Balibu affiche tes photos récentes pour en choisir une rapidement.</string>
 </dict>
 </plist>

@@ -11,7 +11,7 @@ struct ResultsFiltersBar: View {
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: DesignTokens.spacingXS) {
+            HStack(spacing: 8) {
                 FilterChip(title: String(localized: "Filtrer"), systemImage: "line.3.horizontal.decrease.circle") {
                     onSelectTab(.marketplace)
                 }
@@ -28,7 +28,9 @@ struct ResultsFiltersBar: View {
                     onSelectTab(.color)
                 }
             }
+            .padding(.horizontal, 0)
             .padding(.vertical, 2)
         }
+        .padding(.horizontal, 0)
     }
 }

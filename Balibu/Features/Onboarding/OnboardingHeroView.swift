@@ -2,7 +2,8 @@
 //  OnboardingHeroView.swift
 //  Balibu
 //
-//  Écran d'introduction — floating listing cards + CTA principal.
+//  Écran d'introduction — 3 cartes flottantes + headline + CTA.
+//  Images : OnboardingMockData.heroCards → onboarding_hero_card_01/02/03
 //
 
 import SwiftUI
@@ -12,6 +13,9 @@ import SwiftUI
 struct OnboardingHeroView: View {
     @ObservedObject var model: OnboardingFlowModel
     @State private var appeared = false
+    @State private var showAuthSheet = false
+
+    private let cards = OnboardingMockData.heroCards
 
     var body: some View {
         ZStack {
@@ -22,7 +26,7 @@ struct OnboardingHeroView: View {
 
                 floatingCardsLayer
                     .frame(maxWidth: .infinity)
-                    .frame(height: 320)
+                    .frame(height: 400)
 
                 Spacer(minLength: 24)
 
@@ -47,6 +51,15 @@ struct OnboardingHeroView: View {
                 appeared = true
             }
         }
+        .sheet(isPresented: $showAuthSheet) {
+            AuthBottomSheet(
+                onSignedIn: { model.advance() },
+                onSkip:     { model.advance() }
+            )
+            .presentationDetents([.height(560)])
+            .presentationCornerRadius(32)
+            .presentationBackground(.ultraThinMaterial)
+        }
     }
 
     // MARK: - Background
@@ -69,47 +82,62 @@ struct OnboardingHeroView: View {
         }
     }
 
-    // MARK: - Floating cards
+    // MARK: - Floating cards (3 cartes depuis OnboardingMockData.heroCards)
+    //
+    // ZStack render order (premier = derrière) :
+    //   [0] ghost card (miroir de cards[2]) — très en arrière, basse et centrée
+    //   [1] cards[1]  — arrière droit
+    //   [2] cards[2]  — arrière gauche
+    //   [3] cards[0]  — avant, carte principale (on top)
 
     private var floatingCardsLayer: some View {
         ZStack {
-            // Back card — blurred, offset right
-            FloatingListingCard(
-                listing: OnboardingMockListing.samples[1],
-                phase: .init(floatAmplitude: 10, rotationDeg: 6, xOffset: 90, yOffset: 20)
-            )
-            .blur(radius: 2)
-            .scaleEffect(0.88)
-            .opacity(0.7)
+            // Ghost décoratif — derrière tout (pas de labels)
+            if cards.count >= 3 {
+                FloatingListingCard(
+                    card: cards[2],
+                    phase: .init(floatAmplitude: 6, rotationDeg: 5, xOffset: 30, yOffset: 78),
+                    showLabels: false
+                )
+                .blur(radius: 5)
+                .scaleEffect(0.65)
+                .opacity(0.38)
+            }
 
-            // Back card — blurred, offset left
-            FloatingListingCard(
-                listing: OnboardingMockListing.samples[2],
-                phase: .init(floatAmplitude: 8, rotationDeg: -7, xOffset: -88, yOffset: 30)
-            )
-            .blur(radius: 3)
-            .scaleEffect(0.84)
-            .opacity(0.6)
+            // Carte arrière droite (+40% offsets)
+            if cards.count >= 2 {
+                FloatingListingCard(
+                    card: cards[1],
+                    phase: .init(floatAmplitude: 10, rotationDeg: 6, xOffset: 116, yOffset: 24)
+                )
+                .blur(radius: 2)
+                .scaleEffect(0.88)
+                .opacity(0.70)
+            }
 
-            // Center foreground card — sharp
-            FloatingListingCard(
-                listing: OnboardingMockListing.samples[0],
-                phase: .init(floatAmplitude: 14, rotationDeg: -2, xOffset: 0, yOffset: 0)
-            )
-            .shadow(color: Color.black.opacity(0.35), radius: 24, x: 0, y: 10)
+            // Carte arrière gauche (+40% offsets)
+            if cards.count >= 3 {
+                FloatingListingCard(
+                    card: cards[2],
+                    phase: .init(floatAmplitude: 8, rotationDeg: -7, xOffset: -114, yOffset: 36)
+                )
+                .blur(radius: 3)
+                .scaleEffect(0.84)
+                .opacity(0.60)
+            }
 
-            // Small top-right accent card
-            FloatingListingCard(
-                listing: OnboardingMockListing.samples[3],
-                phase: .init(floatAmplitude: 7, rotationDeg: 9, xOffset: 110, yOffset: -70)
-            )
-            .blur(radius: 1)
-            .scaleEffect(0.70)
-            .opacity(0.75)
+            // Carte principale — au premier plan
+            if let main = cards.first {
+                FloatingListingCard(
+                    card: main,
+                    phase: .init(floatAmplitude: 14, rotationDeg: -2, xOffset: 0, yOffset: 0)
+                )
+                .shadow(color: Color.black.opacity(0.35), radius: 28, x: 0, y: 12)
+            }
         }
     }
 
-    // MARK: - Headline (left-aligned)
+    // MARK: - Headline
 
     private var headlineBlock: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -132,7 +160,7 @@ struct OnboardingHeroView: View {
 
     private var ctaButton: some View {
         Button {
-            model.advance()
+            showAuthSheet = true
         } label: {
             HStack(spacing: 8) {
                 Text("Commencer")
@@ -161,8 +189,11 @@ private struct FloatingCardPhase {
 }
 
 private struct FloatingListingCard: View {
-    let listing: OnboardingMockListing
+    let card: OnboardingHeroCardData
     let phase: FloatingCardPhase
+    var showLabels: Bool = true
+
+    private let heroProviderLogoSize: CGFloat = 21  // 14 × 1.5
 
     var body: some View {
         cardContent
@@ -170,86 +201,79 @@ private struct FloatingListingCard: View {
             .rotationEffect(.degrees(phase.rotationDeg))
             .phaseAnimator([false, true]) { view, isUp in
                 view.offset(y: isUp ? -phase.floatAmplitude : 0)
-            } animation: { isUp in
-                .easeInOut(duration: isUp ? 2.8 : 2.4)
+            } animation: { _ in
+                .easeInOut(duration: 2.8)
             }
     }
 
     private var cardContent: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Product image via asset (gradient fallback)
-            OnboardingAssetImage(
-                name: listing.imageName,
-                fallbackColors: listing.gradientColors
-            )
-            .frame(height: 110)
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            // Image produit +40% — asset ou placeholder
+            OnboardingAssetImageView(imageName: card.imageName)
+                .frame(height: 154)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
 
-            // Info row
-            VStack(alignment: .leading, spacing: 2) {
-                Text(listing.brand)
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(0.48))
-                    .lineLimit(1)
-
-                Text(listing.title)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Color.white.opacity(0.92))
-                    .lineLimit(1)
-
-                HStack(alignment: .center) {
-                    HStack(spacing: 6) {
-                        Text(listing.price)
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(Color.accentColor)
-
-                        if let size = listing.size {
-                            Text(size)
-                                .font(.system(size: 10, weight: .medium))
-                                .foregroundStyle(Color.white.opacity(0.40))
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 2)
-                                .background(Color.white.opacity(0.08))
-                                .clipShape(Capsule())
-                        }
-                    }
-
-                    Spacer()
-
-                    // Marketplace logo bottom-right
-                    marketplaceLogo
-                }
+            if showLabels {
+                infoRow
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 9)
         }
-        .frame(width: 152)
+        .frame(width: 213)
         .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(Color.white.opacity(0.14), lineWidth: 1)
         }
     }
 
+    private var infoRow: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(card.brand)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Color.white.opacity(0.48))
+                .lineLimit(1)
+
+            Text(card.title)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(Color.white.opacity(0.92))
+                .lineLimit(1)
+
+            HStack(alignment: .center) {
+                HStack(spacing: 7) {
+                    Text(card.price)
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(Color.accentColor)
+
+                    if let size = card.size {
+                        Text(size)
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(Color.white.opacity(0.40))
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(Color.white.opacity(0.08))
+                            .clipShape(Capsule())
+                    }
+                }
+                Spacer()
+                providerLogo
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 11)
+    }
+
     @ViewBuilder
-    private var marketplaceLogo: some View {
-        let logoName = "logo_\(listing.source.lowercased())"
-        if UIImage(named: logoName) != nil {
-            Image(logoName)
+    private var providerLogo: some View {
+        if UIImage(named: card.providerLogoName) != nil {
+            Image(card.providerLogoName)
                 .resizable()
                 .scaledToFit()
-                .frame(height: 14)
+                .frame(height: heroProviderLogoSize)
                 .opacity(0.70)
         } else {
-            HStack(spacing: 3) {
-                Circle()
-                    .fill(listing.sourceColor)
-                    .frame(width: 5, height: 5)
-                Text(listing.source)
-                    .font(.system(size: 8, weight: .bold))
-                    .foregroundStyle(Color.white.opacity(0.58))
-            }
+            Text(card.providerLogoName.replacingOccurrences(of: "provider_", with: ""))
+                .font(.system(size: 8, weight: .bold))
+                .foregroundStyle(Color.white.opacity(0.50))
         }
     }
 }

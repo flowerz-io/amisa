@@ -2,7 +2,7 @@
 //  OnboardingCountryView.swift
 //  Balibu
 //
-//  Étape 3 — sélection du pays avec pills glassmorphism en cascade.
+//  Étape 3 — sélection de la zone avec un picker wheel iOS premium.
 //
 
 import SwiftUI
@@ -10,115 +10,92 @@ import SwiftUI
 struct OnboardingCountryView: View {
     @ObservedObject var model: OnboardingFlowModel
     @State private var appeared = false
+    @State private var pickerSelection: OnboardingCountry = .france
 
     var body: some View {
         ZStack {
             Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
 
             VStack(spacing: 0) {
-                Spacer(minLength: 120)
+                Spacer(minLength: 195) // 30% de plus, identique sur toutes les pages
 
-                headerBlock
-                    .padding(.horizontal, 28)
-                    .opacity(appeared ? 1 : 0)
-                    .offset(y: appeared ? 0 : 20)
+                OnboardingStepHeader(
+                    currentStep: 2,
+                    title: "Depuis quelle zone\nfais-tu tes achats ?",
+                    subtitle: "On adapte les marketplaces, les devises et les résultats disponibles chez toi."
+                )
+                .opacity(appeared ? 1 : 0)
+                .offset(y: appeared ? 0 : 20)
 
                 Spacer(minLength: 20)
 
-                countryGrid
+                countryPicker
+                    .opacity(appeared ? 1 : 0)
+                    .offset(y: appeared ? 0 : 24)
+                    .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.12), value: appeared)
 
                 Spacer()
 
+                continueButton
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 16)
+                    .opacity(appeared ? 1 : 0)
+                    .animation(.spring(response: 0.5, dampingFraction: 0.78).delay(0.2), value: appeared)
+
                 skipButton
-                    .padding(.horizontal, 28)
                     .padding(.bottom, 48)
                     .opacity(appeared ? 1 : 0)
+                    .animation(.spring(response: 0.5, dampingFraction: 0.78).delay(0.26), value: appeared)
             }
         }
         .ignoresSafeArea()
         .onAppear {
+            // Présélectionner le pays du model si déjà choisi
+            if let existing = model.country {
+                pickerSelection = existing
+            }
             withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.08)) {
                 appeared = true
             }
         }
     }
 
-    // MARK: - Header
+    // MARK: - Picker wheel
 
-    private var headerBlock: some View {
-        VStack(spacing: 8) {
-            Text("Depuis quelle zone\nfais-tu tes achats ?")
-                .font(.system(size: 28, weight: .bold))
-                .foregroundStyle(.primary)
-                .multilineTextAlignment(.center)
-                .lineSpacing(2)
-
-            Text("On adapte les marketplaces, les devises et les résultats disponibles chez toi.")
-                .font(.system(size: 15, weight: .regular))
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-        }
-    }
-
-    // MARK: - Country grid
-
-    private var countryGrid: some View {
-        let columns = [
-            GridItem(.flexible(), spacing: 10),
-            GridItem(.flexible(), spacing: 10),
-        ]
-
-        return LazyVGrid(columns: columns, spacing: 10) {
-            ForEach(Array(OnboardingCountry.allCases.enumerated()), id: \.element.id) { idx, country in
-                countryPill(country, index: idx)
+    private var countryPicker: some View {
+        Picker("Zone", selection: $pickerSelection) {
+            ForEach(OnboardingCountry.allCases) { country in
+                Text("\(country.flag)  \(country.displayName)")
+                    .font(.system(size: 25, weight: .medium)) // +40%
+                    .tag(country)
             }
         }
-        .padding(.horizontal, 20)
+        .pickerStyle(.wheel)
+        .frame(height: 308) // +40% (220 × 1.4)
+        // Pas de fond / carré gris — picker natif nu
+        .padding(.horizontal, 8)
     }
 
-    private func countryPill(_ country: OnboardingCountry, index: Int) -> some View {
-        let isSelected = model.country == country
+    // MARK: - Continuer
 
-        return Button {
-            selectCountry(country)
+    private var continueButton: some View {
+        Button {
+            confirmSelection()
         } label: {
-            HStack(spacing: 10) {
-                Text(country.flag)
-                    .font(.title2)
-
-                Text(country.displayName)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(isSelected ? .white : .primary)
+            HStack(spacing: 8) {
+                Text("Continuer")
+                    .font(.system(size: 17, weight: .semibold))
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 14, weight: .semibold))
             }
+            .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 11)
-            .background {
-                if isSelected {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(Color.accentColor)
-                } else {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(.ultraThinMaterial)
-                }
-            }
-            .overlay {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(isSelected ? Color.clear : Color(uiColor: .separator), lineWidth: 1)
-            }
-            .shadow(
-                color: isSelected ? Color.accentColor.opacity(0.3) : .clear,
-                radius: 12, x: 0, y: 4
-            )
-            .scaleEffect(isSelected ? 1.03 : 1.0)
+            .padding(.vertical, 17)
+            .background(Color.accentColor)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .shadow(color: Color.accentColor.opacity(0.35), radius: 14, x: 0, y: 5)
         }
-        .buttonStyle(.plain)
-        .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 30)
-        .animation(
-            .spring(response: 0.5, dampingFraction: 0.75).delay(Double(index) * 0.07 + 0.2),
-            value: appeared
-        )
-        .animation(.spring(response: 0.35, dampingFraction: 0.70), value: isSelected)
+        .buttonStyle(BouncyButtonStyle())
     }
 
     // MARK: - Skip
@@ -135,12 +112,10 @@ struct OnboardingCountryView: View {
 
     // MARK: - Action
 
-    private func selectCountry(_ country: OnboardingCountry) {
+    private func confirmSelection() {
         withAnimation(.spring(response: 0.35, dampingFraction: 0.70)) {
-            model.country = country
+            model.country = pickerSelection
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-            model.advance()
-        }
+        model.advance()
     }
 }

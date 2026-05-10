@@ -14,16 +14,19 @@ struct BottomNavigationRow: View {
             RightTabCapsule(router: router)
                 .frame(maxWidth: .infinity)
         }
+        // Force la transparence des espaces entre les capsules
+        .background(.clear)
     }
 }
 
 struct LeftTabCapsule: View {
     @ObservedObject var router: Router
+    @ObservedObject private var iconStore = DynamicTabIconStore.shared
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         HStack(spacing: 0) {
-            tabItem(tab: .home, title: String(localized: "Home"), systemImage: "house.and.flag.fill")
+            homeTabItem
             tabItem(tab: .search, title: String(localized: "Recherche"), systemImage: "magnifyingglass")
         }
         .padding(.vertical, 10)
@@ -34,13 +37,51 @@ struct LeftTabCapsule: View {
         }
     }
 
+    // MARK: - Onglet Home avec icône dynamique
+
+    private var homeTabItem: some View {
+        let isSelected = router.selectedTab == .home
+        return Button {
+            router.selectedTab = .home
+        } label: {
+            VStack(spacing: 4) {
+                if let dynIcon = iconStore.homeIcon {
+                    Image(uiImage: dynIcon)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 32, height: 32)
+                } else {
+                    Image(systemName: "house.and.flag.fill")
+                        .font(.system(size: 25, weight: .regular))
+                }
+                Text(String(localized: "Home"))
+                    .font(.caption2)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 4)
+            .foregroundStyle(
+                BalibuSemanticColors.tabItemForeground(
+                    isSelected: isSelected,
+                    colorScheme: colorScheme
+                )
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+    }
+
+    // MARK: - Onglet générique
+
     private func tabItem(tab: MainTab, title: String, systemImage: String) -> some View {
         Button {
             router.selectedTab = tab
         } label: {
             VStack(spacing: 4) {
                 Image(systemName: systemImage)
-                    .font(.system(size: 20, weight: .regular))
+                    .font(.system(size: 25, weight: .regular))
                 Text(title)
                     .font(.caption2)
                     .lineLimit(1)
@@ -84,7 +125,7 @@ struct RightTabCapsule: View {
         } label: {
             VStack(spacing: 4) {
                 Image(systemName: systemImage)
-                    .font(.system(size: 20, weight: .regular))
+                    .font(.system(size: 25, weight: .regular))
                 Text(title)
                     .font(.caption2)
                     .lineLimit(1)

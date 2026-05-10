@@ -2,7 +2,7 @@
 //  RecentPhotosStrip.swift
 //  Balibu
 //
-//  Ruban horizontal de miniatures (photothèque récente).
+//  Ruban horizontal de miniatures (photothèque récente) + bouton "ouvrir tout" en fin de liste.
 //
 
 import Combine
@@ -64,6 +64,8 @@ final class RecentPhotosLibraryModel: ObservableObject {
 struct RecentPhotosStrip: View {
     @ObservedObject var library: RecentPhotosLibraryModel
     let onSelectAsset: (PHAsset) -> Void
+    /// Optionnel : bouton pellicule complète en fin de liste.
+    var onOpenLibrary: (() -> Void)? = nil
 
     private let thumbSize: CGFloat = 56
 
@@ -78,9 +80,30 @@ struct RecentPhotosStrip: View {
                         HStack(spacing: 8) {
                             ForEach(library.assets, id: \.localIdentifier) { asset in
                                 RecentPhotoThumbnail(asset: asset, size: thumbSize)
-                                    .onTapGesture {
-                                        onSelectAsset(asset)
+                                    .onTapGesture { onSelectAsset(asset) }
+                            }
+
+                            // Bouton "tout voir" en fin de ruban
+                            if let openLibrary = onOpenLibrary {
+                                Button {
+                                    openLibrary()
+                                } label: {
+                                    ZStack {
+                                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                            .fill(Color.white.opacity(0.18))
+                                        Image(systemName: "photo.on.rectangle")
+                                            .font(.system(size: 20, weight: .semibold))
+                                            .foregroundStyle(.white)
                                     }
+                                    .frame(width: thumbSize, height: thumbSize)
+                                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                            .strokeBorder(Color.white.opacity(0.2), lineWidth: 0.5)
+                                    }
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel(String(localized: "Ouvrir la photothèque"))
                             }
                         }
                         .padding(.horizontal, 4)
@@ -90,7 +113,7 @@ struct RecentPhotosStrip: View {
             case .denied, .restricted:
                 stripPlaceholder(String(localized: "Accès à la photothèque refusé"))
             case .notDetermined:
-                stripPlaceholder(String(localized: "Autorise l’accès aux photos pour afficher les miniatures."))
+                stripPlaceholder(String(localized: "Autorise l'accès aux photos pour afficher les miniatures."))
             @unknown default:
                 stripPlaceholder(String(localized: "Photothèque indisponible"))
             }

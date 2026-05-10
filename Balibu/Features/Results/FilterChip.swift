@@ -25,8 +25,15 @@ struct FilterChip: View {
             .foregroundStyle(Color.primary)
             .padding(.horizontal, DesignTokens.spacingS)
             .padding(.vertical, DesignTokens.spacingXXS + 2)
-            .background(Color(uiColor: .tertiarySystemFill))
-            .clipShape(Capsule())
+            .background(
+                Capsule(style: .continuous)
+                    .fill(.ultraThinMaterial)
+            )
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(Color.white.opacity(0.18), lineWidth: 0.8)
+            )
+            .shadow(color: .black.opacity(0.06), radius: 8, y: 3)
         }
         .buttonStyle(.plain)
     }

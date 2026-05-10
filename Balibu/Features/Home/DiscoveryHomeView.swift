@@ -66,26 +66,30 @@ struct DiscoveryHomeView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: DesignTokens.spacingM) {
+            VStack(alignment: .leading, spacing: 24) {
                 Text(String(localized: "Découvre des pièces à partir de tes analyses photo."))
-                    .font(DesignTokens.captionFont)
-                    .foregroundStyle(DesignTokens.textSecondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .font(.system(size: 17))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 24)
 
                 if viewModel.feedListings.isEmpty {
                     emptyState
+                        .padding(.horizontal, 24)
                 } else {
                     LazyVGrid(columns: columns, spacing: DesignTokens.spacingM) {
                         ForEach(viewModel.feedListings) { listing in
                             ListingCardView(listing: listing)
                         }
                     }
+                    .padding(.horizontal, 16)
                 }
             }
-            .padding(DesignTokens.spacingL)
+            .padding(.top, 12)
+            .padding(.bottom, 120)
         }
-        .background(DesignTokens.backgroundColor)
-        .toolbar(.hidden, for: .navigationBar)
+        .background(Color(.systemGroupedBackground))
+        .navigationTitle(String(localized: "Découverte"))
+        .navigationBarTitleDisplayMode(.large)
         .onAppear { viewModel.load() }
         .onChange(of: router.path.count) { _, _ in viewModel.load() }
         .onChange(of: router.selectedTab) { _, new in
@@ -96,11 +100,9 @@ struct DiscoveryHomeView: View {
     private var emptyState: some View {
         EmptyStateView(
             icon: "photo.on.rectangle.angled",
-            title: String(localized: "Rien à afficher pour l’instant"),
-            message: String(localized: "Scanne un article pour lancer une analyse et retrouver des annonces ici.")
+            title: String(localized: "Rien à afficher"),
+            message: String(localized: "Scanne un article pour lancer une analyse.")
         )
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, DesignTokens.spacingXL)
     }
 }
 
@@ -112,6 +114,9 @@ final class DiscoveryHomeViewModel: ObservableObject {
         let sessions = SearchHistoryService.shared.fetchSessions()
         let favIds = Set(FavoriteSearchService.shared.allRecords().map(\.id))
         feedListings = HomeDiscoveryFeedBuilder.build(sessions: sessions, favoriteIds: favIds)
+
+        // Mise à jour asynchrone et non bloquante de l'icône dynamique de la tab bar
+        DynamicTabIconStore.shared.updateIfNeeded(with: feedListings)
     }
 }
 

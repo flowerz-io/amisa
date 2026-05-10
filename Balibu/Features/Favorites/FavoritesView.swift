@@ -1,42 +1,54 @@
 //
 //  FavoritesView.swift
-//  Balibu
 //
 
 import SwiftUI
-import UIKit
 
+/// Racine : `NavigationStack` fourni par `MainTabContainerView`.
 struct FavoritesView: View {
     @EnvironmentObject private var router: Router
     @State private var records: [FavoriteSearchRecord] = []
 
-    private let gridColumns = [
-        GridItem(.flexible(), spacing: DesignTokens.spacingM),
-        GridItem(.flexible(), spacing: DesignTokens.spacingM),
-    ]
-
     var body: some View {
-        Group {
-            if records.isEmpty {
-                emptyState
-            } else {
-                ScrollView {
-                    LazyVGrid(columns: gridColumns, spacing: DesignTokens.spacingM) {
+        GeometryReader { proxy in
+            let horizontalPadding: CGFloat = 20
+            let columnSpacing: CGFloat = 12
+            let availableWidth = proxy.size.width
+            let cardWidth = floor((availableWidth - horizontalPadding * 2 - columnSpacing) / 2)
+
+            ScrollView {
+                if records.isEmpty {
+                    emptyState
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, horizontalPadding)
+                        .padding(.top, 12)
+                        .padding(.bottom, 130)
+                } else {
+                    LazyVGrid(
+                        columns: [
+                            GridItem(.fixed(cardWidth), spacing: columnSpacing),
+                            GridItem(.fixed(cardWidth), spacing: columnSpacing),
+                        ],
+                        alignment: .center,
+                        spacing: 14
+                    ) {
                         ForEach(records) { record in
                             Button {
                                 router.navigateToResultsFromFavorite(session: record.toSearchSession())
                             } label: {
-                                FavoriteAnalysisCard(record: record)
+                                FavoriteCard(favorite: record, cardWidth: cardWidth)
                             }
                             .buttonStyle(.plain)
                         }
                     }
-                    .padding(DesignTokens.spacingM)
+                    .padding(.horizontal, horizontalPadding)
+                    .padding(.top, 12)
+                    .padding(.bottom, 130)
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(DesignTokens.backgroundColor)
+        .background(Color(.systemBackground))
         .navigationTitle(String(localized: "Favoris"))
         .navigationBarTitleDisplayMode(.large)
         .onAppear {
@@ -50,20 +62,19 @@ struct FavoritesView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: DesignTokens.spacingL) {
-            Image(systemName: "heart.slash")
-                .font(.system(size: 44))
-                .foregroundStyle(DesignTokens.textSecondary)
-            Text(String(localized: "Aucun favori"))
-                .font(DesignTokens.headlineFont)
-                .foregroundStyle(DesignTokens.textPrimary)
-            Text(String(localized: "Enregistre une recherche depuis les résultats pour la retrouver ici."))
-                .font(DesignTokens.bodyFont)
-                .foregroundStyle(DesignTokens.textSecondary)
+        VStack(spacing: 20) {
+            Image(systemName: "heart.fill")
+                .font(.system(size: 52))
+                .foregroundStyle(.secondary)
+
+            Text(String(localized: "Tes favoris apparaîtront ici"))
+                .font(.system(size: 17))
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-                .padding(.horizontal, DesignTokens.spacingXL)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity)
+        .padding(.top, 100)
+        .padding(.horizontal, 24)
     }
 }
 

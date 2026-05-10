@@ -2,7 +2,7 @@
 //  ShareExtensionRootView.swift
 //  BalibuShareExtension
 //
-//  UI SwiftUI minimaliste pour le flux partage (alignée visuellement sur la Preview native).
+//  UI SwiftUI du flux partage — Review façon Google Lens.
 //
 
 import SwiftUI
@@ -17,6 +17,7 @@ struct ShareExtensionRootView: View {
     var body: some View {
         NavigationStack {
             content
+                .navigationBarHidden(model.state.isPreview)
                 .navigationTitle(String(localized: "Balibu"))
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
@@ -46,35 +47,26 @@ struct ShareExtensionRootView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
         case .preview(let uiImage):
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    ShareSquareCropRepresentable(image: uiImage) { controller in
-                        model.cropController = controller
+            GeometryReader { geo in
+                ZStack(alignment: .top) {
+                    Color.black.ignoresSafeArea()
+
+                    VStack(spacing: 0) {
+                        Color.clear.frame(height: geo.safeAreaInsets.top + 56)
+
+                        GoogleLensCropRepresentable(image: uiImage) { controller in
+                            model.cropController = controller
+                        }
+                        .frame(height: geo.size.height * 0.70)
+                        .background(Color.black)
+
+                        extensionBottomPanel(geo: geo)
                     }
-                    .frame(height: 360)
 
-                    Text(String(localized: "Déplace et zoome pour cadrer l’article dans le carré."))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                    Text(String(localized: "Nous analysons l’image et cherchons des articles similaires sur les marketplaces."))
-                        .font(.body)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                    ShareExtensionPrimaryActionButton(
-                        title: String(localized: "Analyser"),
-                        action: { model.commitCropAndStartBackendSearch() },
-                        isDisabled: model.isStartingRemoteSession
-                    )
-                    .padding(.top, 4)
+                    extensionHeader(safeTop: geo.safeAreaInsets.top)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
-                .padding(.bottom, 24)
             }
-            .background(Color(.systemGroupedBackground))
+            .ignoresSafeArea(edges: .top)
 
         case .videoFramePicker(let videoURL):
             VideoFramePickerView(
@@ -100,6 +92,88 @@ struct ShareExtensionRootView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
+
+    // MARK: - Panel inférieur (preview)
+
+    @ViewBuilder
+    private func extensionBottomPanel(geo: GeometryProxy) -> some View {
+        VStack(spacing: 0) {
+            Spacer(minLength: 12)
+
+            Text(String(localized: "Déplace et pince pour cadrer · fais glisser les coins pour recadrer."))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 24)
+
+            Spacer(minLength: 10)
+
+            Text(String(localized: "Nous analysons l'image et cherchons des articles similaires sur les marketplaces."))
+                .font(.footnote)
+                .foregroundStyle(Color(uiColor: .systemGray2))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+
+            Spacer(minLength: 16)
+
+            ShareExtensionPrimaryActionButton(
+                title: String(localized: "Analyser"),
+                action: { model.commitCropAndStartBackendSearch() },
+                isDisabled: model.isStartingRemoteSession
+            )
+            .padding(.horizontal, 24)
+            .padding(.bottom, max(geo.safeAreaInsets.bottom + 12, 28))
+        }
+        .background(
+            LinearGradient(
+                colors: [Color.black, Color(uiColor: .systemBackground).opacity(0.07)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
+    }
+
+    // MARK: - Header custom
+
+    private func extensionHeader(safeTop: CGFloat) -> some View {
+        ZStack {
+            LinearGradient(
+                colors: [Color.black.opacity(0.55), Color.clear],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: safeTop + 72)
+            .frame(maxWidth: .infinity)
+
+            HStack {
+                Button { model.cancelExtension() } label: {
+                    ZStack {
+                        Circle().fill(.ultraThinMaterial)
+                        Image(systemName: "xmark")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.primary)
+                    }
+                    .frame(width: 44, height: 44)
+                }
+                .buttonStyle(.plain)
+
+                Spacer()
+
+                Text(String(localized: "Review"))
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(.white)
+
+                Spacer()
+
+                Color.clear.frame(width: 44, height: 44)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, safeTop + 6)
+        }
+        .frame(maxWidth: .infinity, alignment: .top)
+    }
+
+    // MARK: - Loading / confirm
 
     @ViewBuilder
     private func confirmReadyContent(model: ShareFlowModel) -> some View {
@@ -142,9 +216,18 @@ struct ShareExtensionRootView: View {
         case .denied:
             Text(String(localized: "Les notifications sont désactivées : tu ne recevras pas de raccourci ici. Ouvre Balibu manuellement pour lancer la recherche — ton analyse est déjà enregistrée. Les futures alertes pour de nouvelles annonces ne fonctionneront pas non plus."))
         case .failed(let message):
-            Text(String(localized: "La notification n’a pas pu être planifiée (\(message)). Ouvre Balibu pour lancer la recherche — ton analyse est enregistrée."))
+            Text(String(localized: "La notification n'a pas pu être planifiée (\(message)). Ouvre Balibu pour lancer la recherche — ton analyse est enregistrée."))
         case .none:
             EmptyView()
         }
+    }
+}
+
+// MARK: - ShareFlowState helper
+
+private extension ShareFlowState {
+    var isPreview: Bool {
+        if case .preview = self { return true }
+        return false
     }
 }
