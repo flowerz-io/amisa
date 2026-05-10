@@ -2,38 +2,32 @@
 //  AdaptiveCardTextOverlay.swift
 //  Balibu
 //
-//  Overlay de lisibilité adaptatif pour cartes image-first.
-//  Couvre uniquement la zone basse de la carte (heightRatio).
-//  Le gradient s'adapte automatiquement à la luminosité du texte.
+//  Overlay gradient adaptatif pour cartes image-first.
+//  Remplacé par AdaptiveCardOverlay — ce fichier contient désormais ce composant.
 //
 //  Logique :
-//  - textColor clair (luminance > 0.45) → gradient sombre (black)
-//  - textColor sombre (luminance ≤ 0.45) → gradient clair (white)
+//  - bottomLuminance < 0.35  → image sombre → gradient discret (max ~0.28)
+//  - bottomLuminance 0.35–0.65 → image moyenne → gradient standard (max ~0.48)
+//  - bottomLuminance > 0.65  → image claire → gradient fort (max ~0.72)
+//  - Toujours un dégradé noir (plus universel que blanc)
+//  - Blur très léger pour adoucir les bords du gradient
 //
 
 import SwiftUI
-import UIKit
 
-// MARK: - AdaptiveCardTextOverlay
+// MARK: - AdaptiveCardOverlay
 
-/// Overlay gradient adaptatif concentré sur le bas d'une carte image.
-///
-/// Usage :
-/// ```swift
-/// .overlay {
-///     AdaptiveCardTextOverlay(textColor: palette.primary)
-/// }
-/// ```
-struct AdaptiveCardTextOverlay: View {
+/// Overlay gradient adaptatif concentré sur le bas d'une carte image-first.
+/// Pilote la lisibilité du texte en s'adaptant à la luminosité de l'image.
+struct AdaptiveCardOverlay: View {
 
-    /// Couleur principale du texte — détermine la teinte du gradient.
-    var textColor: Color
+    /// Luminance moyenne du bas de l'image (0.0 sombre → 1.0 très clair).
+    var bottomLuminance: CGFloat
 
-    /// Proportion de la hauteur totale couverte par l'overlay (0.0–1.0).
+    /// Part de la hauteur couverte par le gradient (0.0–1.0).
     var heightRatio: CGFloat = 0.35
 
-    /// Opacité maximale du gradient en bas de carte.
-    var maxOpacity: CGFloat = 0.45
+    // MARK: - Body
 
     var body: some View {
         LinearGradient(stops: gradientStops, startPoint: .top, endPoint: .bottom)
@@ -43,76 +37,48 @@ struct AdaptiveCardTextOverlay: View {
 
     // MARK: - Gradient
 
+    /// Opacité max adaptée à la luminosité : plus l'image est claire, plus on assombrit.
+    private var maxOpacity: CGFloat {
+        // Plage 0.22 (image sombre) → 0.74 (image très claire), capped à 0.74
+        min(0.22 + bottomLuminance * 0.58, 0.74)
+    }
+
     private var gradientStops: [Gradient.Stop] {
-        let zoneStart   = 1.0 - heightRatio    // début de la zone visible (ex: 0.65 pour 35%)
-        let color       = gradientBaseColor
+        let zoneStart = 1.0 - heightRatio   // 0.65 pour heightRatio = 0.35
+        let op        = maxOpacity
 
         return [
             .init(color: .clear,                    location: 0.00),
             .init(color: .clear,                    location: zoneStart),
-            .init(color: color.opacity(0.08),       location: zoneStart + heightRatio * 0.45),
-            .init(color: color.opacity(0.22),       location: zoneStart + heightRatio * 0.72),
-            .init(color: color.opacity(maxOpacity), location: 1.00),
+            .init(color: .black.opacity(op * 0.18), location: zoneStart + heightRatio * 0.45),
+            .init(color: .black.opacity(op * 0.52), location: zoneStart + heightRatio * 0.72),
+            .init(color: .black.opacity(op),        location: 1.00),
         ]
-    }
-
-    /// Teinte du gradient : sombre si le texte est clair, clair si le texte est sombre.
-    private var gradientBaseColor: Color {
-        isTextColorLight ? .black : .white
-    }
-
-    // MARK: - Luminance helper
-
-    /// `true` si la couleur est perceptivement claire.
-    /// Basé sur la luminance relative sRGB (ITU-R BT.709).
-    private var isTextColorLight: Bool {
-        let ui = UIColor(textColor)
-        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-        guard ui.getRed(&r, green: &g, blue: &b, alpha: &a) else {
-            return true     // fallback : texte blanc → gradient sombre
-        }
-        let luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
-        return luminance > 0.45
     }
 }
 
 // MARK: - Preview
 
-#Preview("AdaptiveCardTextOverlay") {
-    VStack(spacing: 20) {
-        // Texte clair → gradient sombre
-        ZStack {
-            LinearGradient(
-                colors: [.indigo, .purple],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            AdaptiveCardTextOverlay(textColor: .white)
-            Text("Texte clair → gradient sombre")
-                .foregroundStyle(.white)
-                .font(.headline)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
-                .padding()
+#Preview("AdaptiveCardOverlay") {
+    VStack(spacing: 16) {
+        ForEach(
+            [(0.1, "Image sombre"), (0.5, "Image moyenne"), (0.9, "Image très claire")],
+            id: \.1
+        ) { (lum, label) in
+            ZStack(alignment: .bottomLeading) {
+                Rectangle()
+                    .fill(Color(white: lum))
+                AdaptiveCardOverlay(bottomLuminance: lum)
+                Text(label)
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .padding(12)
+                    .adaptiveShadow(for: .white)
+            }
+            .frame(height: 150)
+            .clipShape(RoundedRectangle(cornerRadius: 21, style: .continuous))
         }
-        .frame(height: 180)
-        .clipShape(RoundedRectangle(cornerRadius: 21, style: .continuous))
-
-        // Texte sombre → gradient clair
-        ZStack {
-            LinearGradient(
-                colors: [.yellow, .orange],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            AdaptiveCardTextOverlay(textColor: .black)
-            Text("Texte sombre → gradient clair")
-                .foregroundStyle(.black)
-                .font(.headline)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
-                .padding()
-        }
-        .frame(height: 180)
-        .clipShape(RoundedRectangle(cornerRadius: 21, style: .continuous))
     }
     .padding()
+    .background(Color(uiColor: .systemGroupedBackground))
 }

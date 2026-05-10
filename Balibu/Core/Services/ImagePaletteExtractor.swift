@@ -2,15 +2,16 @@
 //  ImagePaletteExtractor.swift
 //  Balibu
 //
-//  Extraction de palette couleur dominante depuis une image produit.
-//  Utilisée pour colorer dynamiquement le texte dans les cartes listing.
+//  Extraction de palette couleur dominante + luminance du bas de l'image.
+//  Utilisée pour colorer dynamiquement le texte et adapter le gradient
+//  des cartes listing marketplace.
 //
 //  Architecture :
-//  - Actor singleton (thread-safe, cache en mémoire)
+//  - Actor singleton (thread-safe, cache en mémoire par URL)
 //  - Extraction sur thread background via Task.detached
-//  - Resize à 18×18 px pour vitesse maximale
+//  - Resize à 18×18 px pour performance maximale
 //  - Quantisation par bucket de teinte (12 × 30°)
-//  - Validation luminosité : texte toujours lisible sur fond sombre
+//  - bottomLuminance : luminance moyenne du tiers inférieur → pilote AdaptiveCardOverlay
 //
 
 import UIKit
@@ -19,14 +20,18 @@ import SwiftUI
 // MARK: - ListingColorPalette
 
 struct ListingColorPalette: Sendable {
-    /// Couleur principale — titre du produit
+    /// Couleur principale extraite — titre du produit (validée par ReadableDynamicColor).
     let primary: Color
-    /// Couleur secondaire — marque/label
+    /// Couleur secondaire extraite — marque/label.
     let secondary: Color
+    /// Luminance moyenne du bas de l'image (0 = sombre, 1 = très clair).
+    /// Pilote l'opacité et la teinte de AdaptiveCardOverlay.
+    let bottomLuminance: CGFloat
 
     static let fallback = ListingColorPalette(
         primary: .white,
-        secondary: .white.opacity(0.72)
+        secondary: .white.opacity(0.72),
+        bottomLuminance: 0.1
     )
 }
 
@@ -42,12 +47,9 @@ actor ImagePaletteExtractor {
 
     // MARK: - Public API
 
-    /// Retourne la palette dominante pour une URL.
-    /// Cache hit = instantané. Cache miss = réseau + extraction async.
     func palette(for url: URL?) async -> ListingColorPalette {
         guard let url else { return .fallback }
         let key = url.absoluteString
-
         if let cached = cache[key] { return cached }
 
         guard let (data, _) = try? await URLSession.shared.data(from: url),
@@ -66,7 +68,7 @@ actor ImagePaletteExtractor {
     private static func extractSync(from image: UIImage) -> ListingColorPalette {
         let side = 18
 
-        // ── Resize vers une vignette 18×18 px @1x ───────────────────────────
+        // ── Resize vers vignette 18×18 @1x ──────────────────────────────────
         let format = UIGraphicsImageRendererFormat()
         format.scale = 1
         format.opaque = true
@@ -79,7 +81,7 @@ actor ImagePaletteExtractor {
         }
         guard let cgImage = resized.cgImage else { return .fallback }
 
-        // ── Lecture des pixels ───────────────────────────────────────────────
+        // ── Lecture pixels ───────────────────────────────────────────────────
         var pixels = [UInt8](repeating: 0, count: side * side * 4)
         let colorSpace = CGColorSpaceCreateDeviceRGB()
         guard let ctx = CGContext(
@@ -91,6 +93,24 @@ actor ImagePaletteExtractor {
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         ) else { return .fallback }
         ctx.draw(cgImage, in: CGRect(x: 0, y: 0, width: side, height: side))
+
+        // ── Luminance moyenne du tiers inférieur ─────────────────────────────
+        let bottomStartRow = (side * 2) / 3        // 12e ligne sur 18
+        var bottomLumSum: CGFloat = 0
+        var bottomCount  = 0
+        for y in bottomStartRow..<side {
+            for x in 0..<side {
+                let i = (y * side + x) * 4
+                let r = CGFloat(pixels[i])     / 255.0
+                let g = CGFloat(pixels[i + 1]) / 255.0
+                let b = CGFloat(pixels[i + 2]) / 255.0
+                bottomLumSum += 0.2126 * r + 0.7152 * g + 0.0722 * b
+                bottomCount  += 1
+            }
+        }
+        let bottomLuminance: CGFloat = bottomCount > 0
+            ? bottomLumSum / CGFloat(bottomCount)
+            : 0.1
 
         // ── Quantisation par bucket de teinte (12 × 30°) ────────────────────
         var buckets = [Int: [(h: CGFloat, s: CGFloat, b: CGFloat)]]()
@@ -104,37 +124,40 @@ actor ImagePaletteExtractor {
             UIColor(red: r, green: g, blue: b, alpha: 1)
                 .getHue(&h, saturation: &s, brightness: &br, alpha: &a)
 
-            // Exclure les gris, noirs purs et blancs purs
             guard s > 0.18, br > 0.18, br < 0.96 else { continue }
-
             let bucket = Int(h * 12) % 12
             buckets[bucket, default: []].append((h: h, s: s, b: br))
         }
 
-        // ── Tri par fréquence → 2 couleurs dominantes ───────────────────────
+        // ── Top-2 couleurs dominantes ────────────────────────────────────────
         let sorted = buckets.sorted { $0.value.count > $1.value.count }
 
         var extracted: [UIColor] = []
         for (_, samples) in sorted.prefix(2) {
             let count = CGFloat(samples.count)
             let avgH = samples.map(\.h).reduce(0, +) / count
-            // Boost léger de saturation pour l'aspect vivant
             let avgS = min(samples.map(\.s).reduce(0, +) / count * 1.12, 1.0)
-            // Assurer une luminosité suffisante pour texte lisible sur fond sombre
             let rawB = samples.map(\.b).reduce(0, +) / count
             let avgB = max(min(rawB * 1.18, 0.96), 0.62)
-
             extracted.append(UIColor(hue: avgH, saturation: avgS, brightness: avgB, alpha: 1))
         }
 
-        // ── Fallback si aucune couleur saturée trouvée ───────────────────────
-        guard !extracted.isEmpty else { return .fallback }
+        guard !extracted.isEmpty else {
+            return ListingColorPalette(
+                primary: .white, secondary: .white.opacity(0.72),
+                bottomLuminance: bottomLuminance
+            )
+        }
 
-        let primary = Color(uiColor: extracted[0])
-        let secondary: Color = extracted.count > 1
+        let primary   = Color(uiColor: extracted[0])
+        let secondary = extracted.count > 1
             ? Color(uiColor: extracted[1]).opacity(0.82)
             : primary.opacity(0.72)
 
-        return ListingColorPalette(primary: primary, secondary: secondary)
+        return ListingColorPalette(
+            primary: primary,
+            secondary: secondary,
+            bottomLuminance: bottomLuminance
+        )
     }
 }
