@@ -49,5 +49,5 @@ app.register(searchMoreRoute, { prefix: '/' });
 const port = parseInt(process.env.PORT ?? '3000', 10);
 await app.listen({ port, host: '0.0.0.0' });
 
-console.log(`Balibu API running on http://localhost:${port}`);
+console.log(`Amisa API running on http://localhost:${port}`);
 console.log(`VISION_PROVIDER=${visionProviderName}`);

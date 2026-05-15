@@ -1,0 +1,758 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 90;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		DD2E04742F61863100B107F0 /* AmisaShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = DD2E046A2F61863000B107F0 /* AmisaShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		EEAA10002F630DC7006BF7BF /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = EEAA10012F630DC7006BF7BF /* Supabase */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		DD2E044A2F6184F000B107F0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DD2E04342F6184ED00B107F0 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DD2E043B2F6184ED00B107F0;
+			remoteInfo = Amisa;
+		};
+		DD2E04542F6184F000B107F0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DD2E04342F6184ED00B107F0 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DD2E043B2F6184ED00B107F0;
+			remoteInfo = Amisa;
+		};
+		DD2E04722F61863100B107F0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DD2E04342F6184ED00B107F0 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DD2E04692F61863000B107F0;
+			remoteInfo = AmisaShareExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		DD2E04792F61863100B107F0 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			dstPath = "";
+			dstSubfolder = PlugIns;
+			files = (
+				DD2E04742F61863100B107F0 /* AmisaShareExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		DD2E043C2F6184ED00B107F0 /* Amisa.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Amisa.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		DD2E04492F6184F000B107F0 /* AmisaTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AmisaTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		DD2E04532F6184F000B107F0 /* AmisaUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AmisaUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		DD2E046A2F61863000B107F0 /* AmisaShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AmisaShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		DD2E04752F61863100B107F0 /* Exceptions for "AmisaShareExtension" folder in "AmisaShareExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = DD2E04692F61863000B107F0 /* AmisaShareExtension */;
+		};
+		DDAC12FE2F630DC7006BF7BF /* Exceptions for "Amisa" folder in "Amisa" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = DD2E043B2F6184ED00B107F0 /* Amisa */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		DD2E043E2F6184ED00B107F0 /* Amisa */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				DDAC12FE2F630DC7006BF7BF /* Exceptions for "Amisa" folder in "Amisa" target */,
+			);
+			path = Amisa;
+			sourceTree = "<group>";
+		};
+		DD2E044C2F6184F000B107F0 /* AmisaTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = AmisaTests;
+			sourceTree = "<group>";
+		};
+		DD2E04562F6184F000B107F0 /* AmisaUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = AmisaUITests;
+			sourceTree = "<group>";
+		};
+		DD2E046B2F61863000B107F0 /* AmisaShareExtension */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				DD2E04752F61863100B107F0 /* Exceptions for "AmisaShareExtension" folder in "AmisaShareExtension" target */,
+			);
+			path = AmisaShareExtension;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		DD2E04392F6184ED00B107F0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+				EEAA10002F630DC7006BF7BF /* Supabase in Frameworks */,
+			);
+		};
+		DD2E04462F6184F000B107F0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
+		DD2E04502F6184F000B107F0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
+		DD2E04672F61863000B107F0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		DD2E04332F6184ED00B107F0 = {
+			isa = PBXGroup;
+			children = (
+				DD2E043E2F6184ED00B107F0 /* Amisa */,
+				DD2E044C2F6184F000B107F0 /* AmisaTests */,
+				DD2E04562F6184F000B107F0 /* AmisaUITests */,
+				DD2E046B2F61863000B107F0 /* AmisaShareExtension */,
+				DD2E043D2F6184ED00B107F0 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		DD2E043D2F6184ED00B107F0 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				DD2E043C2F6184ED00B107F0 /* Amisa.app */,
+				DD2E04492F6184F000B107F0 /* AmisaTests.xctest */,
+				DD2E04532F6184F000B107F0 /* AmisaUITests.xctest */,
+				DD2E046A2F61863000B107F0 /* AmisaShareExtension.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		DD2E043B2F6184ED00B107F0 /* Amisa */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DD2E045D2F6184F000B107F0 /* Build configuration list for PBXNativeTarget "Amisa" */;
+			buildPhases = (
+				DD2E04382F6184ED00B107F0 /* Sources */,
+				DD2E04392F6184ED00B107F0 /* Frameworks */,
+				DD2E043A2F6184ED00B107F0 /* Resources */,
+				DD2E04792F61863100B107F0 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				DD2E04732F61863100B107F0 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				DD2E043E2F6184ED00B107F0 /* Amisa */,
+			);
+			name = Amisa;
+			packageProductDependencies = (
+				EEAA10012F630DC7006BF7BF /* Supabase */,
+			);
+			productName = Amisa;
+			productReference = DD2E043C2F6184ED00B107F0 /* Amisa.app */;
+			productType = "com.apple.product-type.application";
+		};
+		DD2E04482F6184F000B107F0 /* AmisaTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DD2E04602F6184F000B107F0 /* Build configuration list for PBXNativeTarget "AmisaTests" */;
+			buildPhases = (
+				DD2E04452F6184F000B107F0 /* Sources */,
+				DD2E04462F6184F000B107F0 /* Frameworks */,
+				DD2E04472F6184F000B107F0 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				DD2E044B2F6184F000B107F0 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				DD2E044C2F6184F000B107F0 /* AmisaTests */,
+			);
+			name = AmisaTests;
+			productName = AmisaTests;
+			productReference = DD2E04492F6184F000B107F0 /* AmisaTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		DD2E04522F6184F000B107F0 /* AmisaUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DD2E04632F6184F000B107F0 /* Build configuration list for PBXNativeTarget "AmisaUITests" */;
+			buildPhases = (
+				DD2E044F2F6184F000B107F0 /* Sources */,
+				DD2E04502F6184F000B107F0 /* Frameworks */,
+				DD2E04512F6184F000B107F0 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				DD2E04552F6184F000B107F0 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				DD2E04562F6184F000B107F0 /* AmisaUITests */,
+			);
+			name = AmisaUITests;
+			productName = AmisaUITests;
+			productReference = DD2E04532F6184F000B107F0 /* AmisaUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		DD2E04692F61863000B107F0 /* AmisaShareExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DD2E04762F61863100B107F0 /* Build configuration list for PBXNativeTarget "AmisaShareExtension" */;
+			buildPhases = (
+				DD2E04662F61863000B107F0 /* Sources */,
+				DD2E04672F61863000B107F0 /* Frameworks */,
+				DD2E04682F61863000B107F0 /* Resources */,
+			);
+			buildRules = (
+			);
+			fileSystemSynchronizedGroups = (
+				DD2E046B2F61863000B107F0 /* AmisaShareExtension */,
+			);
+			name = AmisaShareExtension;
+			productName = AmisaShareExtension;
+			productReference = DD2E046A2F61863000B107F0 /* AmisaShareExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		DD2E04342F6184ED00B107F0 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2600;
+				LastUpgradeCheck = 2600;
+				TargetAttributes = {
+					DD2E043B2F6184ED00B107F0 = {
+						CreatedOnToolsVersion = 26.0.1;
+					};
+					DD2E04482F6184F000B107F0 = {
+						CreatedOnToolsVersion = 26.0.1;
+						TestTargetID = DD2E043B2F6184ED00B107F0;
+					};
+					DD2E04522F6184F000B107F0 = {
+						CreatedOnToolsVersion = 26.0.1;
+						TestTargetID = DD2E043B2F6184ED00B107F0;
+					};
+					DD2E04692F61863000B107F0 = {
+						CreatedOnToolsVersion = 26.0.1;
+					};
+				};
+			};
+			buildConfigurationList = DD2E04372F6184ED00B107F0 /* Build configuration list for PBXProject "Amisa" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = DD2E04332F6184ED00B107F0;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				EEAA10022F630DC7006BF7BF /* XCRemoteSwiftPackageReference "supabase-swift" */,
+			);
+			preferredProjectObjectVersion = 90;
+			productRefGroup = DD2E043D2F6184ED00B107F0 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				DD2E043B2F6184ED00B107F0 /* Amisa */,
+				DD2E04482F6184F000B107F0 /* AmisaTests */,
+				DD2E04522F6184F000B107F0 /* AmisaUITests */,
+				DD2E04692F61863000B107F0 /* AmisaShareExtension */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		DD2E043A2F6184ED00B107F0 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+		DD2E04472F6184F000B107F0 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+		DD2E04512F6184F000B107F0 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+		DD2E04682F61863000B107F0 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		DD2E04382F6184ED00B107F0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
+		DD2E04452F6184F000B107F0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
+		DD2E044F2F6184F000B107F0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
+		DD2E04662F61863000B107F0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		DD2E044B2F6184F000B107F0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DD2E043B2F6184ED00B107F0 /* Amisa */;
+			targetProxy = DD2E044A2F6184F000B107F0 /* PBXContainerItemProxy */;
+		};
+		DD2E04552F6184F000B107F0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DD2E043B2F6184ED00B107F0 /* Amisa */;
+			targetProxy = DD2E04542F6184F000B107F0 /* PBXContainerItemProxy */;
+		};
+		DD2E04732F61863100B107F0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DD2E04692F61863000B107F0 /* AmisaShareExtension */;
+			targetProxy = DD2E04722F61863100B107F0 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		DD2E045B2F6184F000B107F0 /* Debug configuration for PBXProject "Amisa" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 7VRLJJU8Q7;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		DD2E045C2F6184F000B107F0 /* Release configuration for PBXProject "Amisa" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 7VRLJJU8Q7;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		DD2E045E2F6184F000B107F0 /* Debug configuration for PBXNativeTarget "Amisa" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Amisa/Amisa.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7VRLJJU8Q7;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Amisa/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Amisa;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.shopping";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Amisa utilise la caméra pour photographier une pièce et trouver des annonces similaires.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Amisa affiche tes photos récentes pour en choisir une rapidement.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = flowerz.io.Amisa.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		DD2E045F2F6184F000B107F0 /* Release configuration for PBXNativeTarget "Amisa" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Amisa/Amisa.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7VRLJJU8Q7;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Amisa/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Amisa;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.shopping";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Amisa utilise la caméra pour photographier une pièce et trouver des annonces similaires.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Amisa affiche tes photos récentes pour en choisir une rapidement.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = flowerz.io.Amisa.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		DD2E04612F6184F000B107F0 /* Debug configuration for PBXNativeTarget "AmisaTests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7VRLJJU8Q7;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = flowerz.io.AmisaTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Amisa.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Amisa";
+			};
+			name = Debug;
+		};
+		DD2E04622F6184F000B107F0 /* Release configuration for PBXNativeTarget "AmisaTests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7VRLJJU8Q7;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = flowerz.io.AmisaTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Amisa.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Amisa";
+			};
+			name = Release;
+		};
+		DD2E04642F6184F000B107F0 /* Debug configuration for PBXNativeTarget "AmisaUITests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7VRLJJU8Q7;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = flowerz.io.AmisaUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Amisa;
+			};
+			name = Debug;
+		};
+		DD2E04652F6184F000B107F0 /* Release configuration for PBXNativeTarget "AmisaUITests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7VRLJJU8Q7;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = flowerz.io.AmisaUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Amisa;
+			};
+			name = Release;
+		};
+		DD2E04772F61863100B107F0 /* Debug configuration for PBXNativeTarget "AmisaShareExtension" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = AmisaShareExtension/AmisaShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7VRLJJU8Q7;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = AmisaShareExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Amisa;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = flowerz.io.Amisa.app.ShareExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		DD2E04782F61863100B107F0 /* Release configuration for PBXNativeTarget "AmisaShareExtension" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = AmisaShareExtension/AmisaShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7VRLJJU8Q7;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = AmisaShareExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Amisa;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = flowerz.io.Amisa.app.ShareExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		DD2E04372F6184ED00B107F0 /* Build configuration list for PBXProject "Amisa" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DD2E045B2F6184F000B107F0 /* Debug configuration for PBXProject "Amisa" */,
+				DD2E045C2F6184F000B107F0 /* Release configuration for PBXProject "Amisa" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		DD2E045D2F6184F000B107F0 /* Build configuration list for PBXNativeTarget "Amisa" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DD2E045E2F6184F000B107F0 /* Debug configuration for PBXNativeTarget "Amisa" */,
+				DD2E045F2F6184F000B107F0 /* Release configuration for PBXNativeTarget "Amisa" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		DD2E04602F6184F000B107F0 /* Build configuration list for PBXNativeTarget "AmisaTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DD2E04612F6184F000B107F0 /* Debug configuration for PBXNativeTarget "AmisaTests" */,
+				DD2E04622F6184F000B107F0 /* Release configuration for PBXNativeTarget "AmisaTests" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		DD2E04632F6184F000B107F0 /* Build configuration list for PBXNativeTarget "AmisaUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DD2E04642F6184F000B107F0 /* Debug configuration for PBXNativeTarget "AmisaUITests" */,
+				DD2E04652F6184F000B107F0 /* Release configuration for PBXNativeTarget "AmisaUITests" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		DD2E04762F61863100B107F0 /* Build configuration list for PBXNativeTarget "AmisaShareExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DD2E04772F61863100B107F0 /* Debug configuration for PBXNativeTarget "AmisaShareExtension" */,
+				DD2E04782F61863100B107F0 /* Release configuration for PBXNativeTarget "AmisaShareExtension" */,
+			);
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		EEAA10022F630DC7006BF7BF /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		EEAA10012F630DC7006BF7BF /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = EEAA10022F630DC7006BF7BF /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = DD2E04342F6184ED00B107F0 /* Project object */;
+}

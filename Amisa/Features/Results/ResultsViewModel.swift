@@ -1,0 +1,460 @@
+//
+//  ResultsViewModel.swift
+//  Balibu
+//
+//  État Results : liste affichée, pagination Vinted, barre sticky.
+//
+
+import SwiftUI
+import Combine
+
+enum ResultsViewState: Equatable {
+    case loaded(SearchSession)
+    case empty
+    case error(String)
+}
+
+@MainActor
+final class ResultsViewModel: ObservableObject {
+    @Published var state: ResultsViewState
+    @Published var displayedListings: [MarketplaceListing]
+    @Published private(set) var allListings: [MarketplaceListing]
+    @Published var enabledProviderKeys: Set<String> {
+        didSet {
+            applyDisplayedFilters()
+            logPaginationState(context: "providers_filter_changed")
+        }
+    }
+    @Published var isLoadingMore: Bool = false
+    @Published var hasMoreResults: Bool
+    @Published var hasMoreVinted: Bool = false
+    @Published var hasMoreGrailed: Bool = false
+    @Published var hasMoreEbay: Bool = false
+    @Published var hasMoreLeboncoin: Bool = false
+    @Published var hasMoreDepop: Bool = false
+    @Published var showStickyHeader: Bool = false
+    /// Disponibilité providers (ex. eBay bloqué par challenge).
+    @Published private(set) var providerAvailabilityMap: ProviderAvailabilityMapDTO?
+    /// Compteurs totaux backend par provider (source de vérité pour l’UI).
+    @Published private(set) var providerCounts: ProviderCountsDTO
+    /// Temps backend (ms) pour la première vague de résultats.
+    @Published private(set) var initialResponseTimeMs: Int?
+    /// Historique debug : page Vinted courante (legacy + nouveau flow).
+    @Published private(set) var currentPage: Int
+    /// Liste vide au chargement mais requête Vinted disponible (favori) : première page à charger.
+    private(set) var needsInitialListingsBootstrap: Bool = false
+
+    private var nextPageToFetch: Int
+    private let paginationSearchText: String
+    private var paginationState: SearchPaginationStateDTO?
+    private var rankingContext: SearchRankingContextDTO?
+    private let apiClient: any APIClientProtocol
+    private var didRunBootstrap: Bool = false
+    private let awaitsRailwayHydration: Bool
+
+    init(session: SearchSession, apiClient: any APIClientProtocol = APIConfig.apiClient) {
+        self.apiClient = apiClient
+        self.awaitsRailwayHydration = session.awaitsRailwayHydration
+        self.paginationSearchText = session.vintedPaginationQuery
+        self.allListings = Self.sortByRelevance(session.listings)
+        self.enabledProviderKeys = Set(
+            ProviderSettingsStore.enabledProviderBackendKeysSnapshot().map {
+                MarketplaceSource.canonicalKey(from: $0)
+            }
+        )
+        self.displayedListings = []
+        self.paginationState = session.paginationState
+        self.rankingContext = session.rankingContext
+        self.providerCounts = session.providerCounts ?? Self.providerCounts(from: session.paginationState)
+        self.initialResponseTimeMs = session.initialResponseTimeMs
+
+        if let paginationState = session.paginationState {
+            self.currentPage = max(1, paginationState.vinted.nextPage - 1)
+            self.nextPageToFetch = paginationState.vinted.nextPage
+            self.hasMoreVinted = paginationState.vinted.hasMore
+            self.hasMoreGrailed = paginationState.grailed.hasMore
+            self.hasMoreEbay = paginationState.ebay?.hasMore ?? false
+            self.hasMoreLeboncoin = paginationState.leboncoin?.hasMore ?? false
+            self.hasMoreDepop = paginationState.depop?.hasMore ?? false
+            self.hasMoreResults =
+                paginationState.vinted.hasMore ||
+                paginationState.grailed.hasMore ||
+                (paginationState.ebay?.hasMore ?? false) ||
+                (paginationState.leboncoin?.hasMore ?? false) ||
+                (paginationState.depop?.hasMore ?? false)
+            self.state = .loaded(session)
+        } else if session.listings.isEmpty {
+            let q = session.vintedPaginationQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+            if session.awaitsRailwayHydration || session.hydratingBackendResults {
+                self.nextPageToFetch = 2
+                self.currentPage = 1
+                self.hasMoreResults = false
+                self.hasMoreVinted = false
+                self.hasMoreGrailed = false
+                self.hasMoreEbay = false
+                self.hasMoreLeboncoin = false
+                self.hasMoreDepop = false
+                self.state = .loaded(session)
+                self.isLoadingMore = true
+            } else if q.isEmpty {
+                self.nextPageToFetch = 2
+                self.currentPage = 1
+                self.hasMoreResults = false
+                self.hasMoreVinted = false
+                self.hasMoreGrailed = false
+                self.hasMoreEbay = false
+                self.hasMoreLeboncoin = false
+                self.hasMoreDepop = false
+                self.state = .empty
+            } else {
+                self.nextPageToFetch = 2
+                self.currentPage = 0
+                self.hasMoreResults = true
+                self.hasMoreVinted = true
+                self.hasMoreGrailed = false
+                self.hasMoreEbay = false
+                self.hasMoreLeboncoin = false
+                self.hasMoreDepop = false
+                self.needsInitialListingsBootstrap = true
+                self.state = .loaded(session)
+            }
+        } else {
+            self.nextPageToFetch = 2
+            self.currentPage = 1
+            let q = session.vintedPaginationQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+            let vintedOnFirstLoad = session.listings.filter { $0.source == "Vinted" }.count
+            let more = !q.isEmpty && vintedOnFirstLoad > 0
+            self.hasMoreResults = more
+            self.hasMoreVinted = more
+            self.hasMoreGrailed = false
+            self.hasMoreEbay = false
+            self.hasMoreLeboncoin = false
+            self.hasMoreDepop = false
+            self.state = .loaded(session)
+        }
+
+        self.providerAvailabilityMap = session.providerAvailability
+        ProviderRuntimeAvailabilityStore.shared.merge(from: session.providerAvailability)
+
+        applyDisplayedFilters()
+        logPaginationState(context: "init")
+    }
+
+    /// Fusionne la réponse réelle après ouverture Results avec placeholder (`hydratingBackendResults`).
+    func mergeHydratedBackendResults(_ session: SearchSession) {
+        guard case .loaded(let current) = state, current.id == session.id else { return }
+        guard current.hydratingBackendResults else { return }
+
+        allListings = Self.sortByRelevance(session.listings)
+        paginationState = session.paginationState
+        rankingContext = session.rankingContext
+        providerCounts = session.providerCounts ?? Self.providerCounts(from: session.paginationState)
+        initialResponseTimeMs = session.initialResponseTimeMs
+        providerAvailabilityMap = session.providerAvailability
+        ProviderRuntimeAvailabilityStore.shared.merge(from: session.providerAvailability)
+
+        if let paginationState = session.paginationState {
+            currentPage = max(1, paginationState.vinted.nextPage - 1)
+            nextPageToFetch = paginationState.vinted.nextPage
+            hasMoreVinted = paginationState.vinted.hasMore
+            hasMoreGrailed = paginationState.grailed.hasMore
+            hasMoreEbay = paginationState.ebay?.hasMore ?? false
+            hasMoreLeboncoin = paginationState.leboncoin?.hasMore ?? false
+            hasMoreDepop = paginationState.depop?.hasMore ?? false
+            hasMoreResults = hasMoreFromAllProviders()
+            needsInitialListingsBootstrap = false
+            state = .loaded(session)
+            isLoadingMore = false
+        } else if session.listings.isEmpty {
+            nextPageToFetch = 2
+            currentPage = 1
+            hasMoreResults = false
+            hasMoreVinted = false
+            hasMoreGrailed = false
+            hasMoreEbay = false
+            hasMoreLeboncoin = false
+            hasMoreDepop = false
+            needsInitialListingsBootstrap = false
+            state = .loaded(session)
+            isLoadingMore = false
+        } else {
+            nextPageToFetch = 2
+            currentPage = 1
+            let q = session.vintedPaginationQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+            let vintedOnFirstLoad = session.listings.filter { $0.source == "Vinted" }.count
+            let more = !q.isEmpty && vintedOnFirstLoad > 0
+            hasMoreResults = more
+            hasMoreVinted = more
+            hasMoreGrailed = false
+            hasMoreEbay = false
+            hasMoreLeboncoin = false
+            hasMoreDepop = false
+            needsInitialListingsBootstrap = false
+            state = .loaded(session)
+            isLoadingMore = false
+        }
+
+        applyDisplayedFilters()
+        logPaginationState(context: "hydration_merge")
+    }
+
+    func applyHydrationFailure(message: String) {
+        guard case .loaded(let current) = state, current.hydratingBackendResults else { return }
+        state = .error(message)
+        isLoadingMore = false
+    }
+
+    /// Favori sans annonces : recharge la page 1 Vinted avec la même logique que la pagination existante.
+    func bootstrapInitialListingsIfNeeded() async {
+        guard !awaitsRailwayHydration else { return }
+        guard needsInitialListingsBootstrap, !didRunBootstrap else { return }
+        guard case .loaded = state else { return }
+        didRunBootstrap = true
+        needsInitialListingsBootstrap = false
+        guard !paginationSearchText.isEmpty else { return }
+
+        isLoadingMore = true
+        defer { isLoadingMore = false }
+
+        do {
+            let response = try await apiClient.fetchVintedListingsPage(
+                searchText: paginationSearchText,
+                page: 1
+            )
+            let newItems = response.listings.map { MarketplaceListing.from($0) }
+            allListings = Self.sortByRelevance(newItems)
+            applyDisplayedFilters()
+            currentPage = response.page
+            nextPageToFetch = 2
+            hasMoreResults = response.hasMore
+            hasMoreVinted = response.hasMore
+            hasMoreGrailed = false
+            hasMoreEbay = false
+            hasMoreLeboncoin = false
+            hasMoreDepop = false
+        } catch {
+            hasMoreResults = false
+            hasMoreVinted = false
+            hasMoreGrailed = false
+            hasMoreEbay = false
+            hasMoreLeboncoin = false
+            hasMoreDepop = false
+        }
+        logPaginationState(context: "bootstrap_done")
+    }
+
+    func updateHeroVisibility(minY: CGFloat) {
+        showStickyHeader = minY < -36
+    }
+
+    /// Chargement anticipé : vers ~50 % de la liste (ex. 5ᵉ carte sur 10).
+    func loadMoreIfNeeded(currentItem: MarketplaceListing) {
+        guard case .loaded = state else { return }
+        guard hasMoreResults, !isLoadingMore else { return }
+        guard !paginationSearchText.isEmpty else { return }
+        guard let idx = displayedListings.firstIndex(where: { $0.id == currentItem.id }) else { return }
+
+        let threshold = max(0, displayedListings.count / 2 - 1)
+        guard idx >= threshold else { return }
+
+        Task { await loadNextBatch() }
+    }
+
+    private func loadNextBatch() async {
+        guard !isLoadingMore, hasMoreResults else { return }
+        isLoadingMore = true
+        defer { isLoadingMore = false }
+
+        if let paginationState, let rankingContext {
+            do {
+                let response = try await apiClient.fetchSearchMore(
+                    request: SearchMoreRequest(
+                        primaryQuery: paginationState.primaryQuery,
+                        batchSizePerProvider: paginationState.batchSizePerProvider,
+                        pagination: paginationState,
+                        rankingContext: rankingContext,
+                        enabledProviders: ProviderSettingsStore.enabledProviderBackendKeysSnapshot()
+                    )
+                )
+                if let delta = response.providerAvailability {
+                    providerAvailabilityMap = (providerAvailabilityMap ?? ProviderAvailabilityMapDTO()).merged(with: delta)
+                    ProviderRuntimeAvailabilityStore.shared.merge(from: delta)
+                }
+                let newItems = response.listings.map { MarketplaceListing.from($0) }
+                allListings = Self.mergeUnique(existing: allListings, new: newItems)
+                allListings = Self.sortByRelevance(allListings)
+                applyDisplayedFilters()
+
+                self.paginationState = response.pagination
+                providerCounts = providerCounts
+                    .merged(with: Self.providerCounts(from: response.pagination))
+                    .merged(with: response.providerCounts)
+                currentPage = max(1, response.pagination.vinted.nextPage - 1)
+                nextPageToFetch = response.pagination.vinted.nextPage
+                hasMoreVinted = response.hasMoreVinted
+                hasMoreGrailed = response.hasMoreGrailed
+                hasMoreEbay = response.hasMoreEbay ?? false
+                hasMoreLeboncoin = response.hasMoreLeboncoin ?? false
+                hasMoreDepop = response.hasMoreDepop ?? false
+                hasMoreResults = hasMoreFromAllProviders()
+            } catch {
+                hasMoreResults = false
+                hasMoreVinted = false
+                hasMoreGrailed = false
+                hasMoreEbay = false
+                hasMoreLeboncoin = false
+                hasMoreDepop = false
+            }
+            logPaginationState(context: "loadNextBatch_searchMore_done")
+            return
+        }
+
+        do {
+            let response = try await apiClient.fetchVintedListingsPage(
+                searchText: paginationSearchText,
+                page: nextPageToFetch
+            )
+            let newItems = response.listings.map { MarketplaceListing.from($0) }
+            allListings = Self.mergeUnique(existing: allListings, new: newItems)
+            allListings = Self.sortByRelevance(allListings)
+            applyDisplayedFilters()
+            currentPage = response.page
+            nextPageToFetch += 1
+            hasMoreResults = response.hasMore
+            hasMoreVinted = response.hasMore
+            hasMoreGrailed = false
+            hasMoreEbay = false
+            hasMoreLeboncoin = false
+            hasMoreDepop = false
+        } catch {
+            hasMoreResults = false
+            hasMoreVinted = false
+            hasMoreGrailed = false
+            hasMoreEbay = false
+            hasMoreLeboncoin = false
+            hasMoreDepop = false
+        }
+        logPaginationState(context: "loadNextBatch_legacy_done")
+    }
+
+    var availableMarketplaceSources: [String] {
+        var ordered: [String] = []
+        var seen = Set<String>()
+
+        for known in MarketplaceSource.knownProviderDisplayNames {
+            let key = MarketplaceSource.canonicalKey(from: known)
+            if !seen.contains(key) {
+                seen.insert(key)
+                ordered.append(known)
+            }
+        }
+
+        for listing in allListings {
+            let key = MarketplaceSource.canonicalKey(from: listing.source)
+            if !seen.contains(key) {
+                seen.insert(key)
+                ordered.append(listing.sourceDisplayLabel)
+            }
+        }
+        return ordered
+    }
+
+    var totalListingsCount: Int {
+        let total = providerCounts.sum
+        return total > 0 ? total : displayedListings.count
+    }
+
+    func providerTotalCount(for source: String) -> Int {
+        providerCounts.count(for: source) ?? 0
+    }
+
+    func formatListingsCount(_ count: Int) -> String {
+        Self.frenchIntegerFormatter.string(from: NSNumber(value: count)) ?? "\(count)"
+    }
+
+    var formattedTotalListingsCount: String {
+        formatListingsCount(totalListingsCount)
+    }
+
+    var formattedInitialSearchTime: String? {
+        guard let ms = initialResponseTimeMs, ms >= 0 else { return nil }
+        let seconds = Double(ms) / 1000.0
+        let number = Self.frenchOneDecimalFormatter.string(from: NSNumber(value: seconds))
+            ?? String(format: "%.1f", seconds).replacingOccurrences(of: ".", with: ",")
+        return "\(number) s"
+    }
+
+    private func applyDisplayedFilters() {
+        displayedListings = allListings.filter { listing in
+            if isEbayHiddenWhenBlocked(listing) { return false }
+            return enabledProviderKeys.contains(MarketplaceSource.canonicalKey(from: listing.source))
+        }
+    }
+
+    private func isEbayHiddenWhenBlocked(_ listing: MarketplaceListing) -> Bool {
+        guard MarketplaceSource.canonicalKey(from: listing.source) == "ebay" else { return false }
+        return providerAvailabilityMap?.ebay?.status == .blocked_by_challenge
+    }
+
+    private func hasMoreFromAllProviders() -> Bool {
+        hasMoreVinted || hasMoreGrailed || hasMoreEbay || hasMoreLeboncoin || hasMoreDepop
+    }
+
+    private static func providerCounts(from pagination: SearchPaginationStateDTO?) -> ProviderCountsDTO {
+        ProviderCountsDTO(
+            vinted: pagination?.vinted.totalCount ?? pagination?.vinted.loadedCount,
+            grailed: pagination?.grailed.totalCount ?? pagination?.grailed.loadedCount,
+            ebay: pagination?.ebay?.totalCount ?? pagination?.ebay?.loadedCount,
+            leboncoin: pagination?.leboncoin?.totalCount ?? pagination?.leboncoin?.loadedCount,
+            depop: pagination?.depop?.totalCount ?? pagination?.depop?.loadedCount
+        )
+    }
+
+    private static let frenchIntegerFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.locale = Locale(identifier: "fr_FR")
+        formatter.numberStyle = .decimal
+        formatter.maximumFractionDigits = 0
+        return formatter
+    }()
+
+    private static let frenchOneDecimalFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.locale = Locale(identifier: "fr_FR")
+        formatter.numberStyle = .decimal
+        formatter.minimumFractionDigits = 1
+        formatter.maximumFractionDigits = 1
+        return formatter
+    }()
+
+    private static func mergeUnique(existing: [MarketplaceListing], new: [MarketplaceListing]) -> [MarketplaceListing] {
+        var seen = Set<String>()
+        for x in existing { seen.insert("\(x.source)|\(x.id)") }
+        var out = existing
+        for x in new {
+            let k = "\(x.source)|\(x.id)"
+            if !seen.contains(k) {
+                seen.insert(k)
+                out.append(x)
+            }
+        }
+        return out
+    }
+
+    private static func sortByRelevance(_ listings: [MarketplaceListing]) -> [MarketplaceListing] {
+        listings.sorted { lhs, rhs in
+            (lhs.relevanceScore ?? 0) > (rhs.relevanceScore ?? 0)
+        }
+    }
+
+    private func logPaginationState(context: String) {
+        let vinted = allListings.filter { $0.source == "Vinted" }.count
+        let grailed = allListings.filter { $0.source == "Grailed" }.count
+        let ebay = allListings.filter { MarketplaceSource.canonicalKey(from: $0.source) == "ebay" }.count
+        let leboncoin = allListings.filter { MarketplaceSource.canonicalKey(from: $0.source) == "leboncoin" }.count
+        let depop = allListings.filter { MarketplaceSource.canonicalKey(from: $0.source) == "depop" }.count
+        print(
+            "[RESULTS_VM] \(context) currentPage=\(currentPage) hasMore=\(hasMoreResults) hasMoreVinted=\(hasMoreVinted) hasMoreGrailed=\(hasMoreGrailed) hasMoreEbay=\(hasMoreEbay) hasMoreLeboncoin=\(hasMoreLeboncoin) hasMoreDepop=\(hasMoreDepop) isLoadingMore=\(isLoadingMore) displayedListings.count=\(displayedListings.count) allListings.count=\(allListings.count) vinted=\(vinted) grailed=\(grailed) ebay=\(ebay) leboncoin=\(leboncoin) depop=\(depop)"
+        )
+    }
+}

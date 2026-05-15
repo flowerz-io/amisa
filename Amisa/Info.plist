@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>SUPABASE_ANON_KEY</key>
+	<string>sb_publishable_a4dwXpouWHeSGSDg47qq5w_mviE4tu3</string>
+	<key>SUPABASE_URL</key>
+	<string>https://istsqscnkkfbyygkgozt.supabase.co</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLIconFile</key>
+			<string></string>
+			<key>CFBundleURLName</key>
+			<string></string>
+			<key>CFBundleURLSchemes</key>
+			<array/>
+		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>amisa</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>amisa</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

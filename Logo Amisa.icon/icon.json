@@ -1,0 +1,144 @@
+{
+  "fill" : {
+    "linear-gradient" : [
+      "display-p3:0.12739,0.18914,0.78935,1.00000",
+      "display-p3:0.60784,0.64706,0.96471,1.00000"
+    ],
+    "orientation" : {
+      "start" : {
+        "x" : 0.5,
+        "y" : 0
+      },
+      "stop" : {
+        "x" : 0.5,
+        "y" : 0.7
+      }
+    }
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "fill" : {
+            "solid" : "display-p3:1.00000,1.00000,1.00000,1.00000"
+          },
+          "glass" : false,
+          "image-name" : "5496173-200.png",
+          "name" : "5496173-200",
+          "position" : {
+            "scale" : 2.59,
+            "translation-in-points" : [
+              1.7950000000000728,
+              -43.49312500000008
+            ]
+          }
+        },
+        {
+          "blend-mode" : "normal",
+          "fill" : {
+            "solid" : "display-p3:1.00000,1.00000,1.00000,1.00000"
+          },
+          "glass" : false,
+          "hidden" : false,
+          "image-name" : "Whisk_60e7bf4ecc5899db5aa45eef4851bf10dr.png",
+          "name" : "Whisk_60e7bf4ecc5899db5aa45eef4851bf10dr",
+          "position" : {
+            "scale" : 0.74,
+            "translation-in-points" : [
+              -0.2999999999999545,
+              -46.07812500000006
+            ]
+          }
+        },
+        {
+          "blend-mode" : "normal",
+          "fill" : "none",
+          "glass" : false,
+          "hidden" : true,
+          "image-name" : "Whisk_60e7bf4ecc5899db5aa45eef4851bf10dr.png",
+          "name" : "Whisk_60e7bf4ecc5899db5aa45eef4851bf10dr",
+          "position" : {
+            "scale" : 0.6,
+            "translation-in-points" : [
+              -0.2999999999999545,
+              -46.078125
+            ]
+          }
+        },
+        {
+          "fill" : {
+            "solid" : "display-p3:0.02262,0.00571,0.00521,1.00000"
+          },
+          "glass" : false,
+          "image-name" : "Logo Abits 2.png",
+          "name" : "Logo Abits 2",
+          "position" : {
+            "scale" : 1.57,
+            "translation-in-points" : [
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "blend-mode" : "normal",
+          "fill" : {
+            "linear-gradient" : [
+              "display-p3:1.00000,1.00000,1.00000,1.00000",
+              "display-p3:0.26052,0.26052,0.26052,1.00000"
+            ],
+            "orientation" : {
+              "start" : {
+                "x" : 0.5,
+                "y" : -0.38226818647541005
+              },
+              "stop" : {
+                "x" : 0.5,
+                "y" : 1.2631252744437942
+              }
+            }
+          },
+          "glass" : true,
+          "hidden" : true,
+          "image-name" : "Logo Abits.png",
+          "name" : "Logo Abits",
+          "opacity" : 1,
+          "position" : {
+            "scale" : 1.4,
+            "translation-in-points" : [
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "glass" : false,
+          "hidden" : true,
+          "image-name" : "94440d0391170c194f2c261ed529828d.png",
+          "name" : "94440d0391170c194f2c261ed529828d",
+          "position" : {
+            "scale" : 1.56,
+            "translation-in-points" : [
+              0.07000000000005002,
+              -27.85312500000009
+            ]
+          }
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
+  }
+}
