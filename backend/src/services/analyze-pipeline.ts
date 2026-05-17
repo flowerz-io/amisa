@@ -5,6 +5,7 @@ import type {
 } from '../types.js';
 import { analyzeFashionVision } from './vision-openai.js';
 import { buildPrimaryQueries } from '../lib/query-from-vision.js';
+import { isProviderRunnable } from '../lib/provider-env.js';
 import {
   failedFlagsFromResults,
   mergeAndCapListings,
@@ -13,27 +14,15 @@ import {
   type ProviderName,
 } from '../lib/parallel-providers.js';
 import {
-  searchDepopStub,
-  searchEbayStub,
-  searchGrailedStub,
-  searchLeboncoinStub,
-  searchVintedStub,
-} from './marketplace-stubs.js';
+  searchDepopListings,
+  searchEbayListings,
+  searchGrailedListings,
+  searchLeboncoinListings,
+  searchVintedListings,
+} from './marketplace-search.js';
 
 const GLOBAL_WAIT_MS = 15_000;
 const MIN_PROVIDERS_DONE = 2;
-
-async function runQueriesOnProvider(
-  fn: (queries: string[]) => Promise<MarketplaceListingDTO[]>,
-  queries: string[]
-): Promise<MarketplaceListingDTO[]> {
-  const all: MarketplaceListingDTO[] = [];
-  for (const q of queries) {
-    const chunk = await fn([q]);
-    all.push(...chunk);
-  }
-  return all;
-}
 
 export async function runAnalyzePipeline(
   body: AnalyzeSearchBody
@@ -64,41 +53,48 @@ export async function runAnalyzePipeline(
     run: () => Promise<MarketplaceListingDTO[]>;
   }> = [];
 
-  if (enabled.has('vinted')) {
+  if (isProviderRunnable('vinted', enabled)) {
     tasks.push({
       name: 'vinted',
       timeoutMs: PROVIDER_TIMEOUT_MS.vinted,
-      run: () => runQueriesOnProvider(searchVintedStub, queries),
+      run: () => searchVintedListings(queries),
     });
   }
-  if (enabled.has('ebay')) {
+  if (isProviderRunnable('ebay', enabled)) {
     tasks.push({
       name: 'ebay',
       timeoutMs: PROVIDER_TIMEOUT_MS.ebay,
-      run: () => runQueriesOnProvider(searchEbayStub, queries),
+      run: () => searchEbayListings(queries),
     });
   }
-  if (enabled.has('grailed')) {
+  if (isProviderRunnable('grailed', enabled)) {
     tasks.push({
       name: 'grailed',
       timeoutMs: PROVIDER_TIMEOUT_MS.grailed,
-      run: () => runQueriesOnProvider(searchGrailedStub, queries),
+      run: () => searchGrailedListings(queries),
     });
   }
-  if (enabled.has('depop')) {
+  if (isProviderRunnable('depop', enabled)) {
     tasks.push({
       name: 'depop',
       timeoutMs: PROVIDER_TIMEOUT_MS.depop,
-      run: () => runQueriesOnProvider(searchDepopStub, queries),
+      run: () => searchDepopListings(queries),
     });
   }
-  if (enabled.has('leboncoin')) {
+  if (isProviderRunnable('leboncoin', enabled)) {
     tasks.push({
       name: 'leboncoin',
       timeoutMs: PROVIDER_TIMEOUT_MS.leboncoin,
-      run: () => runQueriesOnProvider(searchLeboncoinStub, queries),
+      run: () => searchLeboncoinListings(queries),
     });
   }
+
+  console.log(
+    '[ANALYZE_SEARCH] provider_tasks=',
+    tasks.map((t) => t.name),
+    'queries=',
+    queries
+  );
 
   const mergeT0 = performance.now();
   const { snapshot: providerResults, moreProvidersPending } =

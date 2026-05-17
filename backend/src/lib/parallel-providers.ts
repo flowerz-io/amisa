@@ -71,16 +71,28 @@ export async function runProvidersWithEarlyCutoff(
         const listings = await withTimeout(t.timeoutMs, t.name, t.run);
         const ms = Math.round(performance.now() - p0);
         results.push({ name: t.name, ms, listings, status: 'ok' });
-        console.log(`[PERF] ${t.name}=${ms}ms results=${listings.length}`);
+        console.log(
+          `[PERF] ${t.name}=${ms}ms results=${listings.length} (see PROVIDER_SUCCESS for details)`
+        );
       } catch (e) {
         const ms = Math.round(performance.now() - p0);
         const msg = e instanceof Error ? e.message : String(e);
-        const status = msg.includes('timeout:') ? 'timeout' : 'error';
+        const isTimeout =
+          /\btimeout after \d+ms\b/i.test(msg) || msg.includes('timeout:');
+        const status: ProviderTaskResult['status'] = isTimeout
+          ? 'timeout'
+          : 'error';
         results.push({ name: t.name, ms, listings: [], status });
+        console.error(`[PROVIDER_REJECTED] ${t.name}`, {
+          status,
+          durationMs: ms,
+          reason: msg,
+          stack: e instanceof Error ? e.stack : undefined,
+        });
         if (status === 'timeout') {
-          console.log(`[PERF] ${t.name}=timeout`);
+          console.log(`[PERF] ${t.name}=timeout after ${ms}ms`);
         } else {
-          console.log(`[PERF] ${t.name}=error`);
+          console.log(`[PERF] ${t.name}=error after ${ms}ms`);
         }
       } finally {
         completed += 1;
