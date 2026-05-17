@@ -153,7 +153,8 @@ extension AnalyzeSearchResponse {
             ),
             providerAvailability: nil,
             initialResponseTimeMs: 58900,
-            providerCounts: ProviderCountsDTO(vinted: 120, grailed: 1750, ebay: 116, leboncoin: 0, depop: 10)
+            providerCounts: ProviderCountsDTO(vinted: 120, grailed: 1750, ebay: 116, leboncoin: 0, depop: 10),
+            moreProvidersPending: false
         )
     }
 }

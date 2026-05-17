@@ -1,19 +1,6 @@
 {
   "fill" : {
-    "linear-gradient" : [
-      "display-p3:0.12739,0.18914,0.78935,1.00000",
-      "display-p3:0.60784,0.64706,0.96471,1.00000"
-    ],
-    "orientation" : {
-      "start" : {
-        "x" : 0.5,
-        "y" : 0
-      },
-      "stop" : {
-        "x" : 0.5,
-        "y" : 0.7
-      }
-    }
+    "solid" : "display-p3:0.51895,0.50786,0.48600,1.00000"
   },
   "groups" : [
     {
@@ -22,7 +9,7 @@
           "fill" : {
             "solid" : "display-p3:1.00000,1.00000,1.00000,1.00000"
           },
-          "glass" : false,
+          "glass" : true,
           "image-name" : "5496173-200.png",
           "name" : "5496173-200",
           "position" : {
@@ -38,7 +25,7 @@
           "fill" : {
             "solid" : "display-p3:1.00000,1.00000,1.00000,1.00000"
           },
-          "glass" : false,
+          "glass" : true,
           "hidden" : false,
           "image-name" : "Whisk_60e7bf4ecc5899db5aa45eef4851bf10dr.png",
           "name" : "Whisk_60e7bf4ecc5899db5aa45eef4851bf10dr",
@@ -69,7 +56,7 @@
           "fill" : {
             "solid" : "display-p3:0.02262,0.00571,0.00521,1.00000"
           },
-          "glass" : false,
+          "glass" : true,
           "image-name" : "Logo Abits 2.png",
           "name" : "Logo Abits 2",
           "position" : {
@@ -110,6 +97,14 @@
               0
             ]
           }
+        },
+        {
+          "blend-mode" : "normal",
+          "fill" : "automatic",
+          "glass" : false,
+          "hidden" : false,
+          "image-name" : "Rectangle 29.png",
+          "name" : "Rectangle 29"
         },
         {
           "glass" : false,

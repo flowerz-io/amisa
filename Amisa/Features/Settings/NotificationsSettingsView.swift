@@ -26,7 +26,7 @@ struct NotificationsSettingsView: View {
                     )
                     lumaDivider()
                     notifRow(
-                        icon: "arrow.down.circle.fill", color: .blue,
+                        icon: "arrow.down.circle.fill", color: BrandColors.secondaryOrange,
                         label: "Alertes baisse de prix",
                         subtitle: "Quand un article suit une baisse",
                         binding: $priceDrop

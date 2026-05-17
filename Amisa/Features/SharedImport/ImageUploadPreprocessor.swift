@@ -20,8 +20,10 @@ enum ImageUploadPreprocessorError: LocalizedError {
 
 /// Redimensionnement + JPEG avec boucle de compression pour viser un payload léger.
 enum ImageUploadPreprocessor {
-    /// Largeur max côté pixel (points × scale pris en compte via `UIImage`).
-    static let maxPixelWidth: CGFloat = 1200
+    /// Largeur max sur le **plus long** côté (px), avant envoi `analyze-search`.
+    static let maxLongSidePixels: CGFloat = 1024
+    /// Alias historique — conservé pour compatibilité ; correspond au côté long.
+    static var maxPixelWidth: CGFloat { maxLongSidePixels }
     static let initialCompressionQuality: CGFloat = 0.75
     /// Cible confort pour éviter 413 côté proxy.
     static let targetMaxBytes = 500_000
@@ -32,13 +34,20 @@ enum ImageUploadPreprocessor {
 
     /// Retourne des données JPEG prêtes pour `analyze-search`.
     static func prepareForUpload(_ image: UIImage) throws -> Data {
-        let scaled = resizeIfNeeded(image, maxWidth: maxPixelWidth)
+        let scaled = resizeIfNeeded(image, maxLongSide: maxLongSidePixels)
         var quality = initialCompressionQuality
         var data = scaled.jpegData(compressionQuality: quality) ?? Data()
         if data.isEmpty { throw ImageUploadPreprocessorError.couldNotEncode }
 
         var working = scaled
-        var w = min(maxPixelWidth, max(working.size.width * working.scale, 1))
+        var w = min(
+            maxLongSidePixels,
+            max(
+                working.size.width * working.scale,
+                working.size.height * working.scale,
+                1
+            )
+        )
 
         while data.count > targetMaxBytes {
             if quality > minCompressionQuality + 0.04 {
@@ -51,7 +60,7 @@ enum ImageUploadPreprocessor {
 
             if w > minPixelWidth + 40 {
                 w *= 0.85
-                working = resizeIfNeeded(image, maxWidth: w)
+                working = resizeIfNeeded(image, maxLongSide: w)
                 quality = min(initialCompressionQuality, quality + 0.05)
                 if let d = working.jpegData(compressionQuality: quality), !d.isEmpty {
                     data = d
@@ -69,16 +78,27 @@ enum ImageUploadPreprocessor {
         }
 
         if data.isEmpty { throw ImageUploadPreprocessorError.couldNotEncode }
+
+        let kb = Double(data.count) / 1024.0
+        let mb = kb / 1024.0
+        let sizeStr = mb >= 0.01 ? String(format: "%.2f MB", mb) : String(format: "%.0f KB", kb)
+        #if DEBUG
+        print("[IMAGE_UPLOAD] payload=\(data.count) bytes (~\(sizeStr)) quality=\(quality) longSide≤\(Int(maxLongSidePixels))px")
+        #else
+        NSLog("[IMAGE_UPLOAD] %llu bytes (~%@)", UInt64(data.count), sizeStr)
+        #endif
         return data
     }
 
-    private static func resizeIfNeeded(_ image: UIImage, maxWidth: CGFloat) -> UIImage {
+    /// Agrandit si bonne orientation : le **plus long** côté ne dépasse pas `maxLongSide` px.
+    private static func resizeIfNeeded(_ image: UIImage, maxLongSide: CGFloat) -> UIImage {
         let w = image.size.width * image.scale
         let h = image.size.height * image.scale
-        guard w > maxWidth, maxWidth > 0 else { return image }
+        let longSide = max(w, h)
+        guard longSide > maxLongSide, maxLongSide > 0 else { return image }
 
-        let ratio = maxWidth / w
-        let newSize = CGSize(width: maxWidth, height: max(1, h * ratio))
+        let ratio = maxLongSide / longSide
+        let newSize = CGSize(width: max(1, w * ratio), height: max(1, h * ratio))
 
         let format = UIGraphicsImageRendererFormat.default()
         format.scale = 1

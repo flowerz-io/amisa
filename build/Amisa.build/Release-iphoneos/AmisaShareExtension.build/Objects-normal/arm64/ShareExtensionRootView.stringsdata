@@ -1,0 +1,72 @@
+{
+  "source": "/Users/jonas/Documents/App/Amisa/AmisaShareExtension/ShareExtensionRootView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Amisa",
+        "location": {
+          "startingColumn": 52,
+          "startingLine": 21
+        }
+      },
+      {
+        "comment": "",
+        "key": "Fermer",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 25
+        }
+      },
+      {
+        "comment": "",
+        "key": "Préparation du partage…",
+        "location": {
+          "startingColumn": 40,
+          "startingLine": 43
+        }
+      },
+      {
+        "comment": "",
+        "key": "Tu peux déplacer ou redimensionner la zone comme avec une photo classique.",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 124
+        }
+      },
+      {
+        "comment": "",
+        "key": "Analyser",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 135
+        }
+      },
+      {
+        "comment": "",
+        "key": "Review",
+        "location": {
+          "startingColumn": 48,
+          "startingLine": 162
+        }
+      },
+      {
+        "comment": "",
+        "key": "Fermer",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 188
+        }
+      },
+      {
+        "comment": "",
+        "key": "Amisa",
+        "location": {
+          "startingColumn": 40,
+          "startingLine": 194
+        }
+      }
+    ]
+  },
+  "version": 1
+}

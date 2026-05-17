@@ -115,11 +115,11 @@ struct ShareExtensionAnalyzeChromeButton: View {
     private var glowGradient: AngularGradient {
         AngularGradient(
             colors: [
-                Color.accentColor.opacity(0.25),
-                Color.orange.opacity(0.85),
-                Color.red.opacity(0.9),
-                Color.accentColor.opacity(0.75),
-                Color.accentColor.opacity(0.25),
+                ShareExtensionBrandColors.primaryRed.opacity(0.22),
+                ShareExtensionBrandColors.secondaryOrange.opacity(0.88),
+                ShareExtensionBrandColors.primaryRed.opacity(0.92),
+                ShareExtensionBrandColors.secondaryOrange.opacity(0.55),
+                ShareExtensionBrandColors.primaryRed.opacity(0.22),
             ],
             center: .center,
             angle: .degrees(rotation)

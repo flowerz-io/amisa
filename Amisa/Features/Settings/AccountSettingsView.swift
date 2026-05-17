@@ -17,7 +17,7 @@ struct AccountSettingsView: View {
         ScrollView {
             VStack(spacing: 28) {
                 lumaSection("Informations") {
-                    accountRow(icon: "envelope.fill",   color: .blue,   label: "E-mail",           value: email.isEmpty   ? "—" : email)
+                    accountRow(icon: "envelope.fill",   color: BrandColors.secondaryOrange, label: "E-mail",           value: email.isEmpty   ? "—" : email)
                     lumaDivider()
                     accountRow(icon: "phone.fill",      color: .green,  label: "Téléphone",        value: phone.isEmpty   ? "—" : phone)
                     lumaDivider()

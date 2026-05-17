@@ -1,13 +1,8 @@
 import 'dotenv/config';
 
-import { existsSync } from 'node:fs';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
-import { chromium } from 'playwright';
-import {
-  visionProviderName,
-  logVisionProviderDiagnostic,
-} from './config.js';
+import { logVisionProviderDiagnostic } from './config.js';
 import { analyzeSearchRoute } from './routes/analyze-search.js';
 import { resolveSharedUrlRoute } from './routes/resolve-shared-url.js';
 import { vintedListingsRoute } from './routes/vinted-listings.js';
@@ -20,21 +15,17 @@ import { searchSessionsRoute } from './routes/search-sessions.js';
 import { PROVIDERS_ENABLED } from './providers-config.js';
 
 logVisionProviderDiagnostic();
-const grailedBrowserPath = chromium.executablePath();
-console.log(
-  `[GRAILED_BROWSER_READY] ${existsSync(grailedBrowserPath) ? 'yes' : 'no'} path=${grailedBrowserPath}`
-);
-console.log(
-  `[LEBONCOIN_BROWSER_READY] ${existsSync(grailedBrowserPath) ? 'yes' : 'no'} path=${grailedBrowserPath}`
-);
-console.log(
-  `[DEPOP_BROWSER_READY] ${existsSync(grailedBrowserPath) ? 'yes' : 'no'} path=${grailedBrowserPath}`
-);
 console.log('[PROVIDERS_ENABLED]', PROVIDERS_ENABLED);
 
 const app = Fastify({ logger: true });
 
+app.addHook('onRequest', async (request, _reply) => {
+  console.log(`[REQ] ${request.method} ${request.url}`);
+});
+
 await app.register(cors, { origin: true });
+
+app.get('/health', async () => ({ ok: true, service: 'amisa-backend' }));
 
 app.register(analyzeSearchRoute, { prefix: '/' });
 app.register(searchSessionsRoute, { prefix: '/' });
@@ -47,7 +38,11 @@ app.register(depopListingsRoute, { prefix: '/' });
 app.register(searchMoreRoute, { prefix: '/' });
 
 const port = parseInt(process.env.PORT ?? '3000', 10);
+console.log('Amisa API running');
 await app.listen({ port, host: '0.0.0.0' });
 
-console.log(`Amisa API running on http://localhost:${port}`);
-console.log(`VISION_PROVIDER=${visionProviderName}`);
+console.log('[Amisa API] base ready');
+console.log(
+  '[Amisa API] routes: GET /health, POST /analyze-search, POST /resolve-shared-url, POST /search-sessions'
+);
+console.log(`[Amisa API] listening on http://localhost:${port}`);

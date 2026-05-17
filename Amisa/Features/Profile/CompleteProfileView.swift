@@ -143,7 +143,14 @@ struct CompleteProfileView: View {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
-                        .background(canContinue && !isSaving ? Color.accentColor : Color.accentColor.opacity(0.45))
+                        .background {
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .fill(
+                                    canContinue && !isSaving
+                                        ? AnyShapeStyle(BrandColors.primaryLinearGradient)
+                                        : AnyShapeStyle(BrandColors.primaryDisabled)
+                                )
+                        }
                         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     }
                     .buttonStyle(.plain)

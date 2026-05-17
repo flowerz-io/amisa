@@ -1,0 +1,16 @@
+{
+  "source": "/Users/jonas/Documents/App/Amisa/AmisaShareExtension/ShareExtensionPrimaryActionButton.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Fermer",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 96
+        }
+      }
+    ]
+  },
+  "version": 1
+}

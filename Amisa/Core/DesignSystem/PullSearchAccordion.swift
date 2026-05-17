@@ -93,7 +93,7 @@ struct PullSearchAccordion: View {
                     } else {
                         HStack(spacing: 12) {
                             ProgressView()
-                                .tint(.red)
+                                .tint(Color.accentColor)
 
                             Text(
                                 isRefreshing

@@ -1,0 +1,12 @@
+{
+  "/Users/jonas/Documents/App/Amisa/AmisaShareExtension/GoogleLensCropView.swift" : {
+    "abi-baseline-json" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/AmisaShareExtension.build/Objects-normal/arm64/AmisaShareExtension.abi.json",
+    "const-values" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/AmisaShareExtension.build/Objects-normal/arm64/AmisaShareExtension-primary.swiftconstvalues",
+    "dependencies" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/AmisaShareExtension.build/Objects-normal/arm64/AmisaShareExtension-primary.d",
+    "diagnostics" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/AmisaShareExtension.build/Objects-normal/arm64/AmisaShareExtension-primary.dia",
+    "objc-header" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/AmisaShareExtension.build/Objects-normal/arm64/AmisaShareExtension-Swift.h",
+    "swiftdoc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/AmisaShareExtension.build/Objects-normal/arm64/AmisaShareExtension.swiftdoc",
+    "swiftmodule" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/AmisaShareExtension.build/Objects-normal/arm64/AmisaShareExtension.swiftmodule",
+    "swiftsourceinfo" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/AmisaShareExtension.build/Objects-normal/arm64/AmisaShareExtension.swiftsourceinfo"
+  }
+}

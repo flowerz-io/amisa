@@ -1,0 +1,16 @@
+{
+  "source": "/Users/jonas/Documents/App/Amisa/AmisaShareExtension/ShareExtensionAnalysisLoading.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Recherche des annonces similaires…",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 117
+        }
+      }
+    ]
+  },
+  "version": 1
+}

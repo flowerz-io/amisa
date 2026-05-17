@@ -55,19 +55,19 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		DD2E04752F61863100B107F0 /* Exceptions for "AmisaShareExtension" folder in "AmisaShareExtension" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = DD2E04692F61863000B107F0 /* AmisaShareExtension */;
-		};
-		DDAC12FE2F630DC7006BF7BF /* Exceptions for "Amisa" folder in "Amisa" target */ = {
+		DD2E04802F61863100B107F0 /* Exceptions for "Amisa" folder in "Amisa" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
 			target = DD2E043B2F6184ED00B107F0 /* Amisa */;
+		};
+		DD2E04812F61863100B107F0 /* Exceptions for "AmisaShareExtension" folder in "AmisaShareExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = DD2E04692F61863000B107F0 /* AmisaShareExtension */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -75,7 +75,7 @@
 		DD2E043E2F6184ED00B107F0 /* Amisa */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				DDAC12FE2F630DC7006BF7BF /* Exceptions for "Amisa" folder in "Amisa" target */,
+				DD2E04802F61863100B107F0 /* Exceptions for "Amisa" folder in "Amisa" target */,
 			);
 			path = Amisa;
 			sourceTree = "<group>";
@@ -93,7 +93,7 @@
 		DD2E046B2F61863000B107F0 /* AmisaShareExtension */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				DD2E04752F61863100B107F0 /* Exceptions for "AmisaShareExtension" folder in "AmisaShareExtension" target */,
+				DD2E04812F61863100B107F0 /* Exceptions for "AmisaShareExtension" folder in "AmisaShareExtension" target */,
 			);
 			path = AmisaShareExtension;
 			sourceTree = "<group>";
@@ -247,6 +247,11 @@
 				TargetAttributes = {
 					DD2E043B2F6184ED00B107F0 = {
 						CreatedOnToolsVersion = 26.0.1;
+						SystemCapabilities = {
+							com.apple.ApplicationGroups.iOS = {
+								enabled = 1;
+							};
+						};
 					};
 					DD2E04482F6184F000B107F0 = {
 						CreatedOnToolsVersion = 26.0.1;
@@ -258,6 +263,11 @@
 					};
 					DD2E04692F61863000B107F0 = {
 						CreatedOnToolsVersion = 26.0.1;
+						SystemCapabilities = {
+							com.apple.ApplicationGroups.iOS = {
+								enabled = 1;
+							};
+						};
 					};
 				};
 			};

@@ -181,7 +181,7 @@ struct ScanFloatingButton: View {
         Button(action: action) {
             ZStack {
                 Circle()
-                    .fill(Color.accentColor)
+                    .fill(BrandColors.primaryLinearGradient)
                     .overlay(
                         Circle().stroke(Color.white.opacity(0.22), lineWidth: 1)
                     )

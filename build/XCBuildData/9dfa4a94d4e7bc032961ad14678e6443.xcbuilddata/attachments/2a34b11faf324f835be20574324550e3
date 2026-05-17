@@ -1,0 +1,16 @@
+{
+  "" : {
+    "const-values" : "/Users/jonas/Library/Developer/Xcode/DerivedData/Amisa-ccgabmsowvcrildywanqmdnzgonu/SourcePackages/checkouts/xctest-dynamic-overlay/build/xctest-dynamic-overlay.build/Release-iphoneos/IssueReportingPackageSupport.build/Objects-normal/arm64/IssueReportingPackageSupport-primary.swiftconstvalues",
+    "dependencies" : "/Users/jonas/Library/Developer/Xcode/DerivedData/Amisa-ccgabmsowvcrildywanqmdnzgonu/SourcePackages/checkouts/xctest-dynamic-overlay/build/xctest-dynamic-overlay.build/Release-iphoneos/IssueReportingPackageSupport.build/Objects-normal/arm64/IssueReportingPackageSupport-primary.d",
+    "diagnostics" : "/Users/jonas/Library/Developer/Xcode/DerivedData/Amisa-ccgabmsowvcrildywanqmdnzgonu/SourcePackages/checkouts/xctest-dynamic-overlay/build/xctest-dynamic-overlay.build/Release-iphoneos/IssueReportingPackageSupport.build/Objects-normal/arm64/IssueReportingPackageSupport-primary.dia",
+    "emit-module-dependencies" : "/Users/jonas/Library/Developer/Xcode/DerivedData/Amisa-ccgabmsowvcrildywanqmdnzgonu/SourcePackages/checkouts/xctest-dynamic-overlay/build/xctest-dynamic-overlay.build/Release-iphoneos/IssueReportingPackageSupport.build/Objects-normal/arm64/IssueReportingPackageSupport-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/jonas/Library/Developer/Xcode/DerivedData/Amisa-ccgabmsowvcrildywanqmdnzgonu/SourcePackages/checkouts/xctest-dynamic-overlay/build/xctest-dynamic-overlay.build/Release-iphoneos/IssueReportingPackageSupport.build/Objects-normal/arm64/IssueReportingPackageSupport-primary-emit-module.dia",
+    "pch" : "/Users/jonas/Library/Developer/Xcode/DerivedData/Amisa-ccgabmsowvcrildywanqmdnzgonu/SourcePackages/checkouts/xctest-dynamic-overlay/build/xctest-dynamic-overlay.build/Release-iphoneos/IssueReportingPackageSupport.build/Objects-normal/arm64/IssueReportingPackageSupport-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/jonas/Library/Developer/Xcode/DerivedData/Amisa-ccgabmsowvcrildywanqmdnzgonu/SourcePackages/checkouts/xctest-dynamic-overlay/build/xctest-dynamic-overlay.build/Release-iphoneos/IssueReportingPackageSupport.build/Objects-normal/arm64/IssueReportingPackageSupport-primary.swiftdeps"
+  },
+  "/Users/jonas/Library/Developer/Xcode/DerivedData/Amisa-ccgabmsowvcrildywanqmdnzgonu/SourcePackages/checkouts/xctest-dynamic-overlay/Sources/IssueReportingPackageSupport/_Test.swift" : {
+    "index-unit-output-path" : "/xctest-dynamic-overlay.build/Release-iphoneos/IssueReportingPackageSupport.build/Objects-normal/arm64/_Test.o",
+    "llvm-bc" : "/Users/jonas/Library/Developer/Xcode/DerivedData/Amisa-ccgabmsowvcrildywanqmdnzgonu/SourcePackages/checkouts/xctest-dynamic-overlay/build/xctest-dynamic-overlay.build/Release-iphoneos/IssueReportingPackageSupport.build/Objects-normal/arm64/_Test.bc",
+    "object" : "/Users/jonas/Library/Developer/Xcode/DerivedData/Amisa-ccgabmsowvcrildywanqmdnzgonu/SourcePackages/checkouts/xctest-dynamic-overlay/build/xctest-dynamic-overlay.build/Release-iphoneos/IssueReportingPackageSupport.build/Objects-normal/arm64/_Test.o"
+  }
+}

@@ -28,8 +28,8 @@ enum ReadableDynamicColor {
     static let softBlack  = Color.black.opacity(0.88)
     /// Accent chaud — or/crème premium.
     static let warmAccent = Color(red: 0.86, green: 0.68, blue: 0.46)
-    /// Accent froid — bleu ciel éditorial.
-    static let coolAccent = Color(red: 0.42, green: 0.62, blue: 0.95)
+    /// Accent éditorial — orange marque atténué (highlights cartes dynamiques).
+    static let coolAccent = Color(red: 232 / 255, green: 108 / 255, blue: 38 / 255).opacity(0.85)
 
     // MARK: - Clamping
 

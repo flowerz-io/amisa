@@ -1,0 +1,26 @@
+{
+  "" : {
+    "const-values" : "/Users/jonas/Library/Developer/Xcode/DerivedData/Amisa-ccgabmsowvcrildywanqmdnzgonu/SourcePackages/checkouts/supabase-swift/build/Supabase.build/Release-iphoneos/Functions.build/Objects-normal/arm64/Functions-primary.swiftconstvalues",
+    "dependencies" : "/Users/jonas/Library/Developer/Xcode/DerivedData/Amisa-ccgabmsowvcrildywanqmdnzgonu/SourcePackages/checkouts/supabase-swift/build/Supabase.build/Release-iphoneos/Functions.build/Objects-normal/arm64/Functions-primary.d",
+    "diagnostics" : "/Users/jonas/Library/Developer/Xcode/DerivedData/Amisa-ccgabmsowvcrildywanqmdnzgonu/SourcePackages/checkouts/supabase-swift/build/Supabase.build/Release-iphoneos/Functions.build/Objects-normal/arm64/Functions-primary.dia",
+    "emit-module-dependencies" : "/Users/jonas/Library/Developer/Xcode/DerivedData/Amisa-ccgabmsowvcrildywanqmdnzgonu/SourcePackages/checkouts/supabase-swift/build/Supabase.build/Release-iphoneos/Functions.build/Objects-normal/arm64/Functions-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/jonas/Library/Developer/Xcode/DerivedData/Amisa-ccgabmsowvcrildywanqmdnzgonu/SourcePackages/checkouts/supabase-swift/build/Supabase.build/Release-iphoneos/Functions.build/Objects-normal/arm64/Functions-primary-emit-module.dia",
+    "pch" : "/Users/jonas/Library/Developer/Xcode/DerivedData/Amisa-ccgabmsowvcrildywanqmdnzgonu/SourcePackages/checkouts/supabase-swift/build/Supabase.build/Release-iphoneos/Functions.build/Objects-normal/arm64/Functions-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/jonas/Library/Developer/Xcode/DerivedData/Amisa-ccgabmsowvcrildywanqmdnzgonu/SourcePackages/checkouts/supabase-swift/build/Supabase.build/Release-iphoneos/Functions.build/Objects-normal/arm64/Functions-primary.swiftdeps"
+  },
+  "/Users/jonas/Library/Developer/Xcode/DerivedData/Amisa-ccgabmsowvcrildywanqmdnzgonu/SourcePackages/checkouts/supabase-swift/Sources/Functions/Exports.swift" : {
+    "index-unit-output-path" : "/Supabase.build/Release-iphoneos/Functions.build/Objects-normal/arm64/Exports.o",
+    "llvm-bc" : "/Users/jonas/Library/Developer/Xcode/DerivedData/Amisa-ccgabmsowvcrildywanqmdnzgonu/SourcePackages/checkouts/supabase-swift/build/Supabase.build/Release-iphoneos/Functions.build/Objects-normal/arm64/Exports.bc",
+    "object" : "/Users/jonas/Library/Developer/Xcode/DerivedData/Amisa-ccgabmsowvcrildywanqmdnzgonu/SourcePackages/checkouts/supabase-swift/build/Supabase.build/Release-iphoneos/Functions.build/Objects-normal/arm64/Exports.o"
+  },
+  "/Users/jonas/Library/Developer/Xcode/DerivedData/Amisa-ccgabmsowvcrildywanqmdnzgonu/SourcePackages/checkouts/supabase-swift/Sources/Functions/FunctionsClient.swift" : {
+    "index-unit-output-path" : "/Supabase.build/Release-iphoneos/Functions.build/Objects-normal/arm64/FunctionsClient.o",
+    "llvm-bc" : "/Users/jonas/Library/Developer/Xcode/DerivedData/Amisa-ccgabmsowvcrildywanqmdnzgonu/SourcePackages/checkouts/supabase-swift/build/Supabase.build/Release-iphoneos/Functions.build/Objects-normal/arm64/FunctionsClient.bc",
+    "object" : "/Users/jonas/Library/Developer/Xcode/DerivedData/Amisa-ccgabmsowvcrildywanqmdnzgonu/SourcePackages/checkouts/supabase-swift/build/Supabase.build/Release-iphoneos/Functions.build/Objects-normal/arm64/FunctionsClient.o"
+  },
+  "/Users/jonas/Library/Developer/Xcode/DerivedData/Amisa-ccgabmsowvcrildywanqmdnzgonu/SourcePackages/checkouts/supabase-swift/Sources/Functions/Types.swift" : {
+    "index-unit-output-path" : "/Supabase.build/Release-iphoneos/Functions.build/Objects-normal/arm64/Types.o",
+    "llvm-bc" : "/Users/jonas/Library/Developer/Xcode/DerivedData/Amisa-ccgabmsowvcrildywanqmdnzgonu/SourcePackages/checkouts/supabase-swift/build/Supabase.build/Release-iphoneos/Functions.build/Objects-normal/arm64/Types.bc",
+    "object" : "/Users/jonas/Library/Developer/Xcode/DerivedData/Amisa-ccgabmsowvcrildywanqmdnzgonu/SourcePackages/checkouts/supabase-swift/build/Supabase.build/Release-iphoneos/Functions.build/Objects-normal/arm64/Types.o"
+  }
+}

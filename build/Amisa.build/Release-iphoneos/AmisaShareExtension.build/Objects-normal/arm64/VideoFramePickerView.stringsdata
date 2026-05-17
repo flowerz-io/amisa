@@ -1,0 +1,56 @@
+{
+  "source": "/Users/jonas/Documents/App/Amisa/AmisaShareExtension/VideoFramePickerView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Extraction des frames vidéo…",
+        "location": {
+          "startingColumn": 48,
+          "startingLine": 39
+        }
+      },
+      {
+        "comment": "",
+        "key": "Utiliser cette frame",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 76
+        }
+      },
+      {
+        "comment": "",
+        "key": "Annuler",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 82
+        }
+      },
+      {
+        "comment": "",
+        "key": "Aucune frame exploitable n’a été extraite.",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 159
+        }
+      },
+      {
+        "comment": "",
+        "key": "Impossible de lire la vidéo.",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 116
+        }
+      },
+      {
+        "comment": "",
+        "key": "Impossible de lire la vidéo.",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 110
+        }
+      }
+    ]
+  },
+  "version": 1
+}

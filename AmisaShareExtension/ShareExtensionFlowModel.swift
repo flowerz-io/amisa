@@ -77,7 +77,7 @@ final class ShareFlowModel: ObservableObject {
     /// Après recadrage : enregistre l’image dans l’App Group, lance Railway (`POST /search-sessions`), puis teaser + polling.
     func commitCropAndStartBackendSearch() {
         guard let cropped = cropController?.exportCroppedImage(),
-              let data = cropped.jpegData(compressionQuality: 0.88) else {
+              let data = try? ImageUploadPreprocessor.prepareForUpload(cropped) else {
             state = .error(message: "Impossible d’exporter l’image recadrée.")
             return
         }

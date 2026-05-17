@@ -1,13 +1,8 @@
-//
-//  AmisaAppDelegate.swift
-//  Balibu
-//
-//  Délégation UserNotifications : tap sur la notification + présentation en foreground.
-//
-
 import UIKit
 import UserNotifications
 
+/// Enregistrez le délégué dans votre `AmisaApp` :
+/// `@UIApplicationDelegateAdaptor(AmisaAppDelegate.self) private var appDelegate`
 final class AmisaAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     weak var router: Router?
 
@@ -17,6 +12,7 @@ final class AmisaAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificatio
     ) -> Bool {
         LegacyAmisaStorageMigration.runAtLaunch()
         UNUserNotificationCenter.current().delegate = self
+        AppNetworkingBootstrap.onAppLaunch()
         return true
     }
 

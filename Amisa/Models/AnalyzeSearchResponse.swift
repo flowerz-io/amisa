@@ -23,6 +23,8 @@ struct AnalyzeSearchResponse: Decodable {
     let providerAvailability: ProviderAvailabilityMapDTO?
     let initialResponseTimeMs: Int?
     let providerCounts: ProviderCountsDTO?
+    /// Réponse « vague » : d’autres sources marketplace n’étaient pas encore toutes intégrées au snapshot (early cutoff côté serveur).
+    let moreProvidersPending: Bool?
 
     init(
         visionResult: FashionVisionResult,
@@ -37,7 +39,8 @@ struct AnalyzeSearchResponse: Decodable {
         depopSearchFailed: Bool? = nil,
         providerAvailability: ProviderAvailabilityMapDTO? = nil,
         initialResponseTimeMs: Int? = nil,
-        providerCounts: ProviderCountsDTO? = nil
+        providerCounts: ProviderCountsDTO? = nil,
+        moreProvidersPending: Bool? = nil
     ) {
         self.visionResult = visionResult
         self.generatedQueries = generatedQueries
@@ -52,5 +55,6 @@ struct AnalyzeSearchResponse: Decodable {
         self.providerAvailability = providerAvailability
         self.initialResponseTimeMs = initialResponseTimeMs
         self.providerCounts = providerCounts
+        self.moreProvidersPending = moreProvidersPending
     }
 }

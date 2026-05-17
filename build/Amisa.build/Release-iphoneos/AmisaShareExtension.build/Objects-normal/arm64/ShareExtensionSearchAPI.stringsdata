@@ -1,0 +1,32 @@
+{
+  "source": "/Users/jonas/Documents/App/Amisa/AmisaShareExtension/ShareExtensionSearchAPI.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Réponse invalide du serveur",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 74
+        }
+      },
+      {
+        "comment": "",
+        "key": "Erreur serveur (%lld)",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 76
+        }
+      },
+      {
+        "comment": "",
+        "key": "Données inattendues",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 78
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -1,0 +1,691 @@
+{
+  "" : {
+    "const-values" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/Amisa-primary.swiftconstvalues",
+    "dependencies" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/Amisa-primary.d",
+    "diagnostics" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/Amisa-primary.dia",
+    "emit-module-dependencies" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/Amisa-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/Amisa-primary-emit-module.dia",
+    "pch" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/Amisa-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/Amisa-primary.swiftdeps"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/AmisaApp.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AmisaApp.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AmisaApp.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AmisaApp.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/App/AppRouter.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AppRouter.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AppRouter.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AppRouter.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/App/MainTab.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/MainTab.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/MainTab.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/MainTab.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/App/MainTabContainerView.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/MainTabContainerView.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/MainTabContainerView.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/MainTabContainerView.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/App/Router.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/Router.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/Router.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/Router.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Core/Crop/GoogleLensCropView.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/GoogleLensCropView.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/GoogleLensCropView.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/GoogleLensCropView.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Core/DesignSystem/AdaptiveCardTextOverlay.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AdaptiveCardTextOverlay.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AdaptiveCardTextOverlay.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AdaptiveCardTextOverlay.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Core/DesignSystem/AmisaButtonStyle.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AmisaButtonStyle.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AmisaButtonStyle.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AmisaButtonStyle.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Core/DesignSystem/AmisaHomeChrome.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AmisaHomeChrome.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AmisaHomeChrome.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AmisaHomeChrome.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Core/DesignSystem/AmisaSemanticColors.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AmisaSemanticColors.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AmisaSemanticColors.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AmisaSemanticColors.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Core/DesignSystem/BrandColors.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/BrandColors.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/BrandColors.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/BrandColors.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Core/DesignSystem/DesignTokens.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/DesignTokens.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/DesignTokens.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/DesignTokens.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Core/DesignSystem/LiquidGlassComponents.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/LiquidGlassComponents.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/LiquidGlassComponents.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/LiquidGlassComponents.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Core/DesignSystem/PrimaryActionButton.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/PrimaryActionButton.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/PrimaryActionButton.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/PrimaryActionButton.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Core/DesignSystem/PullSearchAccordion.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/PullSearchAccordion.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/PullSearchAccordion.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/PullSearchAccordion.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Core/DesignSystem/ReadableDynamicColor.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ReadableDynamicColor.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ReadableDynamicColor.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ReadableDynamicColor.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Core/DesignSystem/ReviewChromeModifiers.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ReviewChromeModifiers.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ReviewChromeModifiers.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ReviewChromeModifiers.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Core/DesignSystem/ScanFrameOverlay.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ScanFrameOverlay.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ScanFrameOverlay.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ScanFrameOverlay.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Core/Formatting/PriceFormatting.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/PriceFormatting.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/PriceFormatting.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/PriceFormatting.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Core/Networking/APIConfig.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/APIConfig.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/APIConfig.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/APIConfig.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Core/Networking/AppConfig.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AppConfig.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AppConfig.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AppConfig.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Core/Networking/AppNetworkingBootstrap.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AppNetworkingBootstrap.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AppNetworkingBootstrap.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AppNetworkingBootstrap.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Core/Networking/DebugBackendHealthPing.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/DebugBackendHealthPing.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/DebugBackendHealthPing.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/DebugBackendHealthPing.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Core/Networking/SearchSessionRemoteModels.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SearchSessionRemoteModels.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SearchSessionRemoteModels.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SearchSessionRemoteModels.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Core/Notifications/AmisaAppDelegate.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AmisaAppDelegate.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AmisaAppDelegate.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AmisaAppDelegate.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Core/Notifications/AmisaNotificationIdentifiers.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AmisaNotificationIdentifiers.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AmisaNotificationIdentifiers.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AmisaNotificationIdentifiers.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Core/Notifications/NotificationManager.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/NotificationManager.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/NotificationManager.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/NotificationManager.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Core/Services/DynamicTabIconStore.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/DynamicTabIconStore.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/DynamicTabIconStore.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/DynamicTabIconStore.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Core/Services/ImagePaletteExtractor.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ImagePaletteExtractor.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ImagePaletteExtractor.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ImagePaletteExtractor.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Core/Services/LegacyAmisaStorageMigration.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/LegacyAmisaStorageMigration.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/LegacyAmisaStorageMigration.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/LegacyAmisaStorageMigration.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Core/Services/TabBarIconComposer.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/TabBarIconComposer.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/TabBarIconComposer.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/TabBarIconComposer.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Core/Utilities/EffectiveSafeArea.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/EffectiveSafeArea.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/EffectiveSafeArea.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/EffectiveSafeArea.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Core/Utilities/ScrollViewOffsetReader.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ScrollViewOffsetReader.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ScrollViewOffsetReader.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ScrollViewOffsetReader.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Core/Utils/LoadingView.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/LoadingView.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/LoadingView.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/LoadingView.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Extensions/UIImage+Helpers.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/UIImage+Helpers.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/UIImage+Helpers.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/UIImage+Helpers.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Extensions/URL+Helpers.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/URL+Helpers.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/URL+Helpers.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/URL+Helpers.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Auth/AuthBottomSheet.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AuthBottomSheet.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AuthBottomSheet.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AuthBottomSheet.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Camera/CameraCaptureView.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/CameraCaptureView.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/CameraCaptureView.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/CameraCaptureView.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Camera/CameraPreviewView.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/CameraPreviewView.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/CameraPreviewView.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/CameraPreviewView.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Camera/CameraSessionController.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/CameraSessionController.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/CameraSessionController.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/CameraSessionController.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Camera/CameraViewModel.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/CameraViewModel.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/CameraViewModel.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/CameraViewModel.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Camera/RecentPhotosStrip.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/RecentPhotosStrip.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/RecentPhotosStrip.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/RecentPhotosStrip.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Favorites/FavoriteCard.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/FavoriteCard.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/FavoriteCard.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/FavoriteCard.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Favorites/FavoritesView.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/FavoritesView.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/FavoritesView.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/FavoritesView.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Home/DiscoveryHomeView.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/DiscoveryHomeView.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/DiscoveryHomeView.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/DiscoveryHomeView.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Home/HomeStickyFilterOverlay.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/HomeStickyFilterOverlay.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/HomeStickyFilterOverlay.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/HomeStickyFilterOverlay.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Home/HomeViewModel.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/HomeViewModel.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/HomeViewModel.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/HomeViewModel.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Navigation/BottomNavigationComponents.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/BottomNavigationComponents.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/BottomNavigationComponents.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/BottomNavigationComponents.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Onboarding/NoBounceScrollView.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/NoBounceScrollView.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/NoBounceScrollView.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/NoBounceScrollView.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Onboarding/NotificationOnboardingStepView.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/NotificationOnboardingStepView.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/NotificationOnboardingStepView.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/NotificationOnboardingStepView.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Onboarding/OnboardingCountryView.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/OnboardingCountryView.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/OnboardingCountryView.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/OnboardingCountryView.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Onboarding/OnboardingDemoView.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/OnboardingDemoView.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/OnboardingDemoView.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/OnboardingDemoView.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Onboarding/OnboardingFlowModel.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/OnboardingFlowModel.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/OnboardingFlowModel.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/OnboardingFlowModel.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Onboarding/OnboardingGenderView.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/OnboardingGenderView.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/OnboardingGenderView.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/OnboardingGenderView.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Onboarding/OnboardingHeroView.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/OnboardingHeroView.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/OnboardingHeroView.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/OnboardingHeroView.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Onboarding/OnboardingMockData.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/OnboardingMockData.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/OnboardingMockData.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/OnboardingMockData.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Onboarding/OnboardingPaywallView.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/OnboardingPaywallView.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/OnboardingPaywallView.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/OnboardingPaywallView.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Onboarding/OnboardingRootView.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/OnboardingRootView.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/OnboardingRootView.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/OnboardingRootView.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Profile/AllPhotoAnalysesView.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AllPhotoAnalysesView.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AllPhotoAnalysesView.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AllPhotoAnalysesView.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Profile/CompleteProfileView.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/CompleteProfileView.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/CompleteProfileView.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/CompleteProfileView.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Profile/EditProfileView.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/EditProfileView.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/EditProfileView.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/EditProfileView.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Profile/ProfileBannerHeaderView.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ProfileBannerHeaderView.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ProfileBannerHeaderView.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ProfileBannerHeaderView.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Profile/ProfileTabAvatarView.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ProfileTabAvatarView.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ProfileTabAvatarView.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ProfileTabAvatarView.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Profile/ProfileView.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ProfileView.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ProfileView.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ProfileView.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Results/AnalysisPreviewSquircle.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AnalysisPreviewSquircle.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AnalysisPreviewSquircle.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AnalysisPreviewSquircle.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Results/FilterChip.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/FilterChip.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/FilterChip.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/FilterChip.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Results/ListingCardView.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ListingCardView.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ListingCardView.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ListingCardView.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Results/ProviderLogoView.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ProviderLogoView.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ProviderLogoView.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ProviderLogoView.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Results/ResultsDetailsSheet.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ResultsDetailsSheet.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ResultsDetailsSheet.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ResultsDetailsSheet.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Results/ResultsFilterTab.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ResultsFilterTab.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ResultsFilterTab.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ResultsFilterTab.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Results/ResultsFiltersBar.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ResultsFiltersBar.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ResultsFiltersBar.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ResultsFiltersBar.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Results/ResultsFiltersPagerSheet.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ResultsFiltersPagerSheet.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ResultsFiltersPagerSheet.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ResultsFiltersPagerSheet.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Results/ResultsFloatingHeader.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ResultsFloatingHeader.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ResultsFloatingHeader.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ResultsFloatingHeader.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Results/ResultsHeaderButtonsOverlay.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ResultsHeaderButtonsOverlay.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ResultsHeaderButtonsOverlay.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ResultsHeaderButtonsOverlay.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Results/ResultsSkeletonViews.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ResultsSkeletonViews.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ResultsSkeletonViews.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ResultsSkeletonViews.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Results/ResultsStickyBar.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ResultsStickyBar.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ResultsStickyBar.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ResultsStickyBar.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Results/ResultsView.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ResultsView.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ResultsView.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ResultsView.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Results/ResultsViewModel.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ResultsViewModel.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ResultsViewModel.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ResultsViewModel.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Results/ScrollOffsetPreferenceKey.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ScrollOffsetPreferenceKey.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ScrollOffsetPreferenceKey.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ScrollOffsetPreferenceKey.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Search/ManualSearchLoadingView.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ManualSearchLoadingView.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ManualSearchLoadingView.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ManualSearchLoadingView.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Search/ManualSearchPreviewCollage.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ManualSearchPreviewCollage.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ManualSearchPreviewCollage.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ManualSearchPreviewCollage.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Search/SearchHomeView.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SearchHomeView.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SearchHomeView.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SearchHomeView.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/SearchHistory/SearchHistoryView.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SearchHistoryView.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SearchHistoryView.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SearchHistoryView.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/SearchHistory/SearchHistoryViewModel.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SearchHistoryViewModel.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SearchHistoryViewModel.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SearchHistoryViewModel.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Settings/AccountSettingsView.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AccountSettingsView.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AccountSettingsView.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AccountSettingsView.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Settings/AppearanceSettingsView.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AppearanceSettingsView.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AppearanceSettingsView.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AppearanceSettingsView.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Settings/NotificationsSettingsView.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/NotificationsSettingsView.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/NotificationsSettingsView.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/NotificationsSettingsView.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Settings/ProvidersSettingsView.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ProvidersSettingsView.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ProvidersSettingsView.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ProvidersSettingsView.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/Settings/SettingsView.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SettingsView.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SettingsView.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SettingsView.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/ShareImport/SharedImportReviewViewModel.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SharedImportReviewViewModel-266d0301d05e48a2b6237e040acd1783.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SharedImportReviewViewModel-266d0301d05e48a2b6237e040acd1783.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SharedImportReviewViewModel-266d0301d05e48a2b6237e040acd1783.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/SharedImport/ImageUploadPreprocessor.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ImageUploadPreprocessor.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ImageUploadPreprocessor.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ImageUploadPreprocessor.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/SharedImport/LoadingSearchView.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/LoadingSearchView.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/LoadingSearchView.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/LoadingSearchView.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/SharedImport/ProviderLoadingLogosView.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ProviderLoadingLogosView.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ProviderLoadingLogosView.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ProviderLoadingLogosView.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/SharedImport/RemoteSessionLoadingView.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/RemoteSessionLoadingView.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/RemoteSessionLoadingView.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/RemoteSessionLoadingView.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/SharedImport/ShareImportProcessingView.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ShareImportProcessingView.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ShareImportProcessingView.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ShareImportProcessingView.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/SharedImport/SharedImportReviewView.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SharedImportReviewView.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SharedImportReviewView.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SharedImportReviewView.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/SharedImport/SharedImportReviewViewModel.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SharedImportReviewViewModel-7302e57f69eb8dcf5c0a313c39894164.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SharedImportReviewViewModel-7302e57f69eb8dcf5c0a313c39894164.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SharedImportReviewViewModel-7302e57f69eb8dcf5c0a313c39894164.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/SharedImport/SharedSessionResumeFailedView.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SharedSessionResumeFailedView.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SharedSessionResumeFailedView.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SharedSessionResumeFailedView.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Features/SharedImport/SquareCropEditor.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SquareCropEditor.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SquareCropEditor.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SquareCropEditor.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Models/AnalyzeSearchRequest.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AnalyzeSearchRequest.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AnalyzeSearchRequest.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AnalyzeSearchRequest.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Models/AnalyzeSearchResponse.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AnalyzeSearchResponse.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AnalyzeSearchResponse.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AnalyzeSearchResponse.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Models/FashionVisionResult.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/FashionVisionResult.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/FashionVisionResult.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/FashionVisionResult.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Models/FavoriteSearchRecord.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/FavoriteSearchRecord.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/FavoriteSearchRecord.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/FavoriteSearchRecord.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Models/MarketplaceListing.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/MarketplaceListing.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/MarketplaceListing.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/MarketplaceListing.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Models/MarketplaceSource.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/MarketplaceSource.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/MarketplaceSource.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/MarketplaceSource.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Models/PendingSharedSearchSession.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/PendingSharedSearchSession.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/PendingSharedSearchSession.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/PendingSharedSearchSession.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Models/ProviderAvailability.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ProviderAvailability.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ProviderAvailability.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ProviderAvailability.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Models/ProviderConfiguration.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ProviderConfiguration.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ProviderConfiguration.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ProviderConfiguration.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Models/SearchSession.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SearchSession.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SearchSession.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SearchSession.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Models/SearchState.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SearchState.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SearchState.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SearchState.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Models/ShareContinuitySnapshot.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ShareContinuitySnapshot.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ShareContinuitySnapshot.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ShareContinuitySnapshot.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Models/SharedImportPayload.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SharedImportPayload.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SharedImportPayload.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SharedImportPayload.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Models/StructuredFashionQuery.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/StructuredFashionQuery.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/StructuredFashionQuery.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/StructuredFashionQuery.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Models/UserProfile.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/UserProfile.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/UserProfile.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/UserProfile.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Models/VintedListingsAPI.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/VintedListingsAPI.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/VintedListingsAPI.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/VintedListingsAPI.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Services/APIClient.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/APIClient.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/APIClient.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/APIClient.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Services/AnalyzeFetchCoordinator.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AnalyzeFetchCoordinator.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AnalyzeFetchCoordinator.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AnalyzeFetchCoordinator.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Services/AuthManager.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AuthManager.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AuthManager.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/AuthManager.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Services/FavoriteSearchService.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/FavoriteSearchService.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/FavoriteSearchService.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/FavoriteSearchService.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Services/ImagePersistenceService.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ImagePersistenceService.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ImagePersistenceService.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ImagePersistenceService.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Services/MockAPIClient.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/MockAPIClient.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/MockAPIClient.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/MockAPIClient.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Services/ProfileManager.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ProfileManager.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ProfileManager.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ProfileManager.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Services/ProfileStore.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ProfileStore.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ProfileStore.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ProfileStore.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Services/ProviderRuntimeAvailabilityStore.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ProviderRuntimeAvailabilityStore.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ProviderRuntimeAvailabilityStore.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ProviderRuntimeAvailabilityStore.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Services/ProviderSettingsStore.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ProviderSettingsStore.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ProviderSettingsStore.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ProviderSettingsStore.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Services/RemoteAvatarCache.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/RemoteAvatarCache.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/RemoteAvatarCache.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/RemoteAvatarCache.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Services/SearchHistoryService.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SearchHistoryService.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SearchHistoryService.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SearchHistoryService.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Services/SearchSessionFromRemote.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SearchSessionFromRemote.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SearchSessionFromRemote.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SearchSessionFromRemote.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Services/SearchSessionStatusService.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SearchSessionStatusService.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SearchSessionStatusService.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SearchSessionStatusService.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Services/ShareContinuitySessionBuilder.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ShareContinuitySessionBuilder.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ShareContinuitySessionBuilder.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ShareContinuitySessionBuilder.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Services/ShareStorageService.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ShareStorageService.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ShareStorageService.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/ShareStorageService.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Services/SharedSearchLaunchCoordinator.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SharedSearchLaunchCoordinator.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SharedSearchLaunchCoordinator.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SharedSearchLaunchCoordinator.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Services/SharedSearchSessionStore.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SharedSearchSessionStore.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SharedSearchSessionStore.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SharedSearchSessionStore.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Services/SupabaseConfig.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SupabaseConfig.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SupabaseConfig.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SupabaseConfig.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/Amisa/Services/SupabaseManager.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SupabaseManager.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SupabaseManager.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/SupabaseManager.o"
+  },
+  "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "index-unit-output-path" : "/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "llvm-bc" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/GeneratedAssetSymbols.bc",
+    "object" : "/Users/jonas/Documents/App/Amisa/build/Amisa.build/Release-iphoneos/Amisa.build/Objects-normal/arm64/GeneratedAssetSymbols.o"
+  }
+}

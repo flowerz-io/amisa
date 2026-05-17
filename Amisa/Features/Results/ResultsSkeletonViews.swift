@@ -20,6 +20,8 @@ private struct SkeletonShimmerOverlay: View {
             LinearGradient(
                 colors: [
                     .clear,
+                    colorScheme == .dark ? Color.white.opacity(0.10) : Color.white.opacity(0.50),
+                    BrandColors.secondaryOrange.opacity(colorScheme == .dark ? 0.10 : 0.08),
                     colorScheme == .dark ? Color.white.opacity(0.12) : Color.white.opacity(0.55),
                     .clear,
                 ],

@@ -39,7 +39,7 @@ struct LoadingProgressBlock: View {
                     .fill(AmisaSemanticColors.progressTrackFill())
                     .frame(height: 8)
                 Capsule()
-                    .fill(Color.accentColor)
+                    .fill(DesignTokens.brandLinearGradientHorizontal)
                     .frame(width: width, height: 8)
             }
         }

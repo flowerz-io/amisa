@@ -39,6 +39,8 @@ final class ResultsViewModel: ObservableObject {
     @Published private(set) var providerCounts: ProviderCountsDTO
     /// Temps backend (ms) pour la première vague de résultats.
     @Published private(set) var initialResponseTimeMs: Int?
+    /// Réponse snapshot avant fin de tous les providers (early cutoff serveur).
+    @Published private(set) var moreProvidersPending: Bool = false
     /// Historique debug : page Vinted courante (legacy + nouveau flow).
     @Published private(set) var currentPage: Int
     /// Liste vide au chargement mais requête Vinted disponible (favori) : première page à charger.
@@ -67,6 +69,7 @@ final class ResultsViewModel: ObservableObject {
         self.rankingContext = session.rankingContext
         self.providerCounts = session.providerCounts ?? Self.providerCounts(from: session.paginationState)
         self.initialResponseTimeMs = session.initialResponseTimeMs
+        self.moreProvidersPending = session.moreProvidersPending
 
         if let paginationState = session.paginationState {
             self.currentPage = max(1, paginationState.vinted.nextPage - 1)
@@ -150,6 +153,7 @@ final class ResultsViewModel: ObservableObject {
         rankingContext = session.rankingContext
         providerCounts = session.providerCounts ?? Self.providerCounts(from: session.paginationState)
         initialResponseTimeMs = session.initialResponseTimeMs
+        moreProvidersPending = session.moreProvidersPending
         providerAvailabilityMap = session.providerAvailability
         ProviderRuntimeAvailabilityStore.shared.merge(from: session.providerAvailability)
 
@@ -200,6 +204,13 @@ final class ResultsViewModel: ObservableObject {
 
     func applyHydrationFailure(message: String) {
         guard case .loaded(let current) = state, current.hydratingBackendResults else { return }
+        if !allListings.isEmpty {
+            var cleared = current
+            cleared.hydratingBackendResults = false
+            state = .loaded(cleared)
+            isLoadingMore = false
+            return
+        }
         state = .error(message)
         isLoadingMore = false
     }

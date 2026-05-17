@@ -1,0 +1,56 @@
+{
+  "source": "/Users/jonas/Documents/App/Amisa/AmisaShareExtension/ShareExtensionResultsTeaserView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Préparation de ta recherche…",
+        "location": {
+          "startingColumn": 40,
+          "startingLine": 144
+        }
+      },
+      {
+        "comment": "",
+        "key": "Tu recevras une notification quand tout sera prêt.",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 250
+        }
+      },
+      {
+        "comment": "",
+        "key": "Notifications désactivées : ouvre Amisa depuis l’accueil pour suivre ta recherche.",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 254
+        }
+      },
+      {
+        "comment": "",
+        "key": "Alerte non planifiée (%@).",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 258
+        }
+      },
+      {
+        "comment": "",
+        "key": "Recherche en cours",
+        "location": {
+          "startingColumn": 40,
+          "startingLine": 234
+        }
+      },
+      {
+        "comment": "",
+        "key": "Amisa parcourt les marketplaces pour toi.",
+        "location": {
+          "startingColumn": 40,
+          "startingLine": 237
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -39,7 +39,7 @@ struct SettingsView: View {
 
                     lumaDivider()
 
-                    lumaNavLink(icon: "person.crop.circle.fill", color: .blue, label: String(localized: "Paramètres du compte")) {
+                    lumaNavLink(icon: "person.crop.circle.fill", color: BrandColors.primaryRed, label: String(localized: "Paramètres du compte")) {
                         AccountSettingsView()
                     }
                     // Déconnexion
@@ -92,7 +92,7 @@ struct SettingsView: View {
                         showOnboarding = true
                     }
                     lumaDivider()
-                    lumaNavLink(icon: "info.circle.fill", color: .blue, label: "À propos") { aboutPlaceholder }
+                    lumaNavLink(icon: "info.circle.fill", color: BrandColors.secondaryOrange, label: "À propos") { aboutPlaceholder }
                     lumaDivider()
                     lumaInfoRow(icon: "tag.fill",    color: .mint,  label: "Version", value: appVersion)
                     lumaDivider()

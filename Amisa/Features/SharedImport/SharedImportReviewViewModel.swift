@@ -104,7 +104,8 @@ final class SharedImportReviewViewModel: ObservableObject {
             providerAvailability: response.providerAvailability,
             providerCounts: response.providerCounts,
             initialResponseTimeMs: response.initialResponseTimeMs,
-            hydratingBackendResults: false
+            hydratingBackendResults: false,
+            moreProvidersPending: response.moreProvidersPending ?? false
         )
 
         searchHistoryService?.addSession(session)

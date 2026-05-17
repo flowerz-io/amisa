@@ -42,7 +42,8 @@ enum SearchSessionFromRemote {
             rankingContext: response.rankingContext,
             providerAvailability: response.providerAvailability,
             providerCounts: response.providerCounts,
-            initialResponseTimeMs: response.initialResponseTimeMs
+            initialResponseTimeMs: response.initialResponseTimeMs,
+            moreProvidersPending: response.moreProvidersPending ?? false
         )
 
         if let thumbURL = ImagePersistenceService.shared.persistThumbnail(for: session) {

@@ -1,108 +1,33 @@
-//
-//  ShareItemExtractor.swift
-//  BalibuShareExtension
-//
-//  Extrait image ou URL du contexte de partage.
-//
-
-import UniformTypeIdentifiers
+import Foundation
 import UIKit
+import UniformTypeIdentifiers
 
-enum ShareExtractedContent {
-    /// Image brute (fichier joint).
-    case image(Data)
-    /// Lien vers une page (Pinterest, Instagram web, etc.).
-    case link(URL)
-}
-
+/// Extraction d’éléments depuis le sheet de partage — journaux détaillés en cas d’échec.
 enum ShareItemExtractor {
-    /// Collecte images + URLs ; si une URL Instagram est présente, elle prime sur les previews jointes.
-    static func extractContent(from context: NSExtensionContext?) async -> ShareExtractedContent? {
-        guard let context = context,
-              let items = context.inputItems as? [NSExtensionItem],
-              !items.isEmpty else { return nil }
-
-        var collectedImages: [Data] = []
-        var collectedURLs: [URL] = []
-
-        for item in items {
-            guard let attachments = item.attachments else { continue }
-            for provider in attachments {
-                if let url = await loadURL(from: provider) {
-                    collectedURLs.append(url)
-                }
-                if let data = await loadImage(from: provider) {
-                    collectedImages.append(data)
-                }
+    static func logItemProvider(_ provider: NSItemProvider, context: String) {
+        let ids = provider.registeredTypeIdentifiers
+        NSLog("[ShareItemExtractor] %@ — NSItemProvider registeredTypeIdentifiers count=%lu ids=%@",
+              context, ids.count, ids.joined(separator: ", "))
+        for id in ids {
+            if let ut = UTType(id) {
+                NSLog("[ShareItemExtractor] %@ — UTType identifier=%@ preferredMIMEType=%@ conformsTo.publicURL=%@ conformsTo.image=%@",
+                      context,
+                      ut.identifier,
+                      ut.preferredMIMEType ?? "nil",
+                      ut.conforms(to: .url) ? "yes" : "no",
+                      ut.conforms(to: .image) ? "yes" : "no")
+            } else {
+                NSLog("[ShareItemExtractor] %@ — identifier=%@ (UTType non résolu)", context, id)
             }
         }
-
-        if let ig = collectedURLs.first(where: { InstagramURLDetector.isInstagram($0) }) {
-            return .link(ig)
-        }
-        if let firstImg = collectedImages.first {
-            return .image(firstImg)
-        }
-        if let url = collectedURLs.first {
-            return .link(url)
-        }
-        return nil
+        NSLog("[ShareItemExtractor] %@ — suggestedName=%@ hasItemConformingToTypeIdentifier(public.url)=%@ public.image=%@",
+              context,
+              provider.suggestedName ?? "nil",
+              provider.hasItemConformingToTypeIdentifier(UTType.url.identifier) ? "yes" : "no",
+              provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) ? "yes" : "no")
     }
 
-    /// Première image disponible (compat).
-    static func extractImage(from context: NSExtensionContext?) async -> Data? {
-        guard let content = await extractContent(from: context) else { return nil }
-        if case .image(let data) = content { return data }
-        return nil
-    }
-
-    private static func loadImage(from provider: NSItemProvider) async -> Data? {
-        let imageTypes: [String] = [
-            UTType.image.identifier,
-            UTType.jpeg.identifier,
-            UTType.png.identifier,
-            UTType.webP.identifier,
-            "public.image",
-        ]
-
-        for typeId in imageTypes {
-            if provider.hasItemConformingToTypeIdentifier(typeId) {
-                return await withCheckedContinuation { continuation in
-                    provider.loadItem(forTypeIdentifier: typeId, options: nil) { item, _ in
-                        let data = extractImageData(from: item)
-                        continuation.resume(returning: data)
-                    }
-                }
-            }
-        }
-        return nil
-    }
-
-    private static func loadURL(from provider: NSItemProvider) async -> URL? {
-        let urlTypes = [UTType.url.identifier, "public.url"]
-
-        for typeId in urlTypes {
-            if provider.hasItemConformingToTypeIdentifier(typeId) {
-                return await withCheckedContinuation { continuation in
-                    provider.loadItem(forTypeIdentifier: typeId, options: nil) { item, _ in
-                        if let url = item as? URL {
-                            continuation.resume(returning: url)
-                        } else if let s = item as? String, let url = URL(string: s) {
-                            continuation.resume(returning: url)
-                        } else {
-                            continuation.resume(returning: nil)
-                        }
-                    }
-                }
-            }
-        }
-        return nil
-    }
-
-    private static func extractImageData(from item: NSSecureCoding?) -> Data? {
-        if let data = item as? Data { return data }
-        if let url = item as? URL { return try? Data(contentsOf: url) }
-        if let image = item as? UIImage { return image.jpegData(compressionQuality: 0.85) }
-        return nil
+    static func logExtractionFailure(_ error: Error, context: String) {
+        NSLog("[ShareItemExtractor] ÉCHEC %@ — error=%@", context, String(describing: error))
     }
 }

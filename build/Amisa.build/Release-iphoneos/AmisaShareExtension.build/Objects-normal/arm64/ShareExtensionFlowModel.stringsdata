@@ -1,0 +1,16 @@
+{
+  "source": "/Users/jonas/Documents/App/Amisa/AmisaShareExtension/ShareExtensionFlowModel.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Impossible de lancer l’analyse : %@",
+        "location": {
+          "startingColumn": 63,
+          "startingLine": 134
+        }
+      }
+    ]
+  },
+  "version": 1
+}

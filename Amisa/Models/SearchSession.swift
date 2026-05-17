@@ -41,6 +41,8 @@ struct SearchSession: Identifiable, Equatable, Hashable {
     var awaitsRailwayHydration: Bool
     /// Écran résultats ouvert pendant que `analyze-search` ou recherche texte se termine encore (skeletons jusqu’à hydration).
     var hydratingBackendResults: Bool
+    /// Snapshot reçu avant la fin de tous les providers (bandeau discret possible en UI).
+    var moreProvidersPending: Bool
 
     init(
         id: UUID = UUID(),
@@ -60,7 +62,8 @@ struct SearchSession: Identifiable, Equatable, Hashable {
         mode: SearchSessionMode = .imageAnalysis,
         previewImageURLs: [URL] = [],
         awaitsRailwayHydration: Bool = false,
-        hydratingBackendResults: Bool = false
+        hydratingBackendResults: Bool = false,
+        moreProvidersPending: Bool = false
     ) {
         self.id = id
         self.imageFileName = imageFileName
@@ -80,6 +83,7 @@ struct SearchSession: Identifiable, Equatable, Hashable {
         self.previewImageURLs = previewImageURLs
         self.awaitsRailwayHydration = awaitsRailwayHydration
         self.hydratingBackendResults = hydratingBackendResults
+        self.moreProvidersPending = moreProvidersPending
     }
 
     /// Recherche lancée uniquement depuis du texte (pas d’image source).
@@ -160,7 +164,8 @@ extension SearchSession: Codable {
     enum CodingKeys: String, CodingKey {
         case id, imageFileName, thumbnailImageURL, searchQuery, generatedQueries, attributes, listings, createdAt,
              vintedSearchFailed, paginationState, rankingContext, providerAvailability, providerCounts,
-             initialResponseTimeMs, mode, previewImageURLs, awaitsRailwayHydration, hydratingBackendResults
+             initialResponseTimeMs, mode, previewImageURLs, awaitsRailwayHydration, hydratingBackendResults,
+             moreProvidersPending
     }
 
     init(from decoder: Decoder) throws {
@@ -184,6 +189,7 @@ extension SearchSession: Codable {
         let previewImageURLs = try c.decodeIfPresent([URL].self, forKey: .previewImageURLs) ?? []
         let awaitsRailwayHydration = try c.decodeIfPresent(Bool.self, forKey: .awaitsRailwayHydration) ?? false
         let hydratingBackendResults = try c.decodeIfPresent(Bool.self, forKey: .hydratingBackendResults) ?? false
+        let moreProvidersPending = try c.decodeIfPresent(Bool.self, forKey: .moreProvidersPending) ?? false
         self.init(
             id: id,
             imageFileName: imageFileName,
@@ -202,7 +208,8 @@ extension SearchSession: Codable {
             mode: mode,
             previewImageURLs: previewImageURLs,
             awaitsRailwayHydration: awaitsRailwayHydration,
-            hydratingBackendResults: hydratingBackendResults
+            hydratingBackendResults: hydratingBackendResults,
+            moreProvidersPending: moreProvidersPending
         )
     }
 
@@ -226,5 +233,6 @@ extension SearchSession: Codable {
         try c.encode(previewImageURLs, forKey: .previewImageURLs)
         try c.encode(awaitsRailwayHydration, forKey: .awaitsRailwayHydration)
         try c.encode(hydratingBackendResults, forKey: .hydratingBackendResults)
+        try c.encode(moreProvidersPending, forKey: .moreProvidersPending)
     }
 }

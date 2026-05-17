@@ -275,6 +275,13 @@ struct ResultsView: View {
                     .foregroundStyle(Color.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
+
+            if session.moreProvidersPending || viewModel.moreProvidersPending {
+                Text(String(localized: "Résultats encore en cours…"))
+                    .font(DesignTokens.caption)
+                    .foregroundStyle(Color.secondary.opacity(0.9))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
     }
 

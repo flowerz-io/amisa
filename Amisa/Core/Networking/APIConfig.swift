@@ -1,14 +1,11 @@
 //
 //  APIConfig.swift
-//  Balibu
-//
-//  Configuration centralisée du backend.
 //
 
 import Foundation
 
 enum APIConfig {
-    /// Passe à `false` pour utiliser le backend réel.
+    /// Passe à `true` pour utiliser le mock (tests / offline).
     static var useMock: Bool { false }
 
     /// Client API à injecter. Point central pour basculer mock/live.
@@ -16,8 +13,6 @@ enum APIConfig {
         useMock ? MockAPIClient() : APIClient.shared
     }
 
-    /// URL de base du backend.
-    static var baseURL: URL {
-        URL(string: "https://balibu-production.up.railway.app")!
-    }
+    /// URL de base du backend (sans slash final).
+    static var baseURL: URL { AppConfig.backendBaseURL }
 }

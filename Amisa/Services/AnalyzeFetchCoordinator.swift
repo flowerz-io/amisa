@@ -17,9 +17,9 @@ extension Notification.Name {
 /// Durées cibles fullscreen avant passage Results + skeletons.
 enum FullscreenSearchTiming {
     /// Analyse image (aperçu premium court).
-    static let photoNanoseconds: UInt64 = 1_400_000_000
-    /// Recherche texte (légèrement plus courte).
-    static let textNanoseconds: UInt64 = 1_200_000_000
+    static let photoNanoseconds: UInt64 = 5_000_000_000
+    /// Recherche texte — même seuil que l’image pour cohérence UX (skeletons résultats).
+    static let textNanoseconds: UInt64 = 5_000_000_000
 }
 
 actor AnalyzeFetchCoordinator {

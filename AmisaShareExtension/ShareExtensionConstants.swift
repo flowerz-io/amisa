@@ -1,16 +1,19 @@
 //
 //  ShareExtensionConstants.swift
-//  BalibuShareExtension
 //
-//  Même base API que Balibu/Core/Networking/APIConfig (l’extension ne lie pas l’app).
-//
+//  Base API — l’extension ne peut pas importer le module app : la chaîne littérale est
+//  dupliquée volontairement et doit rester alignée avec `AppConfig.backendBaseURLString`.
 
 import Foundation
 
 enum ShareExtensionConstants {
-    static let backendBaseURL = URL(string: "https://balibu-production.up.railway.app")!
+    /// Dupliqué volontairement — doit rester identique à `AppConfig.backendBaseURLString` (sync par commentaire).
+    static let backendBaseURLString = "https://amisa-production.up.railway.app"
+    static var backendBaseURL: URL { URL(string: backendBaseURLString)! }
+    static var analyzeSearchURL: URL { backendBaseURL.appendingPathComponent("analyze-search") }
+    static var resolveSharedURLURL: URL { backendBaseURL.appendingPathComponent("resolve-shared-url") }
+    static var healthURL: URL { backendBaseURL.appendingPathComponent("health") }
 
-    /// Aligné sur `Balibu/Core/Notifications/AmisaNotificationIdentifiers.swift`.
     enum Notifications {
         static let shareResultsReadyCategory = "amisa.category.shareResultsReady"
         static let importIdUserInfoKey = "importId"

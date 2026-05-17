@@ -32,12 +32,16 @@ struct AdaptiveShimmer: ViewModifier {
         if colorScheme == .dark {
             return [
                 .white.opacity(0.03),
+                .white.opacity(0.12),
+                ShareExtensionBrandColors.secondaryOrange.opacity(0.10),
                 .white.opacity(0.22),
                 .white.opacity(0.04),
             ]
         } else {
             return [
                 .black.opacity(0.04),
+                .black.opacity(0.10),
+                ShareExtensionBrandColors.secondaryOrange.opacity(0.08),
                 .black.opacity(0.16),
                 .black.opacity(0.04),
             ]

@@ -6,6 +6,7 @@
 import SwiftUI
 
 enum AmisaSemanticColors {
+    /// Onglet actif : rouge marque ; inchangé en dark (contraste sur chrome sombre).
     static func tabItemForeground(isSelected: Bool, colorScheme: ColorScheme) -> Color {
         if isSelected { return DesignTokens.accent }
         return colorScheme == .dark ? Color.white.opacity(0.9) : Color.black

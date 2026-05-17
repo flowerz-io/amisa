@@ -19,7 +19,7 @@ private struct PaywallFeature: Identifiable {
 
 private let paywallFeatures: [PaywallFeature] = [
     PaywallFeature(icon: "magnifyingglass.circle.fill", iconColor: Color.accentColor, title: "Analyses illimitées",          subtitle: "Scanne autant de looks que tu veux"),
-    PaywallFeature(icon: "storefront.fill",             iconColor: Color.blue,        title: "Recherche multi-marketplaces", subtitle: "Vinted, Grailed, eBay, Depop et plus"),
+    PaywallFeature(icon: "storefront.fill",             iconColor: BrandColors.secondaryOrange, title: "Recherche multi-marketplaces", subtitle: "Vinted, Grailed, eBay, Depop et plus"),
     PaywallFeature(icon: "bolt.fill",                   iconColor: Color.yellow,      title: "Résultats plus rapides",       subtitle: "Priorité dans la file d'analyse"),
     PaywallFeature(icon: "bell.badge.fill",             iconColor: BrandColors.secondary, title: "Alertes meilleures offres",    subtitle: "Notifié dès qu'un prix baisse"),
     PaywallFeature(icon: "heart.fill",                  iconColor: Color.pink,        title: "Favoris & moodboards",         subtitle: "Sauvegarde tes pièces préférées"),
@@ -77,10 +77,7 @@ struct OnboardingPaywallView: View {
     private var paywallBackground: some View {
         ZStack {
             LinearGradient(
-                colors: [
-                    Color(red: 0.05, green: 0.03, blue: 0.10),
-                    Color(red: 0.08, green: 0.05, blue: 0.15),
-                ],
+                colors: BrandColors.editorialDarkBackground,
                 startPoint: .top,
                 endPoint: .bottom
             )
@@ -93,7 +90,7 @@ struct OnboardingPaywallView: View {
                 .offset(x: 60, y: -200)
 
             Circle()
-                .fill(Color.purple.opacity(0.10))
+                .fill(BrandColors.secondaryOrange.opacity(0.12))
                 .frame(width: 300)
                 .blur(radius: 80)
                 .offset(x: -80, y: 300)

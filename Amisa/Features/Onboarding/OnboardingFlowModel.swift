@@ -23,8 +23,8 @@ enum OnboardingGender: String {
 
     var gradientColors: [Color] {
         self == .female
-            ? [Color(red: 0.95, green: 0.72, blue: 0.80), Color(red: 0.88, green: 0.50, blue: 0.65)]
-            : [Color(red: 0.20, green: 0.35, blue: 0.60), Color(red: 0.10, green: 0.22, blue: 0.45)]
+            ? [Color(red: 0.95, green: 0.78, blue: 0.82), Color(red: 0.86, green: 0.42, blue: 0.55)]
+            : [Color(red: 0.26, green: 0.17, blue: 0.14), Color(red: 0.50, green: 0.30, blue: 0.20)]
     }
 }
 

@@ -16,9 +16,19 @@ struct AmisaPrimaryButtonStyle: ButtonStyle {
             .foregroundStyle(Color.white)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
-            .background(isEnabled ? DesignTokens.accent : DesignTokens.accent.opacity(0.35))
+            .background {
+                Group {
+                    if isEnabled {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(BrandColors.primaryLinearGradient)
+                    } else {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(BrandColors.primaryDisabled)
+                    }
+                }
+                .opacity(configuration.isPressed && isEnabled ? 0.88 : 1)
+            }
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .opacity(configuration.isPressed ? 0.9 : 1)
             .animation(.easeInOut(duration: 0.15), value: configuration.isPressed)
     }
 }

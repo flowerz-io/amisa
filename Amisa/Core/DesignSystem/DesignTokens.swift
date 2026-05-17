@@ -21,16 +21,26 @@ enum DesignTokens {
     static let textPrimary = Color(uiColor: .label)
     static let textSecondary = Color(uiColor: .secondaryLabel)
     static let textTertiary = Color(uiColor: .tertiaryLabel)
-    /// Accent UI aligné sur la marque (#446DF6) — garder cohérent avec `AccentColor` dans les Assets.
-    static let accent = BrandColors.primary
-    /// Accent secondaire (#9BA5F6) — halos, contours doux.
-    static let accentSecondary = BrandColors.secondary
+    /// Accent UI aligné sur la marque (#CA2121) — garder cohérent avec `AccentColor` dans les Assets.
+    static let accent = BrandColors.primaryRed
+    /// Accent secondaire (#E86C26) — halos, contours doux, badges premium.
+    static let accentSecondary = BrandColors.secondaryOrange
     static let accentMuted = Color(uiColor: .tertiarySystemFill)
     static let divider = Color(uiColor: .separator)
     static let borderColor = Color(uiColor: .separator)
     static let error = Color(red: 0.9, green: 0.3, blue: 0.3)
     static let errorColor = Color(red: 0.9, green: 0.3, blue: 0.3)
     static let success = Color(uiColor: .systemGreen)
+
+    /// Gradient boutons / chrome principal (rouge → orange).
+    static var brandLinearGradient: LinearGradient {
+        BrandColors.primaryLinearGradient
+    }
+
+    /// Gradient horizontal (progress, shimmer de marque).
+    static var brandLinearGradientHorizontal: LinearGradient {
+        BrandColors.primaryLinearGradientHorizontal
+    }
 
     enum Colors {
         static let background = Color(uiColor: .systemGroupedBackground)

@@ -249,9 +249,9 @@ struct OnboardingDemoView: View {
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 17)
-            .background(Color.accentColor)
+            .background(BrandColors.primaryLinearGradient)
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .shadow(color: Color.accentColor.opacity(0.4), radius: 14, x: 0, y: 5)
+            .shadow(color: BrandColors.secondaryOrange.opacity(0.35), radius: 14, x: 0, y: 5)
         }
         .buttonStyle(BouncyButtonStyle())
         .scaleEffect(ctaPulse ? 1.035 : 1.0)
