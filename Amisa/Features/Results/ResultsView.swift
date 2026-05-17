@@ -146,33 +146,44 @@ struct ResultsView: View {
                         annoncesCountRow(session: session)
                             .padding(.horizontal, DesignTokens.spacingM)
 
-                        // 4. Skeleton initial (liste vide + chargement — même langage visuel que la Share Extension)
-                        if viewModel.displayedListings.isEmpty, viewModel.isLoadingMore {
-                            ResultsListingSkeletonGrid(columns: listingGridColumns, rowSpacing: gridRowSpacing)
+                        // 4–6. Grille : état vide dans la page / skeletons / résultats (+ shimmer fin de vague partielle)
+                        if viewModel.shouldShowEmptyGridState {
+                            ResultsEmptyGridStateView()
                                 .padding(.horizontal, gridHorizontalPadding)
                                 .padding(.vertical, DesignTokens.spacingS)
-                        }
-
-                        // 5. Grille de résultats
-                        LazyVGrid(columns: listingGridColumns, spacing: gridRowSpacing) {
-                            ForEach(viewModel.displayedListings) { listing in
-                                ListingCardView(listing: listing)
-                                    .transition(.opacity.combined(with: .scale(scale: 0.985)))
-                                    .onAppear {
-                                        viewModel.loadMoreIfNeeded(currentItem: listing)
+                        } else if viewModel.shouldShowFullSkeletonGrid {
+                            ResultsListingSkeletonGrid(
+                                columns: listingGridColumns,
+                                rowSpacing: gridRowSpacing,
+                                itemCount: 8
+                            )
+                            .padding(.horizontal, gridHorizontalPadding)
+                            .padding(.vertical, DesignTokens.spacingS)
+                        } else {
+                            LazyVGrid(columns: listingGridColumns, spacing: gridRowSpacing) {
+                                ForEach(viewModel.displayedListings) { listing in
+                                    ListingCardView(listing: listing)
+                                        .transition(.opacity.combined(with: .scale(scale: 0.985)))
+                                        .onAppear {
+                                            viewModel.loadMoreIfNeeded(currentItem: listing)
+                                        }
+                                }
+                                if viewModel.shouldShowTrailingSkeletonTiles {
+                                    ForEach(0..<2, id: \.self) { _ in
+                                        ResultsListingSkeletonCard()
                                     }
+                                }
                             }
-                        }
-                        .padding(.horizontal, gridHorizontalPadding)
-                        .animation(.easeOut(duration: 0.28), value: viewModel.displayedListings.count)
+                            .padding(.horizontal, gridHorizontalPadding)
+                            .animation(.easeOut(duration: 0.28), value: viewModel.displayedListings.count)
 
-                        // 6. Pagination discrète
-                        if viewModel.isLoadingMore, !viewModel.displayedListings.isEmpty {
-                            ProgressView()
-                                .controlSize(.regular)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, DesignTokens.spacingM)
-                                .padding(.horizontal, DesignTokens.spacingM)
+                            if viewModel.shouldShowPaginationProgress {
+                                ProgressView()
+                                    .controlSize(.regular)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, DesignTokens.spacingM)
+                                    .padding(.horizontal, DesignTokens.spacingM)
+                            }
                         }
                     }
                     .padding(.top, safeTop + topImagePadding)
@@ -327,6 +338,28 @@ struct ResultsView: View {
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+// MARK: - Vide (grille dans la page résultats)
+
+private struct ResultsEmptyGridStateView: View {
+    var body: some View {
+        VStack(spacing: DesignTokens.spacingM) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 40))
+                .foregroundStyle(Color.secondary)
+            Text(String(localized: "Aucune annonce trouvée"))
+                .font(DesignTokens.headline)
+                .foregroundStyle(Color.primary)
+            Text(String(localized: "Essaie d’élargir les filtres ou une autre requête."))
+                .font(DesignTokens.caption)
+                .foregroundStyle(Color.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 32)
+        .accessibilityElement(children: .combine)
     }
 }
 

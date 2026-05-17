@@ -54,6 +54,47 @@ final class ResultsViewModel: ObservableObject {
     private var didRunBootstrap: Bool = false
     private let awaitsRailwayHydration: Bool
 
+    // MARK: - Grille : skeletons / vide (UX recherche)
+
+    private var loadedSession: SearchSession? {
+        if case .loaded(let s) = state { return s }
+        return nil
+    }
+
+    /// Recherche initiale ou snapshot encore incomplet (ne couvre pas la pagination « load more » seule).
+    private var isInitialSearchPending: Bool {
+        guard let s = loadedSession else { return false }
+        return s.hydratingBackendResults
+            || s.awaitsRailwayHydration
+            || s.moreProvidersPending
+            || moreProvidersPending
+            || needsInitialListingsBootstrap
+    }
+
+    /// Grille : shimmer tant que l’une des sources ci-dessus est active ou qu’un chargement réseau est en cours.
+    var shouldShowSkeletons: Bool {
+        isInitialSearchPending || isLoadingMore
+    }
+
+    var shouldShowFullSkeletonGrid: Bool {
+        shouldShowSkeletons && displayedListings.isEmpty
+    }
+
+    /// Résultats déjà affichés mais vague partielle (providers encore à fusionner côté backend).
+    var shouldShowTrailingSkeletonTiles: Bool {
+        !displayedListings.isEmpty && isInitialSearchPending
+    }
+
+    var shouldShowPaginationProgress: Bool {
+        isLoadingMore && !displayedListings.isEmpty && !isInitialSearchPending
+    }
+
+    /// Message « aucune annonce » dans la page résultats (pas l’écran `.empty` du VM).
+    var shouldShowEmptyGridState: Bool {
+        guard case .loaded = state else { return false }
+        return !shouldShowSkeletons && displayedListings.isEmpty
+    }
+
     init(session: SearchSession, apiClient: any APIClientProtocol = APIConfig.apiClient) {
         self.apiClient = apiClient
         self.awaitsRailwayHydration = session.awaitsRailwayHydration
@@ -400,7 +441,20 @@ final class ResultsViewModel: ObservableObject {
             if isEbayHiddenWhenBlocked(listing) { return false }
             return enabledProviderKeys.contains(MarketplaceSource.canonicalKey(from: listing.source))
         }
+        #if DEBUG
+        logResultsUIDebug()
+        #endif
     }
+
+    #if DEBUG
+    private func logResultsUIDebug() {
+        guard case .loaded = state else { return }
+        let status = shouldShowSkeletons ? "running" : "completed"
+        print(
+            "[ResultsUI] status=\(status) listings=\(displayedListings.count) showSkeletons=\(shouldShowSkeletons) showEmpty=\(shouldShowEmptyGridState)"
+        )
+    }
+    #endif
 
     private func isEbayHiddenWhenBlocked(_ listing: MarketplaceListing) -> Bool {
         guard MarketplaceSource.canonicalKey(from: listing.source) == "ebay" else { return false }

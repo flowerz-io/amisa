@@ -92,25 +92,27 @@ struct ResultsListingSkeletonCard: View {
 struct ResultsListingSkeletonGrid: View {
     let columns: [GridItem]
     let rowSpacing: CGFloat
-
-    private let placeholderCount = 10
+    /// Nombre de cartes placeholder (ex. 8 au chargement initial, 2 en fin de grille si résultats partiels).
+    let itemCount: Int
 
     init(
         columns: [GridItem],
-        rowSpacing: CGFloat = 14
+        rowSpacing: CGFloat = 14,
+        itemCount: Int = 8
     ) {
         self.columns = columns
         self.rowSpacing = rowSpacing
+        self.itemCount = max(0, itemCount)
     }
 
     var body: some View {
         LazyVGrid(columns: columns, spacing: rowSpacing) {
-            ForEach(0..<placeholderCount, id: \.self) { index in
+            ForEach(0..<itemCount, id: \.self) { index in
                 ResultsListingSkeletonCard()
                     .transition(.opacity.combined(with: .scale(scale: 0.98)))
                     .animation(
                         .easeOut(duration: 0.32).delay(Double(index) * 0.035),
-                        value: placeholderCount
+                        value: itemCount
                     )
             }
         }
