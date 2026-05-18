@@ -151,10 +151,16 @@ extension AnalyzeSearchResponse {
                 inferredModel: "Tabi",
                 itemTypeCanonical: "boots"
             ),
+            vintedSearchFailed: nil,
+            grailedSearchFailed: nil,
+            ebaySearchFailed: nil,
+            leboncoinSearchFailed: nil,
+            depopSearchFailed: nil,
             providerAvailability: nil,
             initialResponseTimeMs: 58900,
             providerCounts: ProviderCountsDTO(vinted: 120, grailed: 1750, ebay: 116, leboncoin: 0, depop: 10),
-            moreProvidersPending: false
+            moreProvidersPending: false,
+            searchDebugMessage: nil
         )
     }
 }

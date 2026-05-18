@@ -1,16 +1,16 @@
 import type { MarketplaceListingDTO } from '../types.js';
 import { marketplaceListingDedupeKey } from './listing-dedupe.js';
 import { getMaxResultsPerSearch } from './search-limits.js';
-import { sleep, withTimeout } from './with-timeout.js';
+import { withTimeout } from './with-timeout.js';
 
 export type ProviderName = 'vinted' | 'ebay' | 'grailed' | 'depop' | 'leboncoin';
 
 export const PROVIDER_TIMEOUT_MS: Record<ProviderName, number> = {
-  vinted: 8000,
-  ebay: 6000,
-  grailed: 10000,
-  depop: 8000,
-  leboncoin: 10000,
+  vinted: 6000,
+  ebay: 8000,
+  grailed: 6000,
+  depop: 6000,
+  leboncoin: 6000,
 };
 
 /** Retour attendu par chaque tâche provider (sans throw en usage nominal). */
@@ -24,13 +24,8 @@ export interface ProviderTaskResult {
   name: ProviderName;
   ms: number;
   listings: MarketplaceListingDTO[];
-  status: 'ok' | 'timeout' | 'error' | 'disabled' | 'rate_limited';
+  status: 'success' | 'timeout' | 'error' | 'disabled' | 'rate_limited';
   reason?: string;
-}
-
-export interface ParallelSearchOutcome {
-  snapshot: ProviderTaskResult[];
-  moreProvidersPending: boolean;
 }
 
 function mapRunResult(r: ProviderRunResult): {
@@ -40,7 +35,7 @@ function mapRunResult(r: ProviderRunResult): {
 } {
   switch (r.runStatus) {
     case 'success':
-      return { listings: r.listings, status: 'ok', reason: r.reason };
+      return { listings: r.listings, status: 'success', reason: r.reason };
     case 'disabled':
       return { listings: [], status: 'disabled', reason: r.reason };
     case 'rate_limited':
@@ -52,100 +47,123 @@ function mapRunResult(r: ProviderRunResult): {
   }
 }
 
-/** Snapshot figé au moment où la barrière se libère (≥ minComplete OU wall time). */
-export async function runProvidersWithEarlyCutoff(
+function isTimeoutMessage(msg: string): boolean {
+  return /\btimeout after \d+ms\b/i.test(msg) || msg.includes('timeout:');
+}
+
+/** Une seconde tentative après timeout / erreur réseau typique. */
+function isRetriableTimeoutOrNetwork(msg: string): boolean {
+  if (isTimeoutMessage(msg)) return true;
+  const m = msg.toLowerCase();
+  if (m.includes('fetch failed')) return true;
+  if (m.includes('econnrefused')) return true;
+  if (m.includes('econnreset')) return true;
+  if (m.includes('etimedout')) return true;
+  if (m.includes('socket hang up')) return true;
+  if (m.includes('networkconnectionlost')) return true;
+  if (m.includes('connection reset')) return true;
+  return false;
+}
+
+async function withTimeoutMaybeRetry(
+  timeoutMs: number,
+  label: ProviderName,
+  run: () => Promise<ProviderRunResult>
+): Promise<ProviderRunResult> {
+  try {
+    return await withTimeout(timeoutMs, label, run);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (!isRetriableTimeoutOrNetwork(msg)) throw e;
+    console.log(
+      `[PROVIDER_RETRY] provider=${label} reason=${JSON.stringify(msg.slice(0, 200))}`
+    );
+    return await withTimeout(timeoutMs, label, run);
+  }
+}
+
+function logProviderResult(r: ProviderTaskResult): void {
+  const reason = r.reason ?? '';
+  console.log(
+    `[PROVIDER_RESULT] provider=${r.name} durationMs=${r.ms} count=${r.listings.length} status=${r.status} reason=${JSON.stringify(reason.slice(0, 500))}`
+  );
+}
+
+/**
+ * Exécute tous les providers en parallèle, attend la fin de chacun (allSettled).
+ * Aucune promesse du tableau ne doit rejeter : résultat toujours `fulfilled`.
+ */
+export async function runProvidersAllSettled(
   tasks: Array<{
     name: ProviderName;
     timeoutMs: number;
     run: () => Promise<ProviderRunResult>;
-  }>,
-  opts: { minComplete: number; maxWallMs: number }
-): Promise<ParallelSearchOutcome> {
-  if (tasks.length === 0) {
-    return { snapshot: [], moreProvidersPending: false };
-  }
-  const results: ProviderTaskResult[] = [];
-  let completed = 0;
-  const t0 = performance.now();
-  let gateDone = false;
-  let snapshot: ProviderTaskResult[] = [];
+  }>
+): Promise<ProviderTaskResult[]> {
+  const settled = await Promise.allSettled(
+    tasks.map((t) => runOneProviderTask(t))
+  );
 
-  let resolveGate!: () => void;
-  const gate = new Promise<void>((r) => {
-    resolveGate = r;
-  });
-
-  const release = () => {
-    if (gateDone) return;
-    gateDone = true;
-    snapshot = results.slice();
-    resolveGate();
-  };
-
-  const tryGate = () => {
-    if (gateDone) return;
-    const elapsed = performance.now() - t0;
-    if (completed >= opts.minComplete || elapsed >= opts.maxWallMs) {
-      release();
+  const out: ProviderTaskResult[] = [];
+  for (let i = 0; i < tasks.length; i++) {
+    const t = tasks[i]!;
+    const s = settled[i]!;
+    if (s.status === 'fulfilled') {
+      out.push(s.value);
+    } else {
+      const msg =
+        s.reason instanceof Error ? s.reason.message : String(s.reason);
+      const row: ProviderTaskResult = {
+        name: t.name,
+        ms: 0,
+        listings: [],
+        status: 'error',
+        reason: `unexpected_parallel_rejection: ${msg}`,
+      };
+      logProviderResult(row);
+      out.push(row);
     }
-  };
-
-  for (const t of tasks) {
-    const p0 = performance.now();
-    void (async () => {
-      try {
-        const outcome = await withTimeout(t.timeoutMs, t.name, t.run);
-        const mapped = mapRunResult(outcome);
-        const ms = Math.round(performance.now() - p0);
-        results.push({
-          name: t.name,
-          ms,
-          listings: mapped.listings,
-          status: mapped.status,
-          reason: mapped.reason,
-        });
-        console.log(
-          `[PERF] ${t.name}=${ms}ms results=${mapped.listings.length} status=${mapped.status}`
-        );
-      } catch (e) {
-        const ms = Math.round(performance.now() - p0);
-        const msg = e instanceof Error ? e.message : String(e);
-        const isTimeout =
-          /\btimeout after \d+ms\b/i.test(msg) || msg.includes('timeout:');
-        const status: ProviderTaskResult['status'] = isTimeout
-          ? 'timeout'
-          : 'error';
-        results.push({
-          name: t.name,
-          ms,
-          listings: [],
-          status,
-          reason: msg,
-        });
-        console.error(`[PROVIDER_REJECTED] ${t.name}`, {
-          status,
-          durationMs: ms,
-          reason: msg,
-          stack: e instanceof Error ? e.stack : undefined,
-        });
-        if (status === 'timeout') {
-          console.log(`[PERF] ${t.name}=timeout after ${ms}ms`);
-        } else {
-          console.log(`[PERF] ${t.name}=error after ${ms}ms`);
-        }
-      } finally {
-        completed += 1;
-        tryGate();
-      }
-    })();
   }
 
-  await Promise.race([gate, sleep(opts.maxWallMs)]);
-  if (!gateDone) release();
+  out.sort((a, b) => a.name.localeCompare(b.name));
+  return out;
+}
 
-  const moreProvidersPending = snapshot.length < tasks.length;
-  snapshot.sort((a, b) => a.name.localeCompare(b.name));
-  return { snapshot, moreProvidersPending };
+async function runOneProviderTask(t: {
+  name: ProviderName;
+  timeoutMs: number;
+  run: () => Promise<ProviderRunResult>;
+}): Promise<ProviderTaskResult> {
+  const p0 = performance.now();
+  try {
+    const outcome = await withTimeoutMaybeRetry(t.timeoutMs, t.name, t.run);
+    const mapped = mapRunResult(outcome);
+    const ms = Math.round(performance.now() - p0);
+    const row: ProviderTaskResult = {
+      name: t.name,
+      ms,
+      listings: mapped.listings,
+      status: mapped.status,
+      reason: mapped.reason,
+    };
+    logProviderResult(row);
+    return row;
+  } catch (e) {
+    const ms = Math.round(performance.now() - p0);
+    const msg = e instanceof Error ? e.message : String(e);
+    const status: ProviderTaskResult['status'] = isTimeoutMessage(msg)
+      ? 'timeout'
+      : 'error';
+    const row: ProviderTaskResult = {
+      name: t.name,
+      ms,
+      listings: [],
+      status,
+      reason: msg,
+    };
+    logProviderResult(row);
+    return row;
+  }
 }
 
 export interface MergeAndCapStats {

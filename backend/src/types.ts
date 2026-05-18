@@ -41,7 +41,7 @@ export interface AnalyzeSearchBody {
 export interface ProviderStatusDTO {
   provider: string;
   status:
-    | 'ok'
+    | 'success'
     | 'disabled'
     | 'rate_limited'
     | 'error'

@@ -66,7 +66,8 @@ final class HomeViewModel: ObservableObject {
             mode: .textQuery,
             previewImageURLs: snapshot.previewImageURLs,
             hydratingBackendResults: false,
-            moreProvidersPending: response.moreProvidersPending ?? false
+            moreProvidersPending: response.moreProvidersPending ?? false,
+            searchDebugMessage: response.searchDebugMessage
         )
 
         searchHistoryService.addSession(session)

@@ -148,7 +148,7 @@ struct ResultsView: View {
 
                         // 4–6. Grille : état vide dans la page / skeletons / résultats (+ shimmer fin de vague partielle)
                         if viewModel.shouldShowEmptyGridState {
-                            ResultsEmptyGridStateView()
+                            ResultsEmptyGridStateView(debugMessage: session.searchDebugMessage)
                                 .padding(.horizontal, gridHorizontalPadding)
                                 .padding(.vertical, DesignTokens.spacingS)
                         } else if viewModel.shouldShowFullSkeletonGrid {
@@ -344,6 +344,8 @@ struct ResultsView: View {
 // MARK: - Vide (grille dans la page résultats)
 
 private struct ResultsEmptyGridStateView: View {
+    var debugMessage: String?
+
     var body: some View {
         VStack(spacing: DesignTokens.spacingM) {
             Image(systemName: "magnifyingglass")
@@ -356,6 +358,13 @@ private struct ResultsEmptyGridStateView: View {
                 .font(DesignTokens.caption)
                 .foregroundStyle(Color.secondary)
                 .multilineTextAlignment(.center)
+            if let debugMessage, !debugMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Text(debugMessage)
+                    .font(DesignTokens.caption)
+                    .foregroundStyle(Color.secondary.opacity(0.95))
+                    .multilineTextAlignment(.center)
+                    .padding(.top, 4)
+            }
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 32)

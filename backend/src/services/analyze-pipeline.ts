@@ -14,7 +14,7 @@ import {
   failedFlagsFromResults,
   mergeAndCapListings,
   PROVIDER_TIMEOUT_MS,
-  runProvidersWithEarlyCutoff,
+  runProvidersAllSettled,
   type ProviderName,
   type ProviderRunResult,
   type ProviderTaskResult,
@@ -29,9 +29,6 @@ import {
   searchVintedListings,
 } from './marketplace-search.js';
 import { EbayRateLimitedError } from './providers/ebay-browse-search.js';
-
-const GLOBAL_WAIT_MS = 15_000;
-const MIN_PROVIDERS_DONE = 2;
 
 const USE_MOCK =
   process.env.USE_MOCK?.toLowerCase() === 'true' ||
@@ -261,31 +258,15 @@ export async function runAnalyzePipeline(
   console.log('[PROVIDERS_ACTIVE]', tasks.map((t) => t.name));
 
   let snapshot: ProviderTaskResult[] = [];
-  let moreProvidersPending = false;
 
-  try {
-    if (tasks.length > 0) {
-      const outcome = await runProvidersWithEarlyCutoff(tasks, {
-        minComplete: Math.min(MIN_PROVIDERS_DONE, Math.max(1, tasks.length)),
-        maxWallMs: GLOBAL_WAIT_MS,
-      });
-      snapshot = outcome.snapshot;
-      moreProvidersPending = outcome.moreProvidersPending;
-      providerStatuses.push(...snapshot.map(taskResultToDTO));
-    }
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    console.error('[ANALYZE_PIPELINE] parallel_exception', msg);
-    providerStatuses.push({
-      provider: 'parallel',
-      status: 'error',
-      reason: msg,
-      listingsCount: 0,
-    });
+  if (tasks.length > 0) {
+    console.log('[PROVIDERS_PARALLEL] mode=allSettled tasks=', tasks.length);
+    snapshot = await runProvidersAllSettled(tasks);
+    providerStatuses.push(...snapshot.map(taskResultToDTO));
   }
 
   const chunks = snapshot
-    .filter((r) => r.status === 'ok')
+    .filter((r) => r.status === 'success')
     .map((r) => r.listings);
   const { listings, stats: mergeStats } = mergeAndCapListings(chunks);
   const mergeMs = Math.round(performance.now() - wall);
@@ -323,7 +304,7 @@ export async function runAnalyzePipeline(
       : undefined,
     depopSearchFailed: enabled.has('depop') ? failed.depopSearchFailed : undefined,
     initialResponseTimeMs: total,
-    moreProvidersPending: tasks.length > 0 ? moreProvidersPending : false,
+    moreProvidersPending: false,
     providerStatuses,
     searchDebugMessage,
   };

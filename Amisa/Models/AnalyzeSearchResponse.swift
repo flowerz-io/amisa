@@ -25,36 +25,6 @@ struct AnalyzeSearchResponse: Decodable {
     let providerCounts: ProviderCountsDTO?
     /// Réponse « vague » : d’autres sources marketplace n’étaient pas encore toutes intégrées au snapshot (early cutoff côté serveur).
     let moreProvidersPending: Bool?
-
-    init(
-        visionResult: FashionVisionResult,
-        generatedQueries: [String],
-        listings: [MarketplaceListingDTO],
-        pagination: SearchPaginationStateDTO? = nil,
-        rankingContext: SearchRankingContextDTO? = nil,
-        vintedSearchFailed: Bool? = nil,
-        grailedSearchFailed: Bool? = nil,
-        ebaySearchFailed: Bool? = nil,
-        leboncoinSearchFailed: Bool? = nil,
-        depopSearchFailed: Bool? = nil,
-        providerAvailability: ProviderAvailabilityMapDTO? = nil,
-        initialResponseTimeMs: Int? = nil,
-        providerCounts: ProviderCountsDTO? = nil,
-        moreProvidersPending: Bool? = nil
-    ) {
-        self.visionResult = visionResult
-        self.generatedQueries = generatedQueries
-        self.listings = listings
-        self.pagination = pagination
-        self.rankingContext = rankingContext
-        self.vintedSearchFailed = vintedSearchFailed
-        self.grailedSearchFailed = grailedSearchFailed
-        self.ebaySearchFailed = ebaySearchFailed
-        self.leboncoinSearchFailed = leboncoinSearchFailed
-        self.depopSearchFailed = depopSearchFailed
-        self.providerAvailability = providerAvailability
-        self.initialResponseTimeMs = initialResponseTimeMs
-        self.providerCounts = providerCounts
-        self.moreProvidersPending = moreProvidersPending
-    }
+    /// Message explicatif si aucune annonce (ex. résumé des erreurs providers côté Railway).
+    let searchDebugMessage: String?
 }
