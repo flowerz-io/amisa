@@ -4,6 +4,7 @@ import {
   hasEbayOAuthCredentials,
 } from '../../lib/ebay-env.js';
 import { getEbayApplicationAccessToken } from './ebay-oauth-token.js';
+import { getEbayResultsLimitPerQuery } from '../../lib/search-limits.js';
 import type { MarketplaceListingDTO } from '../../types.js';
 
 export class EbayRateLimitedError extends Error {
@@ -50,7 +51,7 @@ export async function fetchEbayBrowseListings(
 
   const apiRoot = getEbayApiRoot();
   const marketplaceId = resolveEbayBrowseMarketplaceId();
-  const limit = 30;
+  const limit = getEbayResultsLimitPerQuery();
 
   const params = new URLSearchParams({
     q: searchText,
@@ -230,7 +231,7 @@ export async function runEbayDebugSearch(
     return base;
   }
 
-  const limit = 30;
+  const limit = getEbayResultsLimitPerQuery();
   const params = new URLSearchParams({
     q: searchText,
     limit: String(limit),

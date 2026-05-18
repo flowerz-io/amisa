@@ -90,6 +90,8 @@ export function logProviderEnvironmentDiagnostics(): void {
     'EBAY_CLIENT_SECRET',
     'EBAY_GLOBAL_ID',
     'EBAY_MARKETPLACE_ID',
+    'EBAY_RESULTS_LIMIT_PER_QUERY',
+    'MAX_RESULTS_PER_SEARCH',
     'VINTED_ACCESS_TOKEN',
     'DEBUG_PROVIDER_ROUTE',
   ] as const;

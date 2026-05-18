@@ -287,9 +287,12 @@ export async function runAnalyzePipeline(
   const chunks = snapshot
     .filter((r) => r.status === 'ok')
     .map((r) => r.listings);
-  const listings = mergeAndCapListings(chunks);
+  const { listings, stats: mergeStats } = mergeAndCapListings(chunks);
   const mergeMs = Math.round(performance.now() - wall);
-  console.log(`[PERF] merge=${mergeMs}ms total_listings=${listings.length}`);
+  console.log(
+    `[PERF] merge=${mergeMs}ms total_listings=${listings.length} merge_input_sum=${mergeStats.inputSum} merge_after_dedup_cap=${mergeStats.afterDedupAndCap} merge_max_cap=${mergeStats.maxCap}`
+  );
+  console.log('[PERF] final_listings_to_client', listings.length);
 
   const total = Math.round(performance.now() - wall);
   console.log(`[PERF] total=${total}ms`);

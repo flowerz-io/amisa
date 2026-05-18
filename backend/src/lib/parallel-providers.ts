@@ -1,4 +1,6 @@
 import type { MarketplaceListingDTO } from '../types.js';
+import { marketplaceListingDedupeKey } from './listing-dedupe.js';
+import { getMaxResultsPerSearch } from './search-limits.js';
 import { sleep, withTimeout } from './with-timeout.js';
 
 export type ProviderName = 'vinted' | 'ebay' | 'grailed' | 'depop' | 'leboncoin';
@@ -10,9 +12,6 @@ export const PROVIDER_TIMEOUT_MS: Record<ProviderName, number> = {
   depop: 8000,
   leboncoin: 10000,
 };
-
-const MAX_PER_PROVIDER = 30;
-const MAX_TOTAL = 120;
 
 /** Retour attendu par chaque tâche provider (sans throw en usage nominal). */
 export interface ProviderRunResult {
@@ -149,27 +148,69 @@ export async function runProvidersWithEarlyCutoff(
   return { snapshot, moreProvidersPending };
 }
 
+export interface MergeAndCapStats {
+  chunkCounts: number[];
+  inputSum: number;
+  afterDedupAndCap: number;
+  maxCap: number;
+  dedupeSkips: number;
+  perProviderSkips: number;
+}
+
 export function mergeAndCapListings(
   chunks: MarketplaceListingDTO[][]
-): MarketplaceListingDTO[] {
+): { listings: MarketplaceListingDTO[]; stats: MergeAndCapStats } {
+  const maxCap = getMaxResultsPerSearch();
+  const maxPerProvider = maxCap;
+
   const perProv = new Map<string, number>();
   const seen = new Set<string>();
   const out: MarketplaceListingDTO[] = [];
+  let dedupeSkips = 0;
+  let perProviderSkips = 0;
+
+  const chunkCounts = chunks.map((c) => c.length);
+  const inputSum = chunkCounts.reduce((a, b) => a + b, 0);
 
   outer: for (const chunk of chunks) {
     for (const L of chunk) {
-      const key = `${(L.source ?? '').toLowerCase()}|${L.id}`;
-      if (seen.has(key)) continue;
+      const key = marketplaceListingDedupeKey(L);
+      if (seen.has(key)) {
+        dedupeSkips += 1;
+        continue;
+      }
       const prov = (L.source ?? 'unknown').toLowerCase();
       const n = perProv.get(prov) ?? 0;
-      if (n >= MAX_PER_PROVIDER) continue;
-      if (out.length >= MAX_TOTAL) break outer;
+      if (n >= maxPerProvider) {
+        perProviderSkips += 1;
+        continue;
+      }
+      if (out.length >= maxCap) break outer;
       seen.add(key);
       perProv.set(prov, n + 1);
       out.push(L);
     }
   }
-  return out;
+
+  const stats: MergeAndCapStats = {
+    chunkCounts,
+    inputSum,
+    afterDedupAndCap: out.length,
+    maxCap,
+    dedupeSkips,
+    perProviderSkips,
+  };
+
+  console.log('[LISTINGS_MERGE]', {
+    chunkCounts: stats.chunkCounts,
+    inputSum: stats.inputSum,
+    afterDedupAndCap: stats.afterDedupAndCap,
+    maxCap: stats.maxCap,
+    dedupeSkips: stats.dedupeSkips,
+    perProviderSkips: stats.perProviderSkips,
+  });
+
+  return { listings: out, stats };
 }
 
 export function failedFlagsFromResults(

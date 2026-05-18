@@ -16,6 +16,7 @@ enum ResultsViewState: Equatable {
 
 @MainActor
 final class ResultsViewModel: ObservableObject {
+    /// Affiche tous les `listings` renvoyés par l’API (aucune troncature locale type 30). `APIConfig.maxResultsPerSearch` mirror le plafond backend (`MAX_RESULTS_PER_SEARCH`, défaut 100).
     @Published var state: ResultsViewState
     @Published var displayedListings: [MarketplaceListing]
     @Published private(set) var allListings: [MarketplaceListing]
@@ -492,12 +493,18 @@ final class ResultsViewModel: ObservableObject {
         return formatter
     }()
 
+    private static func listingMergeKey(_ listing: MarketplaceListing) -> String {
+        let url = listing.listingURL?.absoluteString.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !url.isEmpty { return "url:\(url)" }
+        return "\(listing.source)|\(listing.id)"
+    }
+
     private static func mergeUnique(existing: [MarketplaceListing], new: [MarketplaceListing]) -> [MarketplaceListing] {
         var seen = Set<String>()
-        for x in existing { seen.insert("\(x.source)|\(x.id)") }
+        for x in existing { seen.insert(listingMergeKey(x)) }
         var out = existing
         for x in new {
-            let k = "\(x.source)|\(x.id)"
+            let k = listingMergeKey(x)
             if !seen.contains(k) {
                 seen.insert(k)
                 out.append(x)

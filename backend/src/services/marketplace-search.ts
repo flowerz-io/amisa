@@ -1,6 +1,8 @@
 import type { MarketplaceListingDTO } from '../types.js';
 import { fetchEbayBrowseListings } from './providers/ebay-browse-search.js';
 import { fetchVintedCatalogListings } from './providers/vinted-api-search.js';
+import { marketplaceListingDedupeKey } from '../lib/listing-dedupe.js';
+import { getEbayResultsLimitPerQuery } from '../lib/search-limits.js';
 
 const USE_MOCK =
   process.env.USE_MOCK?.toLowerCase() === 'true' ||
@@ -94,16 +96,36 @@ export async function searchEbayListings(
     if (qs.length === 0) {
       throw new Error('ebay: empty query after trim');
     }
+    const limitPerQuery = getEbayResultsLimitPerQuery();
     const merged: MarketplaceListingDTO[] = [];
     const seen = new Set<string>();
+    const rawByQuery: number[] = [];
+    let sumRaw = 0;
+
     for (const q of qs) {
-      for (const L of await fetchEbayBrowseListings(q)) {
-        const k = `${L.source}|${L.id}`;
+      const batch = await fetchEbayBrowseListings(q);
+      rawByQuery.push(batch.length);
+      sumRaw += batch.length;
+      console.log('[EBAY_QUERY_STATS]', {
+        query: q,
+        limitPerQuery,
+        rawCount: batch.length,
+      });
+      for (const L of batch) {
+        const k = marketplaceListingDedupeKey(L);
         if (seen.has(k)) continue;
         seen.add(k);
         merged.push(L);
       }
     }
+
+    console.log('[EBAY_AGGREGATE]', {
+      limitPerQuery,
+      queryCount: qs.length,
+      rawByQuery,
+      sumRaw,
+      afterDedup: merged.length,
+    });
     const ms = Math.round(performance.now() - t0);
     logSuccess('ebay', merged.length, ms);
     return merged;
