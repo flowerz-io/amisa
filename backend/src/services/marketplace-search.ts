@@ -1,5 +1,5 @@
 import type { MarketplaceListingDTO } from '../types.js';
-import { fetchEbayFindingListings } from './providers/ebay-finding-search.js';
+import { fetchEbayBrowseListings } from './providers/ebay-browse-search.js';
 import { fetchVintedCatalogListings } from './providers/vinted-api-search.js';
 
 const USE_MOCK =
@@ -36,7 +36,7 @@ async function mockDelayListings(
     {
       id: `${label}-mock-1`,
       source,
-      title: `[MOCK_MODE] ${label} — configure ${label === 'eBay' ? 'EBAY_APP_ID' : 'API'}`,
+      title: `[MOCK_MODE] ${label} — configure EBAY_CLIENT_ID + EBAY_CLIENT_SECRET (Browse API)`,
       price: 1,
       currency: 'EUR',
       listingUrl: 'https://example.com',
@@ -97,7 +97,7 @@ export async function searchEbayListings(
     const merged: MarketplaceListingDTO[] = [];
     const seen = new Set<string>();
     for (const q of qs) {
-      for (const L of await fetchEbayFindingListings(q)) {
+      for (const L of await fetchEbayBrowseListings(q)) {
         const k = `${L.source}|${L.id}`;
         if (seen.has(k)) continue;
         seen.add(k);

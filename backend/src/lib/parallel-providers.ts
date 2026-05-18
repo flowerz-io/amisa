@@ -14,11 +14,19 @@ export const PROVIDER_TIMEOUT_MS: Record<ProviderName, number> = {
 const MAX_PER_PROVIDER = 30;
 const MAX_TOTAL = 120;
 
+/** Retour attendu par chaque tâche provider (sans throw en usage nominal). */
+export interface ProviderRunResult {
+  listings: MarketplaceListingDTO[];
+  runStatus: 'success' | 'disabled' | 'rate_limited' | 'error';
+  reason?: string;
+}
+
 export interface ProviderTaskResult {
   name: ProviderName;
   ms: number;
   listings: MarketplaceListingDTO[];
-  status: 'ok' | 'timeout' | 'error';
+  status: 'ok' | 'timeout' | 'error' | 'disabled' | 'rate_limited';
+  reason?: string;
 }
 
 export interface ParallelSearchOutcome {
@@ -26,12 +34,31 @@ export interface ParallelSearchOutcome {
   moreProvidersPending: boolean;
 }
 
+function mapRunResult(r: ProviderRunResult): {
+  listings: MarketplaceListingDTO[];
+  status: ProviderTaskResult['status'];
+  reason?: string;
+} {
+  switch (r.runStatus) {
+    case 'success':
+      return { listings: r.listings, status: 'ok', reason: r.reason };
+    case 'disabled':
+      return { listings: [], status: 'disabled', reason: r.reason };
+    case 'rate_limited':
+      return { listings: [], status: 'rate_limited', reason: r.reason };
+    case 'error':
+      return { listings: [], status: 'error', reason: r.reason };
+    default:
+      return { listings: [], status: 'error', reason: 'unknown_run_status' };
+  }
+}
+
 /** Snapshot figé au moment où la barrière se libère (≥ minComplete OU wall time). */
 export async function runProvidersWithEarlyCutoff(
   tasks: Array<{
     name: ProviderName;
     timeoutMs: number;
-    run: () => Promise<MarketplaceListingDTO[]>;
+    run: () => Promise<ProviderRunResult>;
   }>,
   opts: { minComplete: number; maxWallMs: number }
 ): Promise<ParallelSearchOutcome> {
@@ -68,11 +95,18 @@ export async function runProvidersWithEarlyCutoff(
     const p0 = performance.now();
     void (async () => {
       try {
-        const listings = await withTimeout(t.timeoutMs, t.name, t.run);
+        const outcome = await withTimeout(t.timeoutMs, t.name, t.run);
+        const mapped = mapRunResult(outcome);
         const ms = Math.round(performance.now() - p0);
-        results.push({ name: t.name, ms, listings, status: 'ok' });
+        results.push({
+          name: t.name,
+          ms,
+          listings: mapped.listings,
+          status: mapped.status,
+          reason: mapped.reason,
+        });
         console.log(
-          `[PERF] ${t.name}=${ms}ms results=${listings.length} (see PROVIDER_SUCCESS for details)`
+          `[PERF] ${t.name}=${ms}ms results=${mapped.listings.length} status=${mapped.status}`
         );
       } catch (e) {
         const ms = Math.round(performance.now() - p0);
@@ -82,7 +116,13 @@ export async function runProvidersWithEarlyCutoff(
         const status: ProviderTaskResult['status'] = isTimeout
           ? 'timeout'
           : 'error';
-        results.push({ name: t.name, ms, listings: [], status });
+        results.push({
+          name: t.name,
+          ms,
+          listings: [],
+          status,
+          reason: msg,
+        });
         console.error(`[PROVIDER_REJECTED] ${t.name}`, {
           status,
           durationMs: ms,
@@ -152,13 +192,16 @@ export function failedFlagsFromResults(
 
   for (const r of results) {
     if (!enabled.has(r.name)) continue;
-    if (r.status === 'timeout' || r.status === 'error') {
-      if (r.name === 'vinted') o.vintedSearchFailed = true;
-      if (r.name === 'grailed') o.grailedSearchFailed = true;
-      if (r.name === 'ebay') o.ebaySearchFailed = true;
-      if (r.name === 'leboncoin') o.leboncoinSearchFailed = true;
-      if (r.name === 'depop') o.depopSearchFailed = true;
-    }
+    const hard =
+      r.status === 'timeout' ||
+      r.status === 'error' ||
+      r.status === 'rate_limited';
+    if (!hard) continue;
+    if (r.name === 'vinted') o.vintedSearchFailed = true;
+    if (r.name === 'grailed') o.grailedSearchFailed = true;
+    if (r.name === 'ebay') o.ebaySearchFailed = true;
+    if (r.name === 'leboncoin') o.leboncoinSearchFailed = true;
+    if (r.name === 'depop') o.depopSearchFailed = true;
   }
   return o;
 }

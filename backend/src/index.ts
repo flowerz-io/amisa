@@ -6,6 +6,7 @@ import { logVisionProviderDiagnostic } from './config.js';
 import { logProviderEnvironmentDiagnostics } from './lib/provider-env.js';
 import { analyzeSearchRoute } from './routes/analyze-search.js';
 import { debugProviderRoute } from './routes/debug-provider.js';
+import { debugEbayRoute } from './routes/debug-ebay.js';
 import { resolveSharedUrlRoute } from './routes/resolve-shared-url.js';
 import { vintedListingsRoute } from './routes/vinted-listings.js';
 import { grailedListingsRoute } from './routes/grailed-listings.js';
@@ -40,6 +41,7 @@ app.register(leBonCoinListingsRoute, { prefix: '/' });
 app.register(depopListingsRoute, { prefix: '/' });
 app.register(searchMoreRoute, { prefix: '/' });
 app.register(debugProviderRoute, { prefix: '/' });
+app.register(debugEbayRoute, { prefix: '/' });
 
 const port = parseInt(process.env.PORT ?? '3000', 10);
 console.log('Amisa API running');
@@ -47,6 +49,6 @@ await app.listen({ port, host: '0.0.0.0' });
 
 console.log('[Amisa API] base ready');
 console.log(
-  '[Amisa API] routes: GET /health, GET /debug-provider, POST /analyze-search, POST /resolve-shared-url, POST /search-sessions'
+  '[Amisa API] routes: GET /health, GET /debug-provider, GET /debug-ebay, POST /analyze-search, POST /resolve-shared-url, POST /search-sessions'
 );
 console.log(`[Amisa API] listening on http://localhost:${port}`);

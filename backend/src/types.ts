@@ -38,6 +38,20 @@ export interface AnalyzeSearchBody {
   enabledProviders: string[];
 }
 
+export interface ProviderStatusDTO {
+  provider: string;
+  status:
+    | 'ok'
+    | 'disabled'
+    | 'rate_limited'
+    | 'error'
+    | 'timeout'
+    | 'skipped';
+  reason?: string;
+  listingsCount?: number;
+  durationMs?: number;
+}
+
 export interface AnalyzeSearchResponseJSON {
   visionResult: FashionVisionResult;
   generatedQueries: string[];
@@ -54,4 +68,8 @@ export interface AnalyzeSearchResponseJSON {
   providerCounts?: unknown;
   /** Vrai si la réponse est une vague partielle (d’autres providers pourraient encore fusionner côté serveur — ici une seule réponse HTTP). */
   moreProvidersPending?: boolean;
+  /** État détaillé par provider pour le debug (iOS peut ignorer ce champ). */
+  providerStatuses?: ProviderStatusDTO[];
+  /** Message synthétique si aucune annonce n’a été trouvée malgré une vision OK. */
+  searchDebugMessage?: string;
 }

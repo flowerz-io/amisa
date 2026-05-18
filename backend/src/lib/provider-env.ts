@@ -1,83 +1,105 @@
 /**
- * Variables d’environnement Railway / local pour l’exécution des providers.
- * Aucun provider n’est coupé silencieusement : ici on ne fait qu’exposer l’état pour les logs.
+ * Activation stricte des providers Railway : *_ENABLED doit valoir exactement "true".
+ * Plus de liste globale implicite "tous actifs" si PROVIDERS_ENABLED est absent.
  */
 
-const Falsy = new Set(['0', 'false', 'no', 'off', '']);
+import { getEbayDebugSnapshot, hasEbayOAuthCredentials } from './ebay-env.js';
 
-/** `VAR` absent = activé ; explicite false désactive côté serveur. */
-export function envProviderEnabled(envKey: string): boolean {
-  const v = process.env[envKey];
-  if (v === undefined || v === '') return true;
-  return !Falsy.has(v.trim().toLowerCase());
+/** Uniquement la chaîne `true` (insensible à la casse après trim). */
+export function isEnvStrictlyTrue(key: string): boolean {
+  return process.env[key]?.trim().toLowerCase() === 'true';
 }
 
-/** Liste globale optionnelle : PROVIDERS_ENABLED=vinted,ebay ou "all". */
-export function parseGlobalProvidersEnabledList(): Set<string> | null {
-  const raw = process.env.PROVIDERS_ENABLED;
-  if (raw === undefined || raw === '' || raw.toLowerCase() === 'all') {
-    return null;
-  }
-  const set = new Set(
-    raw
-      .split(/[,;\s]+/)
-      .map((s) => s.trim().toLowerCase())
-      .filter(Boolean)
-  );
-  return set.size ? set : null;
+export interface ServerProviderGate {
+  ready: boolean;
+  /** Raison log / debug (ex. missing_token) */
+  reason: string;
 }
 
-/** true si le client (`enabledProviders`) ET le serveur autorisent ce provider. */
-export function isProviderRunnable(
-  name: string,
-  clientEnabled: Set<string>
-): boolean {
-  if (!clientEnabled.has(name.toLowerCase())) return false;
-  const perVar: Record<string, string> = {
-    vinted: 'VINTED_ENABLED',
-    ebay: 'EBAY_ENABLED',
-    grailed: 'GRAILED_ENABLED',
-    depop: 'DEPOP_ENABLED',
-    leboncoin: 'LEBONCOIN_ENABLED',
-  };
-  const key = perVar[name.toLowerCase()];
-  if (key && !envProviderEnabled(key)) {
-    console.warn(`[PROVIDER_SKIP_SERVER] ${name} disabled via ${key}=false`);
-    return false;
+export function gateEbayServer(): ServerProviderGate {
+  if (!isEnvStrictlyTrue('EBAY_ENABLED')) {
+    return { ready: false, reason: 'EBAY_ENABLED_false' };
   }
-  const g = parseGlobalProvidersEnabledList();
-  if (g && !g.has(name.toLowerCase())) {
-    console.warn(
-      `[PROVIDER_SKIP_SERVER] ${name} not in PROVIDERS_ENABLED=${process.env.PROVIDERS_ENABLED}`
-    );
-    return false;
+  if (!hasEbayOAuthCredentials()) {
+    return { ready: false, reason: 'missing_ebay_oauth_credentials' };
   }
-  return true;
+  return { ready: true, reason: 'ok' };
+}
+
+export function gateVintedServer(): ServerProviderGate {
+  if (!isEnvStrictlyTrue('VINTED_ENABLED')) {
+    return { ready: false, reason: 'VINTED_ENABLED_false' };
+  }
+  if (!process.env.VINTED_ACCESS_TOKEN?.trim()) {
+    return { ready: false, reason: 'missing_token' };
+  }
+  return { ready: true, reason: 'ok' };
+}
+
+export function gateGrailedServer(): ServerProviderGate {
+  if (!isEnvStrictlyTrue('GRAILED_ENABLED')) {
+    return { ready: false, reason: 'GRAILED_ENABLED_false' };
+  }
+  return { ready: true, reason: 'ok' };
+}
+
+export function gateDepopServer(): ServerProviderGate {
+  if (!isEnvStrictlyTrue('DEPOP_ENABLED')) {
+    return { ready: false, reason: 'DEPOP_ENABLED_false' };
+  }
+  return { ready: true, reason: 'ok' };
+}
+
+export function gateLeboncoinServer(): ServerProviderGate {
+  if (!isEnvStrictlyTrue('LEBONCOIN_ENABLED')) {
+    return { ready: false, reason: 'LEBONCOIN_ENABLED_false' };
+  }
+  return { ready: true, reason: 'ok' };
 }
 
 export function logProviderEnvironmentDiagnostics(): void {
-  const keys = [
-    'NODE_ENV',
-    'USE_MOCK',
-    'MOCK_MODE',
-    'PROVIDERS_ENABLED',
+  const nodeEnv = process.env.NODE_ENV ?? '<unset>';
+  const useMock = process.env.USE_MOCK ?? '<unset>';
+  const mockMode = process.env.MOCK_MODE ?? '<unset>';
+  const ebaySnap = getEbayDebugSnapshot();
+
+  console.log('[ENV_MARKETPLACES]');
+  console.log(`  NODE_ENV=${nodeEnv}`);
+  console.log(`  USE_MOCK=${useMock}`);
+  console.log(`  MOCK_MODE=${mockMode}`);
+  console.log(
+    `  *_ENABLED strict=true only — defaults off unless VINTED_ENABLED=true etc.`
+  );
+  console.log(`  EBAY_ENABLED raw=${process.env.EBAY_ENABLED ?? '<unset>'}`);
+  console.log(
+    `  ebayAppCredentialPresent=${ebaySnap.appIdPresent} (resolvedFrom=${ebaySnap.appIdSource})`
+  );
+  console.log(
+    `  ebayGlobalIdUsed=${ebaySnap.globalId} (resolvedFrom=${ebaySnap.globalIdSource})`
+  );
+  console.log(
+    `  EBAY_ENV=${process.env.EBAY_ENV ?? '<unset>'} EBAY_CLIENT_SECRET=${process.env.EBAY_CLIENT_SECRET ? 'set(len>0)' : '<unset>'}`
+  );
+
+  const extra = [
     'VINTED_ENABLED',
-    'EBAY_ENABLED',
     'GRAILED_ENABLED',
     'DEPOP_ENABLED',
     'LEBONCOIN_ENABLED',
-    'EBAY_APP_ID',
-    'EBAY_GLOBAL_ID_V2',
+    'EBAY_CLIENT_ID',
+    'EBAY_CLIENT_SECRET',
+    'EBAY_GLOBAL_ID',
+    'EBAY_MARKETPLACE_ID',
     'VINTED_ACCESS_TOKEN',
     'DEBUG_PROVIDER_ROUTE',
   ] as const;
-  console.log('[ENV_MARKETPLACES]');
-  for (const k of keys) {
+  for (const k of extra) {
     const v = process.env[k];
     if (v === undefined) {
       console.log(`  ${k}=<unset>`);
     } else if (
-      k === 'EBAY_APP_ID' ||
+      k === 'EBAY_CLIENT_ID' ||
+      k === 'EBAY_CLIENT_SECRET' ||
       k === 'VINTED_ACCESS_TOKEN'
     ) {
       console.log(
