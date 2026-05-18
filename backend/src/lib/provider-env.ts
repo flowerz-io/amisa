@@ -4,6 +4,7 @@
  */
 
 import { getEbayDebugSnapshot, hasEbayOAuthCredentials } from './ebay-env.js';
+import { logScraperProviderModes } from './provider-modes.js';
 
 /** Uniquement la chaîne `true` (insensible à la casse après trim). */
 export function isEnvStrictlyTrue(key: string): boolean {
@@ -30,9 +31,6 @@ export function gateVintedServer(): ServerProviderGate {
   if (!isEnvStrictlyTrue('VINTED_ENABLED')) {
     return { ready: false, reason: 'VINTED_ENABLED_false' };
   }
-  if (!process.env.VINTED_ACCESS_TOKEN?.trim()) {
-    return { ready: false, reason: 'missing_token' };
-  }
   return { ready: true, reason: 'ok' };
 }
 
@@ -58,6 +56,8 @@ export function gateLeboncoinServer(): ServerProviderGate {
 }
 
 export function logProviderEnvironmentDiagnostics(): void {
+  logScraperProviderModes();
+
   const nodeEnv = process.env.NODE_ENV ?? '<unset>';
   const useMock = process.env.USE_MOCK ?? '<unset>';
   const mockMode = process.env.MOCK_MODE ?? '<unset>';
@@ -105,7 +105,7 @@ export function logProviderEnvironmentDiagnostics(): void {
       k === 'VINTED_ACCESS_TOKEN'
     ) {
       console.log(
-        `  ${k}=${v.length > 0 ? `set(len=${v.length})` : '<empty>'}`
+        `  ${k}=${v.length > 0 ? `set(len=${v.length}), optional legacy Bearer` : '<empty>'}`
       );
     } else {
       console.log(`  ${k}=${v}`);

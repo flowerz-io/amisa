@@ -2,6 +2,12 @@ import type { FastifyInstance } from 'fastify';
 import type { MarketplaceListingDTO } from '../types.js';
 import { getEbayDebugSnapshot } from '../lib/ebay-env.js';
 import {
+  gateDepopServer,
+  gateGrailedServer,
+  gateLeboncoinServer,
+  gateVintedServer,
+} from '../lib/provider-env.js';
+import {
   searchDepopListings,
   searchEbayListings,
   searchGrailedListings,
@@ -24,6 +30,48 @@ export async function debugProviderRoute(app: FastifyInstance): Promise<void> {
     const provider = (req.query.provider ?? 'ebay').toLowerCase().trim();
     const q = (req.query.q ?? 'Adidas Samba').trim();
     const t0 = performance.now();
+
+    if (provider === 'vinted') {
+      const gate = gateVintedServer();
+      if (!gate.ready) {
+        return reply.send({
+          provider: 'vinted',
+          enabled: false,
+          mode: 'scraper',
+          tokenRequired: false,
+          gateReason: gate.reason,
+          count: 0,
+          sampleTitles: [] as string[],
+          durationMs: Math.round(performance.now() - t0),
+        });
+      }
+      try {
+        const listings = await searchVintedListings([q]);
+        const durationMs = Math.round(performance.now() - t0);
+        return reply.send({
+          provider: 'vinted',
+          enabled: true,
+          mode: 'scraper',
+          tokenRequired: false,
+          count: listings.length,
+          sampleTitles: listings.slice(0, 10).map((l) => l.title),
+          durationMs,
+        });
+      } catch (e) {
+        const durationMs = Math.round(performance.now() - t0);
+        const err = e instanceof Error ? e.message : String(e);
+        return reply.send({
+          provider: 'vinted',
+          enabled: true,
+          mode: 'scraper',
+          tokenRequired: false,
+          count: 0,
+          sampleTitles: [] as string[],
+          error: err,
+          durationMs,
+        });
+      }
+    }
 
     if (provider === 'ebay') {
       const snap = getEbayDebugSnapshot();
@@ -61,12 +109,33 @@ export async function debugProviderRoute(app: FastifyInstance): Promise<void> {
       }
     }
 
+    let gate:
+      | ReturnType<typeof gateGrailedServer>
+      | ReturnType<typeof gateDepopServer>
+      | ReturnType<typeof gateLeboncoinServer>;
+    if (provider === 'grailed') gate = gateGrailedServer();
+    else if (provider === 'depop') gate = gateDepopServer();
+    else if (provider === 'leboncoin') gate = gateLeboncoinServer();
+    else {
+      return reply.code(400).send({ error: 'unknown_provider', provider });
+    }
+
+    if (!gate.ready) {
+      return reply.send({
+        provider,
+        enabled: false,
+        mode: 'scraper',
+        tokenRequired: false,
+        gateReason: gate.reason,
+        count: 0,
+        sampleTitles: [] as string[],
+        durationMs: Math.round(performance.now() - t0),
+      });
+    }
+
     try {
       let listings: MarketplaceListingDTO[];
       switch (provider) {
-        case 'vinted':
-          listings = await searchVintedListings([q]);
-          break;
         case 'grailed':
           listings = await searchGrailedListings([q]);
           break;
@@ -83,6 +152,9 @@ export async function debugProviderRoute(app: FastifyInstance): Promise<void> {
       const durationMs = Math.round(performance.now() - t0);
       return reply.send({
         provider,
+        enabled: true,
+        mode: 'scraper',
+        tokenRequired: false,
         query: q,
         status: 'ok' as const,
         durationMs,
@@ -94,12 +166,15 @@ export async function debugProviderRoute(app: FastifyInstance): Promise<void> {
       const rawError = e instanceof Error ? e.message : String(e);
       return reply.send({
         provider,
+        enabled: true,
+        mode: 'scraper',
+        tokenRequired: false,
         query: q,
         status: 'error' as const,
         durationMs,
         count: 0,
         sampleTitles: [] as string[],
-        rawError,
+        error: rawError,
       });
     }
   });

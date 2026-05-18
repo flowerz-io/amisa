@@ -1,34 +1,34 @@
 import type { MarketplaceListingDTO } from '../../types.js';
+import { browserLikeHeaders } from '../../lib/scrape-http.js';
 
 /**
- * API catalogue Vinted (nécessite un jeton Bearer valide, ex. session mobile capturée).
- * Sans VINTED_ACCESS_TOKEN, l’API renvoie `invalid_authentication_token`.
+ * Vinted — accès public catalogue (pas de jeton obligatoire).
+ * En-têtes navigateur + Referer. Si VINTED_ACCESS_TOKEN est défini, Bearer ajouté (legacy).
  */
 export async function fetchVintedCatalogListings(
   searchText: string
 ): Promise<MarketplaceListingDTO[]> {
-  const token = process.env.VINTED_ACCESS_TOKEN?.trim();
-  if (!token) {
-    throw new Error(
-      'vinted: VINTED_ACCESS_TOKEN is not set — Vinted requires a Bearer token for /api/v2/catalog/items'
-    );
-  }
-
   const base =
     process.env.VINTED_API_BASE?.trim() || 'https://www.vinted.fr/api/v2';
-  const perPage = '24';
+  const perPage = process.env.VINTED_SCRAPER_PER_PAGE?.trim() || '24';
   const path = `/catalog/items?search_text=${encodeURIComponent(
     searchText
   )}&per_page=${perPage}&page=1`;
 
+  const token = process.env.VINTED_ACCESS_TOKEN?.trim();
+  const headers: Record<string, string> = {
+    ...browserLikeHeaders({
+      Referer: `https://www.vinted.fr/catalog?search_text=${encodeURIComponent(searchText)}`,
+      Origin: 'https://www.vinted.fr',
+    }),
+    Accept: 'application/json',
+  };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
   const res = await fetch(`${base.replace(/\/$/, '')}${path}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: 'application/json',
-      'User-Agent':
-        process.env.VINTED_USER_AGENT?.trim() ||
-        'Mozilla/5.0 (compatible; AmisaBackend/1.0)',
-    },
+    headers,
   });
 
   const rawText = await res.text();
@@ -36,19 +36,23 @@ export async function fetchVintedCatalogListings(
   try {
     data = JSON.parse(rawText);
   } catch {
-    throw new Error(`vinted: non-JSON response HTTP ${res.status} ${rawText.slice(0, 180)}`);
+    throw new Error(
+      `vinted scraper: non-JSON HTTP ${res.status} ${rawText.slice(0, 200)}`
+    );
   }
 
   const root = data as Record<string, unknown>;
   if (typeof root.code === 'number' && root.code !== 0) {
     throw new Error(
-      `vinted: API error ${JSON.stringify({ code: root.code, message: root.message })}`
+      `vinted scraper: API code ${JSON.stringify({ code: root.code, message: root.message })}`
     );
   }
 
   const items = root.items;
   if (!Array.isArray(items)) {
-    return [];
+    throw new Error(
+      `vinted scraper: missing items[] (HTTP ${res.status}) body=${rawText.slice(0, 300)}`
+    );
   }
 
   const out: MarketplaceListingDTO[] = [];

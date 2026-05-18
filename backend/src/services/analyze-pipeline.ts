@@ -30,10 +30,6 @@ import {
 } from './marketplace-search.js';
 import { EbayRateLimitedError } from './providers/ebay-browse-search.js';
 
-const USE_MOCK =
-  process.env.USE_MOCK?.toLowerCase() === 'true' ||
-  process.env.MOCK_MODE?.toLowerCase() === 'true';
-
 function logSkipped(provider: string, reason: string): void {
   console.log(`[PROVIDER_DISABLED] ${provider} reason=${reason}`);
 }
@@ -76,57 +72,36 @@ async function adaptEbay(queries: string[]): Promise<ProviderRunResult> {
 }
 
 async function adaptGrailed(queries: string[]): Promise<ProviderRunResult> {
-  if (USE_MOCK) {
-    try {
-      const listings = await searchGrailedListings(queries);
-      return { listings, runStatus: 'success' };
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      return { listings: [], runStatus: 'error', reason: msg };
-    }
+  try {
+    const listings = await searchGrailedListings(queries);
+    return { listings, runStatus: 'success' };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error('[PROVIDER_ERROR] grailed', msg);
+    return { listings: [], runStatus: 'error', reason: msg };
   }
-  logSkipped('grailed', 'not_implemented');
-  return {
-    listings: [],
-    runStatus: 'disabled',
-    reason: 'Provider not implemented',
-  };
 }
 
 async function adaptDepop(queries: string[]): Promise<ProviderRunResult> {
-  if (USE_MOCK) {
-    try {
-      const listings = await searchDepopListings(queries);
-      return { listings, runStatus: 'success' };
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      return { listings: [], runStatus: 'error', reason: msg };
-    }
+  try {
+    const listings = await searchDepopListings(queries);
+    return { listings, runStatus: 'success' };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error('[PROVIDER_ERROR] depop', msg);
+    return { listings: [], runStatus: 'error', reason: msg };
   }
-  logSkipped('depop', 'not_implemented');
-  return {
-    listings: [],
-    runStatus: 'disabled',
-    reason: 'Provider not implemented',
-  };
 }
 
 async function adaptLeboncoin(queries: string[]): Promise<ProviderRunResult> {
-  if (USE_MOCK) {
-    try {
-      const listings = await searchLeboncoinListings(queries);
-      return { listings, runStatus: 'success' };
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      return { listings: [], runStatus: 'error', reason: msg };
-    }
+  try {
+    const listings = await searchLeboncoinListings(queries);
+    return { listings, runStatus: 'success' };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error('[PROVIDER_ERROR] leboncoin', msg);
+    return { listings: [], runStatus: 'error', reason: msg };
   }
-  logSkipped('leboncoin', 'not_implemented');
-  return {
-    listings: [],
-    runStatus: 'disabled',
-    reason: 'Provider not implemented',
-  };
 }
 
 export async function runAnalyzePipeline(

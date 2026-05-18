@@ -1,6 +1,9 @@
 import type { MarketplaceListingDTO } from '../types.js';
 import { fetchEbayBrowseListings } from './providers/ebay-browse-search.js';
 import { fetchVintedCatalogListings } from './providers/vinted-api-search.js';
+import { fetchDepopScraperListings } from './providers/depop-scraper.js';
+import { fetchGrailedScraperListings } from './providers/grailed-scraper.js';
+import { fetchLeboncoinScraperListings } from './providers/leboncoin-scraper.js';
 import { marketplaceListingDedupeKey } from '../lib/listing-dedupe.js';
 import { getEbayResultsLimitPerQuery } from '../lib/search-limits.js';
 
@@ -38,7 +41,7 @@ async function mockDelayListings(
     {
       id: `${label}-mock-1`,
       source,
-      title: `[MOCK_MODE] ${label} — configure EBAY_CLIENT_ID + EBAY_CLIENT_SECRET (Browse API)`,
+      title: `[MOCK_MODE] ${label}`,
       price: 1,
       currency: 'EUR',
       listingUrl: 'https://example.com',
@@ -66,7 +69,7 @@ export async function searchVintedListings(
     const seen = new Set<string>();
     for (const q of qs) {
       for (const L of await fetchVintedCatalogListings(q)) {
-        const k = `${L.source}|${L.id}`;
+        const k = marketplaceListingDedupeKey(L);
         if (seen.has(k)) continue;
         seen.add(k);
         merged.push(L);
@@ -147,9 +150,22 @@ export async function searchGrailedListings(
       logSuccess('grailed', out.length, Math.round(performance.now() - t0));
       return out;
     }
-    throw new Error(
-      'grailed: no HTTP implementation in Amisa backend — deploy Grailed scraper or set USE_MOCK=true for dev'
-    );
+    if (qs.length === 0) {
+      throw new Error('grailed: empty query after trim');
+    }
+    const merged: MarketplaceListingDTO[] = [];
+    const seen = new Set<string>();
+    for (const q of qs) {
+      for (const L of await fetchGrailedScraperListings(q)) {
+        const k = marketplaceListingDedupeKey(L);
+        if (seen.has(k)) continue;
+        seen.add(k);
+        merged.push(L);
+      }
+    }
+    const ms = Math.round(performance.now() - t0);
+    logSuccess('grailed', merged.length, ms);
+    return merged;
   } catch (e) {
     logError('grailed', e);
     throw e;
@@ -168,9 +184,22 @@ export async function searchDepopListings(
       logSuccess('depop', out.length, Math.round(performance.now() - t0));
       return out;
     }
-    throw new Error(
-      'depop: no HTTP implementation in Amisa backend — deploy Depop integration or set USE_MOCK=true for dev'
-    );
+    if (qs.length === 0) {
+      throw new Error('depop: empty query after trim');
+    }
+    const merged: MarketplaceListingDTO[] = [];
+    const seen = new Set<string>();
+    for (const q of qs) {
+      for (const L of await fetchDepopScraperListings(q)) {
+        const k = marketplaceListingDedupeKey(L);
+        if (seen.has(k)) continue;
+        seen.add(k);
+        merged.push(L);
+      }
+    }
+    const ms = Math.round(performance.now() - t0);
+    logSuccess('depop', merged.length, ms);
+    return merged;
   } catch (e) {
     logError('depop', e);
     throw e;
@@ -189,9 +218,22 @@ export async function searchLeboncoinListings(
       logSuccess('leboncoin', out.length, Math.round(performance.now() - t0));
       return out;
     }
-    throw new Error(
-      'leboncoin: no HTTP implementation in Amisa backend — deploy scraper or set USE_MOCK=true for dev'
-    );
+    if (qs.length === 0) {
+      throw new Error('leboncoin: empty query after trim');
+    }
+    const merged: MarketplaceListingDTO[] = [];
+    const seen = new Set<string>();
+    for (const q of qs) {
+      for (const L of await fetchLeboncoinScraperListings(q)) {
+        const k = marketplaceListingDedupeKey(L);
+        if (seen.has(k)) continue;
+        seen.add(k);
+        merged.push(L);
+      }
+    }
+    const ms = Math.round(performance.now() - t0);
+    logSuccess('leboncoin', merged.length, ms);
+    return merged;
   } catch (e) {
     logError('leboncoin', e);
     throw e;
