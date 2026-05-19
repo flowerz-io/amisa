@@ -46,10 +46,13 @@ export interface ProviderStatusDTO {
     | 'rate_limited'
     | 'error'
     | 'timeout'
-    | 'skipped';
+    | 'skipped'
+    | 'blocked_403';
   reason?: string;
   listingsCount?: number;
   durationMs?: number;
+  /** Statut HTTP source quand pertinent (scraping). */
+  httpStatus?: number;
 }
 
 export interface AnalyzeSearchResponseJSON {

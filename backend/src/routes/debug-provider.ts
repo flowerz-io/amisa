@@ -3,10 +3,12 @@ import type { MarketplaceListingDTO } from '../types.js';
 import { getEbayDebugSnapshot } from '../lib/ebay-env.js';
 import {
   gateDepopServer,
+  gateEbayServer,
   gateGrailedServer,
   gateLeboncoinServer,
   gateVintedServer,
 } from '../lib/provider-env.js';
+import { ProviderScrapeError } from '../lib/provider-scrape-error.js';
 import {
   searchDepopListings,
   searchEbayListings,
@@ -14,6 +16,43 @@ import {
   searchLeboncoinListings,
   searchVintedListings,
 } from '../services/marketplace-search.js';
+
+type DebugReply = {
+  provider: string;
+  enabled: boolean;
+  mode: string;
+  status: string;
+  count: number;
+  sampleTitles: string[];
+  error?: string;
+  httpStatus?: number;
+  durationMs: number;
+  gateReason?: string;
+  /** Diagnostic eBay (réponse debug). */
+  query?: string;
+  appIdPresent?: boolean;
+  appIdSource?: string;
+  globalId?: string;
+  globalIdSource?: string;
+};
+
+function scrapeFieldsFromErr(e: unknown): {
+  httpStatus?: number;
+  blocked: boolean;
+} {
+  if (e instanceof ProviderScrapeError) {
+    return {
+      httpStatus: e.httpStatus,
+      blocked: !!(e.blocked403 || e.httpStatus === 403),
+    };
+  }
+  return { blocked: false };
+}
+
+function vintedDebugMode(): string {
+  const token = process.env.VINTED_ACCESS_TOKEN?.trim();
+  return token ? 'bearer_api' : 'playwright_public';
+}
 
 /**
  * GET /debug-provider?provider=ebay&q=black+loafers
@@ -30,152 +69,188 @@ export async function debugProviderRoute(app: FastifyInstance): Promise<void> {
     const provider = (req.query.provider ?? 'ebay').toLowerCase().trim();
     const q = (req.query.q ?? 'Adidas Samba').trim();
     const t0 = performance.now();
+    const durationMs = (): number => Math.round(performance.now() - t0);
 
-    if (provider === 'vinted') {
+    async function vintedAnswer(): Promise<DebugReply> {
       const gate = gateVintedServer();
+      const mode = vintedDebugMode();
       if (!gate.ready) {
-        return reply.send({
+        return {
           provider: 'vinted',
           enabled: false,
-          mode: 'scraper',
-          tokenRequired: false,
-          gateReason: gate.reason,
+          mode,
+          status: 'disabled_gate',
           count: 0,
-          sampleTitles: [] as string[],
-          durationMs: Math.round(performance.now() - t0),
-        });
+          sampleTitles: [],
+          error: gate.reason,
+          durationMs: durationMs(),
+          gateReason: gate.reason,
+        };
       }
       try {
         const listings = await searchVintedListings([q]);
-        const durationMs = Math.round(performance.now() - t0);
-        return reply.send({
+        return {
           provider: 'vinted',
           enabled: true,
-          mode: 'scraper',
-          tokenRequired: false,
+          mode,
+          status: listings.length ? 'success' : 'empty',
           count: listings.length,
-          sampleTitles: listings.slice(0, 10).map((l) => l.title),
-          durationMs,
-        });
+          sampleTitles: sampleTitles(listings),
+          durationMs: durationMs(),
+        };
       } catch (e) {
-        const durationMs = Math.round(performance.now() - t0);
         const err = e instanceof Error ? e.message : String(e);
-        return reply.send({
+        const sf = scrapeFieldsFromErr(e);
+        return {
           provider: 'vinted',
           enabled: true,
-          mode: 'scraper',
-          tokenRequired: false,
+          mode,
+          status: sf.blocked ? 'blocked_403' : 'error',
           count: 0,
-          sampleTitles: [] as string[],
+          sampleTitles: [],
           error: err,
-          durationMs,
-        });
+          httpStatus: sf.httpStatus,
+          durationMs: durationMs(),
+        };
       }
     }
 
-    if (provider === 'ebay') {
+    async function ebayAnswer(): Promise<DebugReply> {
+      const gate = gateEbayServer();
       const snap = getEbayDebugSnapshot();
+      const mode = 'browse_api_oauth';
+      if (!gate.ready) {
+        return {
+          provider: 'ebay',
+          enabled: false,
+          mode,
+          status: 'disabled_gate',
+          count: 0,
+          sampleTitles: [],
+          error: gate.reason,
+          durationMs: durationMs(),
+          gateReason: gate.reason,
+        };
+      }
       try {
         const listings = await searchEbayListings([q]);
-        const durationMs = Math.round(performance.now() - t0);
-        return reply.send({
+        return {
           provider: 'ebay',
-          query: q,
-          appIdPresent: snap.appIdPresent,
-          appIdSource: snap.appIdSource,
-          globalId: snap.globalId,
-          globalIdSource: snap.globalIdSource,
-          status: 'ok' as const,
+          enabled: true,
+          mode,
+          status: listings.length ? 'success' : 'empty',
           count: listings.length,
-          sampleTitles: listings.slice(0, 10).map((l) => l.title),
-          durationMs,
-        });
+          sampleTitles: sampleTitles(listings),
+          durationMs: durationMs(),
+          ...ebaySnapPayload(snap, q),
+        };
       } catch (e) {
-        const rawError = e instanceof Error ? e.message : String(e);
-        const durationMs = Math.round(performance.now() - t0);
-        return reply.send({
+        const err = e instanceof Error ? e.message : String(e);
+        return {
           provider: 'ebay',
-          query: q,
-          appIdPresent: snap.appIdPresent,
-          appIdSource: snap.appIdSource,
-          globalId: snap.globalId,
-          globalIdSource: snap.globalIdSource,
-          status: 'error' as const,
+          enabled: true,
+          mode,
+          status: 'error',
           count: 0,
-          sampleTitles: [] as string[],
-          durationMs,
-          rawError,
-        });
+          sampleTitles: [],
+          error: err,
+          durationMs: durationMs(),
+          ...ebaySnapPayload(snap, q),
+        };
       }
     }
 
-    let gate:
-      | ReturnType<typeof gateGrailedServer>
-      | ReturnType<typeof gateDepopServer>
-      | ReturnType<typeof gateLeboncoinServer>;
-    if (provider === 'grailed') gate = gateGrailedServer();
-    else if (provider === 'depop') gate = gateDepopServer();
-    else if (provider === 'leboncoin') gate = gateLeboncoinServer();
-    else {
-      return reply.code(400).send({ error: 'unknown_provider', provider });
-    }
+    async function scrapeProviderAnswer(
+      name: 'grailed' | 'depop' | 'leboncoin',
+      searcher: (queries: string[]) => Promise<MarketplaceListingDTO[]>
+    ): Promise<DebugReply> {
+      const gate =
+        name === 'grailed'
+          ? gateGrailedServer()
+          : name === 'depop'
+            ? gateDepopServer()
+            : gateLeboncoinServer();
+      const mode = 'playwright_scraper';
 
-    if (!gate.ready) {
-      return reply.send({
-        provider,
-        enabled: false,
-        mode: 'scraper',
-        tokenRequired: false,
-        gateReason: gate.reason,
-        count: 0,
-        sampleTitles: [] as string[],
-        durationMs: Math.round(performance.now() - t0),
-      });
-    }
-
-    try {
-      let listings: MarketplaceListingDTO[];
-      switch (provider) {
-        case 'grailed':
-          listings = await searchGrailedListings([q]);
-          break;
-        case 'depop':
-          listings = await searchDepopListings([q]);
-          break;
-        case 'leboncoin':
-          listings = await searchLeboncoinListings([q]);
-          break;
-        default:
-          return reply.code(400).send({ error: 'unknown_provider', provider });
+      if (!gate.ready) {
+        return {
+          provider: name,
+          enabled: false,
+          mode,
+          status: 'disabled_gate',
+          count: 0,
+          sampleTitles: [],
+          error: gate.reason,
+          durationMs: durationMs(),
+          gateReason: gate.reason,
+        };
       }
 
-      const durationMs = Math.round(performance.now() - t0);
-      return reply.send({
-        provider,
-        enabled: true,
-        mode: 'scraper',
-        tokenRequired: false,
-        query: q,
-        status: 'ok' as const,
-        durationMs,
-        count: listings.length,
-        sampleTitles: listings.slice(0, 10).map((l) => l.title),
-      });
-    } catch (e) {
-      const durationMs = Math.round(performance.now() - t0);
-      const rawError = e instanceof Error ? e.message : String(e);
-      return reply.send({
-        provider,
-        enabled: true,
-        mode: 'scraper',
-        tokenRequired: false,
-        query: q,
-        status: 'error' as const,
-        durationMs,
-        count: 0,
-        sampleTitles: [] as string[],
-        error: rawError,
-      });
+      try {
+        const listings = await searcher([q]);
+        return {
+          provider: name,
+          enabled: true,
+          mode,
+          status: listings.length ? 'success' : 'empty',
+          count: listings.length,
+          sampleTitles: sampleTitles(listings),
+          durationMs: durationMs(),
+        };
+      } catch (e) {
+        const err = e instanceof Error ? e.message : String(e);
+        const sf = scrapeFieldsFromErr(e);
+        return {
+          provider: name,
+          enabled: true,
+          mode,
+          status: sf.blocked ? 'blocked_403' : 'error',
+          count: 0,
+          sampleTitles: [],
+          error: err,
+          httpStatus: sf.httpStatus,
+          durationMs: durationMs(),
+        };
+      }
+    }
+
+    switch (provider) {
+      case 'vinted':
+        return reply.send(await vintedAnswer());
+      case 'ebay':
+        return reply.send(await ebayAnswer());
+
+      case 'grailed':
+        return reply.send(
+          await scrapeProviderAnswer('grailed', searchGrailedListings)
+        );
+      case 'depop':
+        return reply.send(
+          await scrapeProviderAnswer('depop', searchDepopListings)
+        );
+      case 'leboncoin':
+        return reply.send(
+          await scrapeProviderAnswer('leboncoin', searchLeboncoinListings)
+        );
+      default:
+        return reply.code(400).send({ error: 'unknown_provider', provider });
     }
   });
+}
+
+function sampleTitles(listings: MarketplaceListingDTO[]): string[] {
+  return listings.slice(0, 10).map((l) => l.title);
+}
+
+function ebaySnapPayload(
+  snap: ReturnType<typeof getEbayDebugSnapshot>,
+  q: string
+) {
+  return {
+    query: q,
+    appIdPresent: snap.appIdPresent,
+    appIdSource: snap.appIdSource,
+    globalId: snap.globalId,
+    globalIdSource: snap.globalIdSource,
+  };
 }

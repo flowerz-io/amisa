@@ -1,5 +1,6 @@
 import type { MarketplaceListingDTO } from '../../types.js';
-import { browserLikeHeaders } from '../../lib/scrape-http.js';
+import { ProviderScrapeError } from '../../lib/provider-scrape-error.js';
+import { fetchHtmlViaPlaywright } from '../../lib/playwright-browser.js';
 
 function extractNextDataJson(html: string): unknown | null {
   const m = html.match(
@@ -103,17 +104,32 @@ export async function fetchGrailedScraperListings(
   searchText: string
 ): Promise<MarketplaceListingDTO[]> {
   const url = `https://www.grailed.com/shop?query=${encodeURIComponent(searchText)}`;
-  const res = await fetch(url, {
-    headers: browserLikeHeaders({
-      Referer: 'https://www.grailed.com/',
-    }),
+  const { status, html } = await fetchHtmlViaPlaywright(url, {
+    referer: 'https://www.grailed.com/',
   });
 
-  const html = await res.text();
-  if (!res.ok) {
-    throw new Error(
-      `grailed scraper: HTTP ${res.status} shop page ${html.slice(0, 160)}`
+  if (status === 403) {
+    throw new ProviderScrapeError(
+      'grailed: HTTP 403 (origine / bot)',
+      403,
+      true
     );
+  }
+
+  if (
+    html.includes('cf-browser-verification') ||
+    html.includes('Just a moment') ||
+    html.includes('challenge-platform')
+  ) {
+    throw new ProviderScrapeError(
+      'grailed: page protégée Cloudflare',
+      403,
+      true
+    );
+  }
+
+  if (!html || status >= 400) {
+    throw new Error(`grailed scraper: HTTP ${status} page trop courte`);
   }
 
   const next = extractNextDataJson(html);

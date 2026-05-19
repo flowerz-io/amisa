@@ -29,19 +29,52 @@ import {
   searchVintedListings,
 } from './marketplace-search.js';
 import { EbayRateLimitedError } from './providers/ebay-browse-search.js';
+import { ProviderScrapeError } from '../lib/provider-scrape-error.js';
 
 function logSkipped(provider: string, reason: string): void {
   console.log(`[PROVIDER_DISABLED] ${provider} reason=${reason}`);
 }
 
+function runResultFromScrapeCatch(
+  provider: string,
+  e: unknown
+): ProviderRunResult {
+  if (e instanceof ProviderScrapeError) {
+    const blocked = e.blocked403 || e.httpStatus === 403;
+    console.error('[PROVIDER_ERROR]', provider, e.message, {
+      httpStatus: e.httpStatus,
+      blocked403: e.blocked403,
+    });
+    if (blocked) {
+      return {
+        listings: [],
+        runStatus: 'blocked_403',
+        reason: e.message,
+        httpStatus: e.httpStatus ?? 403,
+      };
+    }
+    return {
+      listings: [],
+      runStatus: 'error',
+      reason: e.message,
+      httpStatus: e.httpStatus,
+    };
+  }
+  const msg = e instanceof Error ? e.message : String(e);
+  console.error('[PROVIDER_ERROR]', provider, msg);
+  return { listings: [], runStatus: 'error', reason: msg };
+}
+
 function taskResultToDTO(r: ProviderTaskResult): ProviderStatusDTO {
-  return {
+  const o: ProviderStatusDTO = {
     provider: r.name,
     status: r.status,
     reason: r.reason,
     listingsCount: r.listings.length,
     durationMs: r.ms,
   };
+  if (r.httpStatus !== undefined) o.httpStatus = r.httpStatus;
+  return o;
 }
 
 async function adaptVinted(queries: string[]): Promise<ProviderRunResult> {
@@ -49,9 +82,7 @@ async function adaptVinted(queries: string[]): Promise<ProviderRunResult> {
     const listings = await searchVintedListings(queries);
     return { listings, runStatus: 'success' };
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    console.error('[PROVIDER_ERROR] vinted', msg);
-    return { listings: [], runStatus: 'error', reason: msg };
+    return runResultFromScrapeCatch('vinted', e);
   }
 }
 
@@ -76,9 +107,7 @@ async function adaptGrailed(queries: string[]): Promise<ProviderRunResult> {
     const listings = await searchGrailedListings(queries);
     return { listings, runStatus: 'success' };
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    console.error('[PROVIDER_ERROR] grailed', msg);
-    return { listings: [], runStatus: 'error', reason: msg };
+    return runResultFromScrapeCatch('grailed', e);
   }
 }
 
@@ -87,9 +116,7 @@ async function adaptDepop(queries: string[]): Promise<ProviderRunResult> {
     const listings = await searchDepopListings(queries);
     return { listings, runStatus: 'success' };
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    console.error('[PROVIDER_ERROR] depop', msg);
-    return { listings: [], runStatus: 'error', reason: msg };
+    return runResultFromScrapeCatch('depop', e);
   }
 }
 
@@ -98,9 +125,7 @@ async function adaptLeboncoin(queries: string[]): Promise<ProviderRunResult> {
     const listings = await searchLeboncoinListings(queries);
     return { listings, runStatus: 'success' };
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    console.error('[PROVIDER_ERROR] leboncoin', msg);
-    return { listings: [], runStatus: 'error', reason: msg };
+    return runResultFromScrapeCatch('leboncoin', e);
   }
 }
 
@@ -126,6 +151,16 @@ export async function runAnalyzePipeline(
   const enabled = new Set(
     (body.enabledProviders ?? []).map((s) => s.toLowerCase())
   );
+
+  const lcSrv = gateLeboncoinServer();
+  if (lcSrv.ready) {
+    if (!enabled.has('leboncoin')) {
+      console.log(
+        '[ENABLED_MERGE] leboncoin ajouté côté serveur (LEBONCOIN_ENABLED=true)'
+      );
+    }
+    enabled.add('leboncoin');
+  }
 
   const providerStatuses: ProviderStatusDTO[] = [];
 
@@ -255,6 +290,9 @@ export async function runAnalyzePipeline(
 
   const failed = failedFlagsFromResults(snapshot, enabled);
 
+  /** Dès qu’au moins un listing est renvoyé (ex. eBay OK), on n’expose plus les échecs partiels en flags top-level. */
+  const hideTopLevelSearchFailures = listings.length > 0;
+
   let searchDebugMessage: string | undefined;
   if (listings.length === 0) {
     const summary = providerStatuses
@@ -269,15 +307,31 @@ export async function runAnalyzePipeline(
     visionResult: vision,
     generatedQueries: queries,
     listings,
-    vintedSearchFailed: enabled.has('vinted') ? failed.vintedSearchFailed : undefined,
-    grailedSearchFailed: enabled.has('grailed')
-      ? failed.grailedSearchFailed
-      : undefined,
-    ebaySearchFailed: enabled.has('ebay') ? failed.ebaySearchFailed : undefined,
-    leboncoinSearchFailed: enabled.has('leboncoin')
-      ? failed.leboncoinSearchFailed
-      : undefined,
-    depopSearchFailed: enabled.has('depop') ? failed.depopSearchFailed : undefined,
+    vintedSearchFailed: hideTopLevelSearchFailures
+      ? undefined
+      : enabled.has('vinted')
+        ? failed.vintedSearchFailed
+        : undefined,
+    grailedSearchFailed: hideTopLevelSearchFailures
+      ? undefined
+      : enabled.has('grailed')
+        ? failed.grailedSearchFailed
+        : undefined,
+    ebaySearchFailed: hideTopLevelSearchFailures
+      ? undefined
+      : enabled.has('ebay')
+        ? failed.ebaySearchFailed
+        : undefined,
+    leboncoinSearchFailed: hideTopLevelSearchFailures
+      ? undefined
+      : enabled.has('leboncoin')
+        ? failed.leboncoinSearchFailed
+        : undefined,
+    depopSearchFailed: hideTopLevelSearchFailures
+      ? undefined
+      : enabled.has('depop')
+        ? failed.depopSearchFailed
+        : undefined,
     initialResponseTimeMs: total,
     moreProvidersPending: false,
     providerStatuses,

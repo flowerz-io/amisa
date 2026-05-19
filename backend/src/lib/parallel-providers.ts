@@ -6,32 +6,48 @@ import { withTimeout } from './with-timeout.js';
 export type ProviderName = 'vinted' | 'ebay' | 'grailed' | 'depop' | 'leboncoin';
 
 export const PROVIDER_TIMEOUT_MS: Record<ProviderName, number> = {
-  vinted: 6000,
+  /** Playwright (catalogue / anti-bot lent). */
+  vinted: 50000,
   ebay: 8000,
-  grailed: 6000,
-  depop: 6000,
-  leboncoin: 6000,
+  grailed: 50000,
+  depop: 50000,
+  leboncoin: 50000,
 };
 
 /** Retour attendu par chaque tâche provider (sans throw en usage nominal). */
 export interface ProviderRunResult {
   listings: MarketplaceListingDTO[];
-  runStatus: 'success' | 'disabled' | 'rate_limited' | 'error';
+  runStatus:
+    | 'success'
+    | 'disabled'
+    | 'rate_limited'
+    | 'error'
+    | 'blocked_403';
   reason?: string;
+  /** Statut HTTP quand erreur scraping / blocage réseau. */
+  httpStatus?: number;
 }
 
 export interface ProviderTaskResult {
   name: ProviderName;
   ms: number;
   listings: MarketplaceListingDTO[];
-  status: 'success' | 'timeout' | 'error' | 'disabled' | 'rate_limited';
+  status:
+    | 'success'
+    | 'timeout'
+    | 'error'
+    | 'disabled'
+    | 'rate_limited'
+    | 'blocked_403';
   reason?: string;
+  httpStatus?: number;
 }
 
 function mapRunResult(r: ProviderRunResult): {
   listings: MarketplaceListingDTO[];
   status: ProviderTaskResult['status'];
   reason?: string;
+  httpStatus?: number;
 } {
   switch (r.runStatus) {
     case 'success':
@@ -40,8 +56,20 @@ function mapRunResult(r: ProviderRunResult): {
       return { listings: [], status: 'disabled', reason: r.reason };
     case 'rate_limited':
       return { listings: [], status: 'rate_limited', reason: r.reason };
+    case 'blocked_403':
+      return {
+        listings: [],
+        status: 'blocked_403',
+        reason: r.reason,
+        httpStatus: r.httpStatus ?? 403,
+      };
     case 'error':
-      return { listings: [], status: 'error', reason: r.reason };
+      return {
+        listings: [],
+        status: 'error',
+        reason: r.reason,
+        httpStatus: r.httpStatus,
+      };
     default:
       return { listings: [], status: 'error', reason: 'unknown_run_status' };
   }
@@ -84,8 +112,10 @@ async function withTimeoutMaybeRetry(
 
 function logProviderResult(r: ProviderTaskResult): void {
   const reason = r.reason ?? '';
+  const hs =
+    r.httpStatus !== undefined ? ` httpStatus=${r.httpStatus}` : '';
   console.log(
-    `[PROVIDER_RESULT] provider=${r.name} durationMs=${r.ms} count=${r.listings.length} status=${r.status} reason=${JSON.stringify(reason.slice(0, 500))}`
+    `[PROVIDER_RESULT] provider=${r.name} durationMs=${r.ms} count=${r.listings.length} status=${r.status}${hs} reason=${JSON.stringify(reason.slice(0, 500))}`
   );
 }
 
@@ -119,6 +149,7 @@ export async function runProvidersAllSettled(
         listings: [],
         status: 'error',
         reason: `unexpected_parallel_rejection: ${msg}`,
+        httpStatus: undefined,
       };
       logProviderResult(row);
       out.push(row);
@@ -139,13 +170,14 @@ async function runOneProviderTask(t: {
     const outcome = await withTimeoutMaybeRetry(t.timeoutMs, t.name, t.run);
     const mapped = mapRunResult(outcome);
     const ms = Math.round(performance.now() - p0);
-    const row: ProviderTaskResult = {
-      name: t.name,
-      ms,
-      listings: mapped.listings,
-      status: mapped.status,
-      reason: mapped.reason,
-    };
+      const row: ProviderTaskResult = {
+        name: t.name,
+        ms,
+        listings: mapped.listings,
+        status: mapped.status,
+        reason: mapped.reason,
+        httpStatus: mapped.httpStatus,
+      };
     logProviderResult(row);
     return row;
   } catch (e) {
@@ -160,6 +192,7 @@ async function runOneProviderTask(t: {
       listings: [],
       status,
       reason: msg,
+      httpStatus: undefined,
     };
     logProviderResult(row);
     return row;
@@ -251,6 +284,7 @@ export function failedFlagsFromResults(
 
   for (const r of results) {
     if (!enabled.has(r.name)) continue;
+    /** blocked_403 : non bloquant pour les drapeaux top-level UX (voir providerStatuses). */
     const hard =
       r.status === 'timeout' ||
       r.status === 'error' ||

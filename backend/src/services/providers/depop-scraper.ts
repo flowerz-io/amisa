@@ -1,48 +1,15 @@
 import type { MarketplaceListingDTO } from '../../types.js';
-import { browserLikeHeaders } from '../../lib/scrape-http.js';
+import { ProviderScrapeError } from '../../lib/provider-scrape-error.js';
+import {
+  loadPlaywrightChromium,
+  PLAYWRIGHT_UA,
+} from '../../lib/playwright-browser.js';
 
-/**
- * Depop — API web publique (pas de token).
- */
-export async function fetchDepopScraperListings(
-  searchText: string
-): Promise<MarketplaceListingDTO[]> {
-  const country = process.env.DEPOP_COUNTRY?.trim() || 'fr';
-  const language = process.env.DEPOP_LANGUAGE?.trim() || 'fr';
-  const count = process.env.DEPOP_SCRAPER_ITEMS?.trim() || '24';
-
-  const params = new URLSearchParams({
-    what: searchText,
-    items_count: count,
-    country,
-    language,
-  });
-
-  const url = `https://webapi.depop.com/api/v2/search/products/?${params.toString()}`;
-  const res = await fetch(url, {
-    headers: browserLikeHeaders({
-      Referer: 'https://www.depop.com/',
-      Origin: 'https://www.depop.com',
-      Accept: 'application/json',
-    }),
-  });
-
-  const rawText = await res.text();
-  let data: unknown;
-  try {
-    data = JSON.parse(rawText);
-  } catch {
-    throw new Error(
-      `depop scraper: non-JSON HTTP ${res.status} ${rawText.slice(0, 200)}`
-    );
-  }
-
+function parseDepopProducts(data: unknown): MarketplaceListingDTO[] {
   const root = data as Record<string, unknown>;
   const products = root.products ?? root.data;
   if (!Array.isArray(products)) {
-    throw new Error(
-      `depop scraper: no products[] HTTP ${res.status} ${rawText.slice(0, 280)}`
-    );
+    throw new Error('depop: no products[] in JSON');
   }
 
   const out: MarketplaceListingDTO[] = [];
@@ -104,6 +71,89 @@ export async function fetchDepopScraperListings(
       listingUrl,
     });
   }
-
   return out;
+}
+
+/**
+ * Depop — Playwright + fetch JSON dans le navigateur (contourne 403 serveur).
+ */
+export async function fetchDepopScraperListings(
+  searchText: string
+): Promise<MarketplaceListingDTO[]> {
+  const country = process.env.DEPOP_COUNTRY?.trim() || 'fr';
+  const language = process.env.DEPOP_LANGUAGE?.trim() || 'fr';
+  const count = process.env.DEPOP_SCRAPER_ITEMS?.trim() || '24';
+
+  const chromium = await loadPlaywrightChromium();
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const ctx = await browser.newContext({
+      userAgent: PLAYWRIGHT_UA,
+      locale: 'fr-FR',
+      viewport: { width: 1280, height: 900 },
+    });
+    const page = await ctx.newPage();
+    await page.goto('https://www.depop.com/', {
+      waitUntil: 'domcontentloaded',
+      timeout: 45000,
+    });
+
+    const payload = await page.evaluate(
+      async ({
+        what,
+        items_count,
+        country: cty,
+        language: lang,
+      }: {
+        what: string;
+        items_count: string;
+        country: string;
+        language: string;
+      }) => {
+        const params = new URLSearchParams({
+          what,
+          items_count,
+          country: cty,
+          language: lang,
+        });
+        const url = `https://webapi.depop.com/api/v2/search/products/?${params.toString()}`;
+        const r = await fetch(url, {
+          headers: { Accept: 'application/json' },
+        });
+        const text = await r.text();
+        return { status: r.status, text };
+      },
+      {
+        what: searchText,
+        items_count: count,
+        country,
+        language,
+      }
+    );
+
+    if (payload.status === 403) {
+      throw new ProviderScrapeError(
+        'depop: accès API refusé HTTP 403 depuis le navigateur',
+        403,
+        true
+      );
+    }
+
+    let data: unknown;
+    try {
+      data = JSON.parse(payload.text);
+    } catch {
+      throw new Error(
+        `depop: corps non-JSON HTTP ${payload.status} ${payload.text.slice(0, 220)}`
+      );
+    }
+
+    const listings = parseDepopProducts(data);
+    if (listings.length === 0) {
+      throw new Error('depop: aucun résultat (réponse vide ou format modifié)');
+    }
+    return listings;
+  } finally {
+    await browser.close();
+  }
 }

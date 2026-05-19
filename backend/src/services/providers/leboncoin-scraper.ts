@@ -1,5 +1,6 @@
 import type { MarketplaceListingDTO } from '../../types.js';
-import { browserLikeHeaders } from '../../lib/scrape-http.js';
+import { ProviderScrapeError } from '../../lib/provider-scrape-error.js';
+import { fetchHtmlViaPlaywright } from '../../lib/playwright-browser.js';
 
 function extractNextDataJson(html: string): unknown | null {
   const m = html.match(
@@ -43,17 +44,32 @@ export async function fetchLeboncoinScraperListings(
   const url = `https://www.leboncoin.fr/recherche?text=${encodeURIComponent(
     searchText
   )}&category=9`;
-  const res = await fetch(url, {
-    headers: browserLikeHeaders({
-      Referer: 'https://www.leboncoin.fr/',
-    }),
+  const { status, html } = await fetchHtmlViaPlaywright(url, {
+    referer: 'https://www.leboncoin.fr/',
   });
 
-  const html = await res.text();
-  if (!res.ok) {
-    throw new Error(
-      `leboncoin scraper: HTTP ${res.status} ${html.slice(0, 160)}`
+  if (status === 403) {
+    throw new ProviderScrapeError(
+      'leboncoin: HTTP 403 (origine / bot)',
+      403,
+      true
     );
+  }
+
+  if (
+    html.includes('cf-browser-verification') ||
+    html.includes('Just a moment') ||
+    html.includes('challenge-platform')
+  ) {
+    throw new ProviderScrapeError(
+      'leboncoin: page protégée Cloudflare',
+      403,
+      true
+    );
+  }
+
+  if (!html || status >= 400) {
+    throw new Error(`leboncoin scraper: HTTP ${status}`);
   }
 
   const next = extractNextDataJson(html);
