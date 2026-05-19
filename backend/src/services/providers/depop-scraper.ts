@@ -1,7 +1,7 @@
 import type { MarketplaceListingDTO } from '../../types.js';
 import { ProviderScrapeError } from '../../lib/provider-scrape-error.js';
 import {
-  loadPlaywrightChromium,
+  launchChromiumHeadless,
   PLAYWRIGHT_UA,
 } from '../../lib/playwright-browser.js';
 
@@ -84,8 +84,7 @@ export async function fetchDepopScraperListings(
   const language = process.env.DEPOP_LANGUAGE?.trim() || 'fr';
   const count = process.env.DEPOP_SCRAPER_ITEMS?.trim() || '24';
 
-  const chromium = await loadPlaywrightChromium();
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchChromiumHeadless();
   try {
     const ctx = await browser.newContext({
       userAgent: PLAYWRIGHT_UA,

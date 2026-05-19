@@ -9,6 +9,7 @@ import {
   gateVintedServer,
 } from '../lib/provider-env.js';
 import { ProviderScrapeError } from '../lib/provider-scrape-error.js';
+import { PlaywrightChromiumMissingError } from '../lib/playwright-browser.js';
 import {
   searchDepopListings,
   searchEbayListings,
@@ -36,17 +37,22 @@ type DebugReply = {
   globalIdSource?: string;
 };
 
-function scrapeFieldsFromErr(e: unknown): {
+function scrapeDebugOutcome(e: unknown): {
   httpStatus?: number;
   blocked: boolean;
+  browserMissing: boolean;
 } {
+  if (e instanceof PlaywrightChromiumMissingError) {
+    return { blocked: false, browserMissing: true };
+  }
   if (e instanceof ProviderScrapeError) {
     return {
       httpStatus: e.httpStatus,
       blocked: !!(e.blocked403 || e.httpStatus === 403),
+      browserMissing: false,
     };
   }
-  return { blocked: false };
+  return { blocked: false, browserMissing: false };
 }
 
 function vintedDebugMode(): string {
@@ -100,16 +106,20 @@ export async function debugProviderRoute(app: FastifyInstance): Promise<void> {
         };
       } catch (e) {
         const err = e instanceof Error ? e.message : String(e);
-        const sf = scrapeFieldsFromErr(e);
+        const o = scrapeDebugOutcome(e);
         return {
           provider: 'vinted',
           enabled: true,
           mode,
-          status: sf.blocked ? 'blocked_403' : 'error',
+          status: o.browserMissing
+            ? 'browser_missing'
+            : o.blocked
+              ? 'blocked_403'
+              : 'error',
           count: 0,
           sampleTitles: [],
           error: err,
-          httpStatus: sf.httpStatus,
+          httpStatus: o.httpStatus,
           durationMs: durationMs(),
         };
       }
@@ -199,16 +209,20 @@ export async function debugProviderRoute(app: FastifyInstance): Promise<void> {
         };
       } catch (e) {
         const err = e instanceof Error ? e.message : String(e);
-        const sf = scrapeFieldsFromErr(e);
+        const o = scrapeDebugOutcome(e);
         return {
           provider: name,
           enabled: true,
           mode,
-          status: sf.blocked ? 'blocked_403' : 'error',
+          status: o.browserMissing
+            ? 'browser_missing'
+            : o.blocked
+              ? 'blocked_403'
+              : 'error',
           count: 0,
           sampleTitles: [],
           error: err,
-          httpStatus: sf.httpStatus,
+          httpStatus: o.httpStatus,
           durationMs: durationMs(),
         };
       }

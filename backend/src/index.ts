@@ -4,6 +4,7 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { logVisionProviderDiagnostic } from './config.js';
 import { logProviderEnvironmentDiagnostics } from './lib/provider-env.js';
+import { logPlaywrightReadinessAtStartup } from './lib/playwright-browser.js';
 import { analyzeSearchRoute } from './routes/analyze-search.js';
 import { debugProviderRoute } from './routes/debug-provider.js';
 import { debugEbayRoute } from './routes/debug-ebay.js';
@@ -20,6 +21,7 @@ import { PROVIDERS_ENABLED } from './providers-config.js';
 logVisionProviderDiagnostic();
 console.log('[PROVIDERS_ENABLED]', PROVIDERS_ENABLED);
 logProviderEnvironmentDiagnostics();
+await logPlaywrightReadinessAtStartup();
 
 const app = Fastify({ logger: true });
 

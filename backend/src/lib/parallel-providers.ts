@@ -22,7 +22,8 @@ export interface ProviderRunResult {
     | 'disabled'
     | 'rate_limited'
     | 'error'
-    | 'blocked_403';
+    | 'blocked_403'
+    | 'browser_missing';
   reason?: string;
   /** Statut HTTP quand erreur scraping / blocage réseau. */
   httpStatus?: number;
@@ -38,7 +39,8 @@ export interface ProviderTaskResult {
     | 'error'
     | 'disabled'
     | 'rate_limited'
-    | 'blocked_403';
+    | 'blocked_403'
+    | 'browser_missing';
   reason?: string;
   httpStatus?: number;
 }
@@ -62,6 +64,12 @@ function mapRunResult(r: ProviderRunResult): {
         status: 'blocked_403',
         reason: r.reason,
         httpStatus: r.httpStatus ?? 403,
+      };
+    case 'browser_missing':
+      return {
+        listings: [],
+        status: 'browser_missing',
+        reason: r.reason ?? 'playwright chromium manquant sur le runtime',
       };
     case 'error':
       return {
@@ -284,7 +292,7 @@ export function failedFlagsFromResults(
 
   for (const r of results) {
     if (!enabled.has(r.name)) continue;
-    /** blocked_403 : non bloquant pour les drapeaux top-level UX (voir providerStatuses). */
+    /** blocked_403 / browser_missing : non bloquants pour les drapeaux top-level UX. */
     const hard =
       r.status === 'timeout' ||
       r.status === 'error' ||

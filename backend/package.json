@@ -3,7 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "postinstall": "node ./scripts/playwright-postinstall.mjs",
     "build": "tsc -p tsconfig.json",
+    "railway-release": "npx playwright install --with-deps chromium && npm run build",
     "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts"
   },

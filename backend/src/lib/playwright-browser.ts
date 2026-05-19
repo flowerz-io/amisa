@@ -1,7 +1,16 @@
 /**
  * Navigateur Chromium headless pour requêtes same-origin / contournement 403 fetch serveur.
- * Nécessite `playwright` + `npx playwright install chromium` au déploiement.
+ * En prod Railway : Dockerfile installe Chromium via `npx playwright install --with-deps chromium`.
  */
+
+import fs from 'node:fs';
+
+export class PlaywrightChromiumMissingError extends Error {
+  override readonly name = 'PlaywrightChromiumMissingError';
+  constructor(message: string) {
+    super(message);
+  }
+}
 
 export async function loadPlaywrightChromium(): Promise<
   typeof import('playwright')['chromium']
@@ -10,9 +19,64 @@ export async function loadPlaywrightChromium(): Promise<
     const pw = await import('playwright');
     return pw.chromium;
   } catch {
-    throw new Error(
-      'playwright: module non installé — ajoutez "playwright" aux deps et exécutez `npx playwright install chromium`'
+    throw new PlaywrightChromiumMissingError(
+      'playwright: module npm non installé ou import impossible'
     );
+  }
+}
+
+/**
+ * Log startup : chemins Playwright/Chromium utilisables par le runtime.
+ */
+export async function logPlaywrightReadinessAtStartup(): Promise<void> {
+  try {
+    const chromiumMod = await loadPlaywrightChromium();
+    const exe = chromiumMod.executablePath();
+    const exists = fs.existsSync(exe);
+    if (exists) {
+      console.log(`[PLAYWRIGHT_READY] chromium executable path = ${exe}`);
+      console.log(
+        '[PLAYWRIGHT_READY] PLAYWRIGHT_BROWSERS_PATH =',
+        process.env.PLAYWRIGHT_BROWSERS_PATH ?? '<unset>'
+      );
+      return;
+    }
+    console.warn(
+      `[PLAYWRIGHT_READY] chromium manquant au chemin: ${exe} — prévoir Dockerfile / npx playwright install --with-deps chromium`
+    );
+  } catch (e) {
+    const msg = e instanceof PlaywrightChromiumMissingError ? e.message : e instanceof Error ? e.message : String(e);
+    console.warn('[PLAYWRIGHT_READY] chromium indisponible:', msg);
+  }
+}
+
+export async function launchChromiumHeadless(): Promise<
+  import('playwright').Browser
+> {
+  const chromiumLib = await loadPlaywrightChromium();
+  const exe = chromiumLib.executablePath();
+  if (!fs.existsSync(exe)) {
+    throw new PlaywrightChromiumMissingError(
+      `chromium absent dans le runtime (attendu: ${exe}); exécuter: npx playwright install --with-deps chromium`
+    );
+  }
+  try {
+    return await chromiumLib.launch({
+      headless: true,
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    const low = msg.toLowerCase();
+    if (
+      low.includes(`executable doesn't exist`) ||
+      low.includes('executable does not exist') ||
+      (low.includes('browser') &&
+        low.includes('launch') &&
+        low.includes('not found'))
+    ) {
+      throw new PlaywrightChromiumMissingError(msg);
+    }
+    throw e;
   }
 }
 
@@ -24,8 +88,7 @@ export async function fetchHtmlViaPlaywright(
   url: string,
   opts?: { referer?: string }
 ): Promise<{ status: number; html: string }> {
-  const chromium = await loadPlaywrightChromium();
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchChromiumHeadless();
   try {
     const ctx = await browser.newContext({
       userAgent: PLAYWRIGHT_UA,

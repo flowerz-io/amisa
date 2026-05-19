@@ -1,7 +1,7 @@
 import type { MarketplaceListingDTO } from '../../types.js';
 import { ProviderScrapeError } from '../../lib/provider-scrape-error.js';
 import {
-  loadPlaywrightChromium,
+  launchChromiumHeadless,
   PLAYWRIGHT_UA,
 } from '../../lib/playwright-browser.js';
 import { parseVintedCatalogPayload } from './vinted-catalog-parse.js';
@@ -12,8 +12,7 @@ import { parseVintedCatalogPayload } from './vinted-catalog-parse.js';
 export async function fetchVintedViaPlaywright(
   searchText: string
 ): Promise<MarketplaceListingDTO[]> {
-  const chromium = await loadPlaywrightChromium();
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchChromiumHeadless();
   const perPage = process.env.VINTED_SCRAPER_PER_PAGE?.trim() || '24';
   const catalogUrl = `https://www.vinted.fr/catalog?search_text=${encodeURIComponent(searchText)}`;
 

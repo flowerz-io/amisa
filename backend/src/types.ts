@@ -47,7 +47,8 @@ export interface ProviderStatusDTO {
     | 'error'
     | 'timeout'
     | 'skipped'
-    | 'blocked_403';
+    | 'blocked_403'
+    | 'browser_missing';
   reason?: string;
   listingsCount?: number;
   durationMs?: number;

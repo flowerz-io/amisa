@@ -30,6 +30,7 @@ import {
 } from './marketplace-search.js';
 import { EbayRateLimitedError } from './providers/ebay-browse-search.js';
 import { ProviderScrapeError } from '../lib/provider-scrape-error.js';
+import { PlaywrightChromiumMissingError } from '../lib/playwright-browser.js';
 
 function logSkipped(provider: string, reason: string): void {
   console.log(`[PROVIDER_DISABLED] ${provider} reason=${reason}`);
@@ -39,6 +40,18 @@ function runResultFromScrapeCatch(
   provider: string,
   e: unknown
 ): ProviderRunResult {
+  if (e instanceof PlaywrightChromiumMissingError) {
+    console.error(
+      '[PROVIDER_BROWSER_MISSING]',
+      provider,
+      e.message
+    );
+    return {
+      listings: [],
+      runStatus: 'browser_missing',
+      reason: e.message,
+    };
+  }
   if (e instanceof ProviderScrapeError) {
     const blocked = e.blocked403 || e.httpStatus === 403;
     console.error('[PROVIDER_ERROR]', provider, e.message, {
