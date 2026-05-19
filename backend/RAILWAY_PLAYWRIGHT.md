@@ -1,35 +1,42 @@
 # Playwright + Chromium sur Railway
 
-## Recommandé : Docker (`Dockerfile`)
+## Cause fréquente de « chromium absent »
 
-1. Dans le service Railway backend, définit **Root Directory** = `backend`.
-2. Choisis **Docker** comme méthode de build et pointe vers `Dockerfile`.
-3. Pendant le build, `PLAYWRIGHT_BROWSERS_PATH=/ms-playwright` garantit des chemins stables au runtime (voir logs `[PLAYWRIGHT_READY]`).
+- Variable **`PLAYWRIGHT_BROWSERS_PATH=/ms-playwright`** (ou autre) **en runtime** alors que Chromium a été installé ailleurs **au build** → le chemin attendu n’existe pas.
+- **Correctif** : ne pas fixer `PLAYWRIGHT_BROWSERS_PATH` dans les variables Railway, sauf si tu maîtrises le même chemin au **build** et au **run**.
 
-Le `postinstall` (`scripts/playwright-postinstall.mjs`) détecte `/.dockerenv` et exécute :
+Les builds de ce repo **n’imposent plus** de répertoire custom : Chromium va dans le cache Playwright par défaut (souvent sous `/root/.cache/ms-playwright` dans l’image).
 
-`npx playwright install --with-deps chromium`
+## Docker (`Dockerfile`) — recommandé
 
-## Nixpacks (sans Dockerfile)
+1. Service Railway : **Root Directory** = `backend`.
+2. Builder **Docker** avec le `Dockerfile` du dépôt.
+3. Le `RUN npm ci && npx playwright install --with-deps chromium` garantit le navigateur **dans l’image**.
 
-Si le service utilise encore Nixpacks, `nixpacks.toml` enchaîne `npm ci`, `npx playwright install --with-deps chromium`, puis `npm run build`.
+## Nixpacks (sans Docker)
 
-### Commande de build personnalisée
+- `nixpacks.toml` et/ou `railway.json` enchaînent :  
+  `npm ci && npx playwright install --with-deps chromium && npm run build`.
 
-Sur Railway : **Build Command** :
+## Scripts npm (`package.json`)
 
-```bash
-npm ci && npx playwright install --with-deps chromium && npm run build
-```
+| Script | Rôle |
+|--------|------|
+| `prepare:chromium` | `npx playwright install --with-deps chromium` |
+| `build:railway` | `tsc` puis install Chromium (ex. debug local prod) |
+| `railway-release` | install Chromium puis `tsc` (ordre build strict) |
 
-(équiv. script `railway-release` dans `package.json`.)
+## Logs au démarrage
+
+- `[PLAYWRIGHT] chromium ready path=...`
+- `[PLAYWRIGHT] chromium missing path=...`
 
 ## Développement local
 
-Par défaut le `postinstall` **ignore** Chromium (vite `npm ci` / pas de téléchargement lourd). Pour forcer l’installation locale :
+Le `postinstall` évite de tout télécharger par défaut. Forcer :
 
 ```bash
 PLAYWRIGHT_POSTINSTALL_FORCE=1 npm ci
 ```
 
-Désactivation explicite : `SKIP_PLAYWRIGHT_INSTALL=1`.
+Désactiver : `SKIP_PLAYWRIGHT_INSTALL=1`.

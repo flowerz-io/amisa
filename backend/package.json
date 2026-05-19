@@ -5,6 +5,8 @@
   "scripts": {
     "postinstall": "node ./scripts/playwright-postinstall.mjs",
     "build": "tsc -p tsconfig.json",
+    "build:railway": "npm run build && npx playwright install --with-deps chromium",
+    "prepare:chromium": "npx playwright install --with-deps chromium",
     "railway-release": "npx playwright install --with-deps chromium && npm run build",
     "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts"

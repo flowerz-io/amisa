@@ -1,4 +1,6 @@
-# Si Railway utilise Nixpacks (sans Dockerfile) : installe Chromium au build après npm ci.
+# Railway Nixpacks : réinstalle Chromium après deps npm (idempotent) puis compile.
+# Ne définis pas PLAYWRIGHT_BROWSERS_PATH dans les variables Railway sauf besoin avancé :
+# un chemin différent entre build et runtime casse chromium.executablePath().
 
 [phases.install]
 cmds = [

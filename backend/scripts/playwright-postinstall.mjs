@@ -24,7 +24,9 @@ const force =
 const railway = Boolean(
   process.env.RAILWAY_ENVIRONMENT_NAME ||
     process.env.RAILWAY_ENVIRONMENT ||
-    process.env.RAILWAY_PROJECT_ID
+    process.env.RAILWAY_PROJECT_ID ||
+    process.env.RAILWAY_SERVICE_ID ||
+    process.env.RAILWAY_GIT_COMMIT_SHA
 );
 const docker = existsSync('/.dockerenv');
 

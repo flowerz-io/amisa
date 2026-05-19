@@ -26,7 +26,17 @@ export async function loadPlaywrightChromium(): Promise<
 }
 
 /**
- * Log startup : chemins Playwright/Chromium utilisables par le runtime.
+ * Args Chromium pour conteneurs Linux (Railway / Docker) : sans cela, crash fréquent
+ * « Failed to launch ... sandbox » / /dev/shm trop petit.
+ */
+const CHROMIUM_LAUNCH_ARGS: string[] = [
+  '--no-sandbox',
+  '--disable-setuid-sandbox',
+  '--disable-dev-shm-usage',
+];
+
+/**
+ * Log startup : un seul préfixe [PLAYWRIGHT] pour grep dans les logs Railway.
  */
 export async function logPlaywrightReadinessAtStartup(): Promise<void> {
   try {
@@ -34,19 +44,13 @@ export async function logPlaywrightReadinessAtStartup(): Promise<void> {
     const exe = chromiumMod.executablePath();
     const exists = fs.existsSync(exe);
     if (exists) {
-      console.log(`[PLAYWRIGHT_READY] chromium executable path = ${exe}`);
-      console.log(
-        '[PLAYWRIGHT_READY] PLAYWRIGHT_BROWSERS_PATH =',
-        process.env.PLAYWRIGHT_BROWSERS_PATH ?? '<unset>'
-      );
+      console.log(`[PLAYWRIGHT] chromium ready path=${exe}`);
       return;
     }
-    console.warn(
-      `[PLAYWRIGHT_READY] chromium manquant au chemin: ${exe} — prévoir Dockerfile / npx playwright install --with-deps chromium`
-    );
+    console.warn(`[PLAYWRIGHT] chromium missing path=${exe}`);
   } catch (e) {
     const msg = e instanceof PlaywrightChromiumMissingError ? e.message : e instanceof Error ? e.message : String(e);
-    console.warn('[PLAYWRIGHT_READY] chromium indisponible:', msg);
+    console.warn('[PLAYWRIGHT] chromium missing error=', msg);
   }
 }
 
@@ -57,12 +61,13 @@ export async function launchChromiumHeadless(): Promise<
   const exe = chromiumLib.executablePath();
   if (!fs.existsSync(exe)) {
     throw new PlaywrightChromiumMissingError(
-      `chromium absent dans le runtime (attendu: ${exe}); exécuter: npx playwright install --with-deps chromium`
+      `chromium absent dans le runtime (attendu: ${exe}); au build: npx playwright install --with-deps chromium`
     );
   }
   try {
     return await chromiumLib.launch({
       headless: true,
+      args: CHROMIUM_LAUNCH_ARGS,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
