@@ -47,6 +47,16 @@ struct ShareExtensionRootView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color(uiColor: .systemGroupedBackground))
 
+        case .resolvingURLPreview:
+            VStack(spacing: 16) {
+                ProgressView()
+                Text(String(localized: "Chargement de l'aperçu…"))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(uiColor: .systemGroupedBackground))
+
         case .preview(let uiImage):
             GeometryReader { geo in
                 ZStack(alignment: .top) {

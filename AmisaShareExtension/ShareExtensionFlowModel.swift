@@ -11,6 +11,8 @@ import UIKit
 
 enum ShareFlowState {
     case resolving
+    /// Lien web : métadonnées / og:image en cours (ne pas afficher « aucune image »).
+    case resolvingURLPreview(URL)
     case preview(image: UIImage)
     case videoFramePicker(videoURL: URL)
     case loading(image: UIImage)
@@ -43,7 +45,7 @@ final class ShareFlowModel: ObservableObject {
     init(
         extensionContext: NSExtensionContext?,
         inputResolver: SharedInputResolver = SharedInputResolver(),
-        linkResolver: ShareLinkResolving = BackendShareLinkResolver()
+        linkResolver: ShareLinkResolving = CompositeShareLinkResolver()
     ) {
         self.extensionContext = extensionContext
         self.inputResolver = inputResolver
@@ -146,6 +148,9 @@ final class ShareFlowModel: ObservableObject {
             return
         }
 
+        let typeSummary = Self.logShareExtensionReceivedTypes(context: ctx)
+        print("[ShareExtension] received item types=\(typeSummary)")
+
         let resolution = await inputResolver.resolve(from: ctx)
         switch resolution.kind {
         case .image(let image):
@@ -157,26 +162,63 @@ final class ShareFlowModel: ObservableObject {
                 state = .videoFramePicker(videoURL: videoURL)
             }
         case .url(let url):
+            print(
+                "[ShareExtension] url detected=\(String(url.absoluteString.prefix(200)))"
+            )
             if let preview = resolution.previewImage {
+                persistResolvedURLPreview(preview)
                 setImageForPreview(preview)
                 return
             }
             if resolution.platform == .tiktok {
                 print("[TIKTOK_FALLBACK_USED]")
             }
-            do {
-                let images = try await linkResolver.loadCandidateImages(from: url)
-                if let first = images.first {
-                    setImageForPreview(first)
-                } else {
-                    state = .error(message: "Aucune image exploitable dans ce partage.")
-                }
-            } catch {
-                state = .error(message: "Aucune image exploitable dans ce partage.")
-            }
+            state = .resolvingURLPreview(url)
+            Task { await resolveSharedURLPreview(url) }
         case .unknown:
             state = .error(message: "Aucune image, vidéo ou URL exploitable.")
         }
+    }
+
+    private func persistResolvedURLPreview(_ image: UIImage) {
+        do {
+            let data = try ImageUploadPreprocessor.prepareForUpload(image)
+            let name = try ShareExtensionStorage.saveJPEGToSharedImagesOnly(data)
+            print("[ShareExtension] preview image saved=\(name) bytes=\(data.count)")
+        } catch {
+            print("[ShareExtension] error=\(error.localizedDescription)")
+        }
+    }
+
+    private func resolveSharedURLPreview(_ url: URL) async {
+        do {
+            let images = try await linkResolver.loadCandidateImages(from: url)
+            guard let first = images.first else {
+                print("[ShareExtension] no usable image after fallbacks")
+                state = .error(message: String(localized: "Aucune image exploitable pour ce lien."))
+                return
+            }
+            persistResolvedURLPreview(first)
+            setImageForPreview(first)
+        } catch {
+            print("[ShareExtension] error=\(error.localizedDescription)")
+            print("[ShareExtension] no usable image after fallbacks")
+            state = .error(message: String(localized: "Aucune image exploitable pour ce lien."))
+        }
+    }
+
+    private static func logShareExtensionReceivedTypes(context: NSExtensionContext) -> String {
+        guard let items = context.inputItems as? [NSExtensionItem] else { return "(none)" }
+        var set = Set<String>()
+        for item in items {
+            guard let attachments = item.attachments else { continue }
+            for p in attachments {
+                for id in p.registeredTypeIdentifiers {
+                    set.insert(id)
+                }
+            }
+        }
+        return set.sorted().joined(separator: ", ")
     }
 
     private func pollRemoteSession(sessionId: String) async {

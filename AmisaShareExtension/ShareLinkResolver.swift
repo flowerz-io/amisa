@@ -52,11 +52,14 @@ struct BackendShareLinkResolver: ShareLinkResolving {
     }
 }
 
-/// Résolution standard via backend.
+/// Résolution : aperçu local (LP + HTML + image directe), puis backend `/resolve-shared-url` si besoin.
 struct CompositeShareLinkResolver: ShareLinkResolving {
     private let backend = BackendShareLinkResolver()
 
     func loadCandidateImages(from pageURL: URL) async throws -> [UIImage] {
+        if let local = await ShareURLPreviewResolver.resolvePreview(for: pageURL) {
+            return [local]
+        }
         return try await backend.loadCandidateImages(from: pageURL)
     }
 }
