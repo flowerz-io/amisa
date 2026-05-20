@@ -29,4 +29,14 @@ struct FashionVisionResult: Codable, Equatable, Hashable {
     let dominantColorPrecise: String?
     /// Type canon court (ex: jacket, cap, clog).
     let itemTypeCanonical: String?
+    /// Modèle exact probable (prompt vision expert).
+    let exactModel: String?
+    /// Coloris commercial ou descriptif.
+    let colorway: String?
+    /// Marque + modèle + coloris (affichage prioritaire).
+    let fullIdentification: String?
+    /// Indices visuels courts (transparence / debug).
+    let visualReasoning: String?
+    /// Requêtes Vinted suggérées par le backend.
+    let searchQueries: [String]?
 }

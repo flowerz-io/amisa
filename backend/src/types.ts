@@ -30,6 +30,16 @@ export interface FashionVisionResult {
   inferredModel?: string;
   dominantColorPrecise?: string;
   itemTypeCanonical?: string;
+  /** Modèle exact probable (vision expert). */
+  exactModel?: string;
+  /** Coloris commercial ou descriptif. */
+  colorway?: string;
+  /** Marque + modèle + coloris (affichage / requête prioritaire). */
+  fullIdentification?: string;
+  /** Indices visuels courts pour debug / transparence. */
+  visualReasoning?: string;
+  /** Requêtes Vinted suggérées par le modèle (2–3 idéalement). */
+  searchQueries?: string[];
 }
 
 export interface AnalyzeSearchBody {

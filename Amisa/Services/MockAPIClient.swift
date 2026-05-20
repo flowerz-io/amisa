@@ -85,7 +85,7 @@ extension AnalyzeSearchResponse {
             visionResult: FashionVisionResult(
                 category: "footwear",
                 subcategory: "ankle boots",
-                dominantItem: "black leather ankle boots",
+                dominantItem: "Maison Margiela Tabi boots black",
                 probableBrand: "Maison Margiela",
                 color: "black",
                 material: "leather",
@@ -96,7 +96,16 @@ extension AnalyzeSearchResponse {
                 secondaryMarking: nil,
                 inferredModel: "Tabi",
                 dominantColorPrecise: "black",
-                itemTypeCanonical: "boots"
+                itemTypeCanonical: "boots",
+                exactModel: "Tabi",
+                colorway: "black",
+                fullIdentification: "Maison Margiela Tabi boots black",
+                visualReasoning: "split toe, cylindrical heel",
+                searchQueries: [
+                    "Maison Margiela Tabi boots black",
+                    "Maison Margiela Tabi black",
+                    "Maison Margiela split toe boots",
+                ]
             ),
             generatedQueries: [
                 "Maison Margiela tabi boots black",

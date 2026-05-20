@@ -106,7 +106,12 @@ final class SupabaseManager {
 
         client = SupabaseClient(
             supabaseURL: supabaseURL,
-            supabaseKey: supabaseAnonKey
+            supabaseKey: supabaseAnonKey,
+            options: SupabaseClientOptions(
+                auth: .init(
+                    emitLocalSessionAsInitialSession: true
+                )
+            )
         )
         configurationFailureReason = ""
     }

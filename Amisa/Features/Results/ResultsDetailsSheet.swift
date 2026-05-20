@@ -56,12 +56,30 @@ struct ResultsDetailsSheet: View {
 
                     if let attrs = session.attributes {
                         section(title: String(localized: "Attributs détectés")) {
-                            attributeRow(String(localized: "Catégorie"), attrs.category)
-                            attributeRow(String(localized: "Sous-catégorie"), attrs.subcategory)
+                            attributeRow(
+                                String(localized: "Identification"),
+                                identificationDisplay(attrs)
+                            )
                             attributeRow(String(localized: "Marque"), attrs.probableBrand)
-                            attributeRow(String(localized: "Couleur"), attrs.color)
+                            attributeRow(
+                                String(localized: "Modèle"),
+                                modelDisplay(attrs)
+                            )
+                            attributeRow(
+                                String(localized: "Coloris"),
+                                colorwayDisplay(attrs)
+                            )
+                            attributeRow(
+                                String(localized: "Catégorie"),
+                                categoryDisplay(attrs)
+                            )
                             attributeRow(String(localized: "Matière"), attrs.material)
-                            attributeRow(String(localized: "Objet"), attrs.dominantItem)
+                            if let confText = confidenceDisplay(attrs.confidence) {
+                                attributeRow(String(localized: "Confiance"), confText)
+                            }
+                            if let vr = attrs.visualReasoning?.trimmingCharacters(in: .whitespacesAndNewlines), !vr.isEmpty {
+                                attributeRow(String(localized: "Indices visuels"), vr)
+                            }
                             if let kw = attrs.styleKeywords, !kw.isEmpty {
                                 attributeRow(String(localized: "Mots-clés"), kw.joined(separator: ", "))
                             }
@@ -106,5 +124,56 @@ struct ResultsDetailsSheet: View {
                 .foregroundStyle(Color.primary)
                 .multilineTextAlignment(.trailing)
         }
+    }
+
+    /// Identification complète (nouveau champ) ou composition legacy.
+    private func identificationDisplay(_ attrs: FashionVisionResult) -> String? {
+        if let fi = attrs.fullIdentification?.trimmingCharacters(in: .whitespacesAndNewlines), !fi.isEmpty {
+            return fi
+        }
+        let parts: [String] = [
+            attrs.probableBrand,
+            attrs.exactModel ?? attrs.inferredModel,
+            attrs.colorway ?? attrs.color ?? attrs.dominantColorPrecise,
+        ]
+            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        if !parts.isEmpty { return parts.joined(separator: " ") }
+        if let d = attrs.dominantItem?.trimmingCharacters(in: .whitespacesAndNewlines), !d.isEmpty { return d }
+        return nil
+    }
+
+    private func modelDisplay(_ attrs: FashionVisionResult) -> String? {
+        let m = (attrs.exactModel ?? attrs.inferredModel)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let m, !m.isEmpty { return m }
+        return nil
+    }
+
+    private func colorwayDisplay(_ attrs: FashionVisionResult) -> String? {
+        let c = (attrs.colorway ?? attrs.color ?? attrs.dominantColorPrecise)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if let c, !c.isEmpty { return c }
+        return nil
+    }
+
+    private func categoryDisplay(_ attrs: FashionVisionResult) -> String? {
+        let c = attrs.category?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let s = attrs.subcategory?.trimmingCharacters(in: .whitespacesAndNewlines)
+        switch (c, s) {
+        case let (cat?, sub?) where !cat.isEmpty && !sub.isEmpty:
+            return "\(cat) · \(sub)"
+        case let (cat?, _) where !cat.isEmpty:
+            return cat
+        case let (_, sub?) where !sub.isEmpty:
+            return sub
+        default:
+            return attrs.itemTypeCanonical?.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+    }
+
+    private func confidenceDisplay(_ value: Double?) -> String? {
+        guard let value else { return nil }
+        let pct = max(0, min(100, Int((value * 100).rounded())))
+        return "\(pct) %"
     }
 }

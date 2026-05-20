@@ -75,10 +75,6 @@ struct ProfileAvatarCircleView: View {
             resolvedRemote = nil
             return
         }
-        if let cached = RemoteAvatarCache.shared.cachedImage(for: remoteURLString) {
-            resolvedRemote = cached
-            return
-        }
         resolvedRemote = await RemoteAvatarCache.shared.image(for: remoteURLString)
     }
 }

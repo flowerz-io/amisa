@@ -108,10 +108,19 @@ struct SearchSession: Identifiable, Equatable, Hashable {
     var extractedAttributes: [String] {
         guard let attr = attributes else { return [] }
         var parts: [String] = []
+        if let fi = attr.fullIdentification, !fi.isEmpty {
+            parts.append(fi)
+        }
         if let c = attr.category, !c.isEmpty { parts.append(c) }
         if let b = attr.probableBrand, !b.isEmpty { parts.append(b) }
-        if let col = attr.color, !col.isEmpty { parts.append(col) }
+        let col = attr.colorway ?? attr.color
+        if let col, !col.isEmpty { parts.append(col) }
         if let m = attr.material, !m.isEmpty { parts.append(m) }
+        if let model = attr.exactModel ?? attr.inferredModel, !model.isEmpty {
+            if !parts.contains(where: { $0.localizedCaseInsensitiveContains(model) }) {
+                parts.append(model)
+            }
+        }
         parts.append(contentsOf: attr.styleKeywords ?? [])
         return parts
     }
@@ -137,7 +146,12 @@ extension SearchSession {
                 secondaryMarking: nil,
                 inferredModel: nil,
                 dominantColorPrecise: "black",
-                itemTypeCanonical: "boots"
+                itemTypeCanonical: "boots",
+                exactModel: nil,
+                colorway: "black",
+                fullIdentification: nil,
+                visualReasoning: nil,
+                searchQueries: nil
             ),
             listings: MarketplaceListing.mockListings,
             createdAt: Date(),

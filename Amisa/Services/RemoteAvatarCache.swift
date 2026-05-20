@@ -7,32 +7,25 @@
 
 import UIKit
 
-final class RemoteAvatarCache: @unchecked Sendable {
+final actor RemoteAvatarCache {
     static let shared = RemoteAvatarCache()
 
     private let memory = NSCache<NSString, UIImage>()
-    private let lock = NSLock()
     private var inflight: [String: Task<UIImage?, Never>] = [:]
 
     private init() {
         memory.countLimit = 80
     }
 
-    func cachedImage(for urlString: String?) -> UIImage? {
-        guard let key = Self.normalizedKey(urlString) else { return nil }
-        return memory.object(forKey: key as NSString)
-    }
-
     func image(for urlString: String?) async -> UIImage? {
-        guard let key = Self.normalizedKey(urlString), let url = URL(string: key) else { return nil }
+        guard let key = Self.normalizedKey(urlString),
+              let url = URL(string: key) else { return nil }
 
         if let hit = memory.object(forKey: key as NSString) {
             return hit
         }
 
-        lock.lock()
         if let existing = inflight[key] {
-            lock.unlock()
             return await existing.value
         }
 
@@ -40,7 +33,6 @@ final class RemoteAvatarCache: @unchecked Sendable {
             do {
                 let (data, _) = try await URLSession.shared.data(from: url)
                 guard let img = UIImage(data: data) else { return nil }
-                memory.setObject(img, forKey: key as NSString)
                 return img
             } catch {
                 return nil
@@ -48,14 +40,13 @@ final class RemoteAvatarCache: @unchecked Sendable {
         }
 
         inflight[key] = task
-        lock.unlock()
-
         let img = await task.value
 
-        lock.lock()
-        inflight[key] = nil
-        lock.unlock()
+        if let img {
+            memory.setObject(img, forKey: key as NSString)
+        }
 
+        inflight[key] = nil
         return img
     }
 

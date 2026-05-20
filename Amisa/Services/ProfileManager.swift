@@ -87,7 +87,7 @@ final class ProfileManager: ObservableObject {
         }
 
         var avatarURL = normalizedURLString(profile?.avatarURL)
-        var bannerURL = profile?.bannerURL
+        let bannerURL = profile?.bannerURL
 
         if let data = avatarJPEGData {
             if let url = try? await SupabaseManager.shared.uploadProfileImage(imageData: data, userId: userId) {
