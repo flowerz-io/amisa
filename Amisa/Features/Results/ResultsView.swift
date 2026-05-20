@@ -302,6 +302,21 @@ struct ResultsView: View {
                     .foregroundStyle(Color.secondary.opacity(0.9))
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
+
+            #if DEBUG
+            VStack(alignment: .leading, spacing: 3) {
+                Text(viewModel.debugProviderListingCountsLine)
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(Color.orange.opacity(0.92))
+                if let st = viewModel.debugProviderStatusesLine {
+                    Text(st)
+                        .font(.system(size: 9, design: .monospaced))
+                        .foregroundStyle(Color.secondary.opacity(0.88))
+                }
+            }
+            .padding(.top, 4)
+            .accessibilityHidden(true)
+            #endif
         }
     }
 

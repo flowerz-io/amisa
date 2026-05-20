@@ -47,6 +47,8 @@ struct SearchSession: Identifiable, Equatable, Hashable {
     var searchDebugMessage: String?
     /// Identifiant `GET /search-sessions/:id` tant que les providers lents peuvent encore enrichir les résultats.
     var searchSessionId: String?
+    /// Dernière synthèse API (`providerStatuses`) — debug / diagnostic.
+    var providerStatuses: [String: String]?
 
     init(
         id: UUID = UUID(),
@@ -69,7 +71,8 @@ struct SearchSession: Identifiable, Equatable, Hashable {
         hydratingBackendResults: Bool = false,
         moreProvidersPending: Bool = false,
         searchDebugMessage: String? = nil,
-        searchSessionId: String? = nil
+        searchSessionId: String? = nil,
+        providerStatuses: [String: String]? = nil
     ) {
         self.id = id
         self.imageFileName = imageFileName
@@ -92,6 +95,7 @@ struct SearchSession: Identifiable, Equatable, Hashable {
         self.moreProvidersPending = moreProvidersPending
         self.searchDebugMessage = searchDebugMessage
         self.searchSessionId = searchSessionId
+        self.providerStatuses = providerStatuses
     }
 
     /// Recherche lancée uniquement depuis du texte (pas d’image source).
@@ -173,7 +177,7 @@ extension SearchSession: Codable {
         case id, imageFileName, thumbnailImageURL, searchQuery, generatedQueries, attributes, listings, createdAt,
              vintedSearchFailed, paginationState, rankingContext, providerAvailability, providerCounts,
              initialResponseTimeMs, mode, previewImageURLs, awaitsRailwayHydration, hydratingBackendResults,
-             moreProvidersPending, searchDebugMessage, searchSessionId
+             moreProvidersPending, searchDebugMessage, searchSessionId, providerStatuses
     }
 
     init(from decoder: Decoder) throws {
@@ -200,6 +204,7 @@ extension SearchSession: Codable {
         let moreProvidersPending = try c.decodeIfPresent(Bool.self, forKey: .moreProvidersPending) ?? false
         let searchDebugMessage = try c.decodeIfPresent(String.self, forKey: .searchDebugMessage)
         let searchSessionId = try c.decodeIfPresent(String.self, forKey: .searchSessionId)
+        let providerStatuses = try c.decodeIfPresent([String: String].self, forKey: .providerStatuses)
         self.init(
             id: id,
             imageFileName: imageFileName,
@@ -221,7 +226,8 @@ extension SearchSession: Codable {
             hydratingBackendResults: hydratingBackendResults,
             moreProvidersPending: moreProvidersPending,
             searchDebugMessage: searchDebugMessage,
-            searchSessionId: searchSessionId
+            searchSessionId: searchSessionId,
+            providerStatuses: providerStatuses
         )
     }
 
@@ -248,5 +254,6 @@ extension SearchSession: Codable {
         try c.encode(moreProvidersPending, forKey: .moreProvidersPending)
         try c.encodeIfPresent(searchDebugMessage, forKey: .searchDebugMessage)
         try c.encodeIfPresent(searchSessionId, forKey: .searchSessionId)
+        try c.encodeIfPresent(providerStatuses, forKey: .providerStatuses)
     }
 }

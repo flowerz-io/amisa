@@ -269,6 +269,7 @@ final class ResultsViewModel: ObservableObject {
         moreProvidersPending = response.moreProvidersPending ?? false
         session.listings = allListings
         session.moreProvidersPending = moreProvidersPending
+        session.providerStatuses = response.providerStatuses ?? session.providerStatuses
         if let sid = response.searchSessionId, !sid.isEmpty {
             session.searchSessionId = sid
             activeSlowPollSessionId = sid
@@ -623,3 +624,32 @@ final class ResultsViewModel: ObservableObject {
         )
     }
 }
+
+#if DEBUG
+extension ResultsViewModel {
+    /// Comptes par source sur les annonces fusionnées (hydratation incluse), pas sur la grille filtrée.
+    var debugProviderListingCountsLine: String {
+        let order: [(key: String, label: String)] = [
+            ("ebay", "eBay"),
+            ("vinted", "Vinted"),
+            ("depop", "Depop"),
+            ("grailed", "Grailed"),
+        ]
+        return order.map { item in
+            let c = allListings.filter { MarketplaceSource.canonicalKey(from: $0.source) == item.key }.count
+            return "\(item.label): \(c)"
+        }.joined(separator: ", ")
+    }
+
+    /// Statuts backend récents (ex. `running`, `success`, `blocked`).
+    var debugProviderStatusesLine: String? {
+        guard let map = loadedSession?.providerStatuses, !map.isEmpty else { return nil }
+        let order = ["ebay", "vinted", "depop", "grailed"]
+        let parts = order.compactMap { key -> String? in
+            guard let v = map[key] else { return nil }
+            return "\(key)=\(v)"
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+}
+#endif

@@ -109,7 +109,8 @@ final class SharedImportReviewViewModel: ObservableObject {
             hydratingBackendResults: false,
             moreProvidersPending: pendingSlow,
             searchDebugMessage: response.searchDebugMessage,
-            searchSessionId: response.searchSessionId
+            searchSessionId: response.searchSessionId,
+            providerStatuses: response.providerStatuses
         )
 
         searchHistoryService?.addSession(session)
