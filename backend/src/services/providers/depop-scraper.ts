@@ -1,256 +1,200 @@
 import type { MarketplaceListingDTO } from '../../types.js';
-import { ProviderScrapeError } from '../../lib/provider-scrape-error.js';
 import {
   launchChromiumHeadless,
   PLAYWRIGHT_UA,
 } from '../../lib/playwright-browser.js';
 
-function rootKeysPreview(data: unknown, max = 24): string[] {
-  if (!data || typeof data !== 'object') return [];
-  return Object.keys(data as object).slice(0, max);
-}
-
-/** Extrait un tableau produit quel que soit le gabarit récent de l’API search. */
-function depopProductsFromPayload(data: unknown): unknown[] {
-  if (!data || typeof data !== 'object') return [];
-  const root = data as Record<string, unknown>;
-  const tryArrays: unknown[][] = [];
-  if (Array.isArray(root.products)) tryArrays.push(root.products);
-  if (Array.isArray(root.items)) tryArrays.push(root.items);
-  if (root.data && typeof root.data === 'object') {
-    const d = root.data as Record<string, unknown>;
-    if (Array.isArray(d.products)) tryArrays.push(d.products);
-    if (Array.isArray(d.items)) tryArrays.push(d.items);
-    if (Array.isArray(d.results)) tryArrays.push(d.results);
-    if (Array.isArray(d.hits)) tryArrays.push(d.hits);
-  }
-  for (const arr of tryArrays) {
-    if (arr.length > 0) return arr;
-  }
-  return [];
-}
-
-function depopPriceAndCurrency(row: Record<string, unknown>): {
-  price: number;
-  currency: string;
-} {
-  let price = 0;
+function parseDepopPriceText(raw: string): { price: number; currency: string } {
+  const t = raw.replace(/\s+/g, ' ').trim();
+  if (!t) return { price: 0, currency: 'EUR' };
   let currency = 'EUR';
-  const pricing = row.pricing;
-  if (pricing && typeof pricing === 'object' && !Array.isArray(pricing)) {
-    const pr = pricing as Record<string, unknown>;
-    const national = pr.national_price;
-    if (national && typeof national === 'object') {
-      const np = national as Record<string, unknown>;
-      const tp = np.total_price ?? np.price;
-      if (typeof tp === 'string' || typeof tp === 'number') {
-        price = Number(tp);
-      }
-      if (typeof np.currency_name === 'string') {
-        currency = np.currency_name.toUpperCase();
-      }
-    }
-    const priceObj = pr.price;
-    if (priceObj && typeof priceObj === 'object') {
-      const po = priceObj as Record<string, unknown>;
-      const tp = po.total_price ?? po.price ?? po.discounted;
-      if (
-        (price === 0 || !Number.isFinite(price)) &&
-        (typeof tp === 'string' || typeof tp === 'number')
-      ) {
-        price = Number(tp);
-      }
-      const cur = po.currency_name ?? pr.currency;
-      if (typeof cur === 'string') currency = cur.toUpperCase();
-    }
-  }
-  const ipa = row.item_product_price;
-  if (ipa && typeof ipa === 'object') {
-    const p = ipa as Record<string, unknown>;
-    const amt = p.amount ?? p.price_amount ?? p.value;
-    if (typeof amt === 'string' || typeof amt === 'number') {
-      price = Number(amt);
-    }
-    if (typeof p.currency === 'string') currency = p.currency.toUpperCase();
-  }
-  if (typeof row.price === 'number') price = row.price;
-  else if (typeof row.price === 'string') price = Number(row.price);
-  return {
-    price: Number.isFinite(price) ? price : 0,
-    currency,
-  };
+  if (t.includes('£') || /\bGBP\b/i.test(t)) currency = 'GBP';
+  else if (t.includes('$') || /\bUSD\b/i.test(t)) currency = 'USD';
+  const normalized = t.replace(/,/g, '.').replace(/[^\d.]/g, ' ');
+  const parts = normalized.trim().split(/\s+/).filter(Boolean);
+  const lastNum = [...parts].reverse().find((p) => /^\d+(\.\d+)?$/.test(p));
+  const price = lastNum ? Number.parseFloat(lastNum) : Number.parseFloat(normalized.replace(/\s/g, ''));
+  return { price: Number.isFinite(price) ? price : 0, currency };
 }
 
-function parseDepopProducts(data: unknown, parseContext: string): MarketplaceListingDTO[] {
-  const rawList = depopProductsFromPayload(data);
-  console.log('[DEPOP_PARSE]', parseContext, {
-    rawCount: rawList.length,
-    rootKeys: rootKeysPreview(data),
-  });
+type DepopDomRow = {
+  slug: string;
+  listingUrl: string;
+  title: string;
+  priceText: string;
+  imageUrl: string;
+};
 
-  const out: MarketplaceListingDTO[] = [];
-  for (const raw of rawList) {
-    if (!raw || typeof raw !== 'object') continue;
-    const row = raw as Record<string, unknown>;
-    const id = row.id ?? row.selling_id ?? row.product_id;
-    const idStr =
-      typeof id === 'number'
-        ? String(id)
-        : typeof id === 'string'
-          ? id
-          : undefined;
-    if (!idStr) continue;
+/**
+ * Extraction DOM uniquement (pas de `fetch()` dans le navigateur).
+ */
+async function extractDepopRowsFromDom(page: {
+  evaluate: <T>(fn: () => T) => Promise<T>;
+}): Promise<DepopDomRow[]> {
+  return page.evaluate(() => {
+    const out: DepopDomRow[] = [];
+    const seen = new Set<string>();
+    const anchors = Array.from(
+      document.querySelectorAll('a[href*="/products/"]')
+    ) as HTMLAnchorElement[];
 
-    const slug =
-      typeof row.slug === 'string' ? row.slug : idStr;
-    const description =
-      typeof row.description === 'string'
-        ? row.description
-        : typeof row.title === 'string'
-          ? row.title
-          : `Depop ${idStr}`;
+    const absUrl = (href: string) =>
+      href.startsWith('http') ? href : `https://www.depop.com${href}`;
 
-    const { price, currency } = depopPriceAndCurrency(row);
+    for (const a of anchors) {
+      const href = a.getAttribute('href') || '';
+      const m = href.match(/\/products\/([^/?#]+)/);
+      if (!m) continue;
+      const slug = m[1];
+      if (seen.has(slug)) continue;
 
-    let imageUrl: string | undefined;
-    const pics = row.pictures;
-    if (Array.isArray(pics) && pics[0] && typeof pics[0] === 'object') {
-      const p0 = pics[0] as Record<string, unknown>;
-      imageUrl =
-        (typeof p0.url === 'string' && p0.url) ||
-        (typeof p0['1280'] === 'string' && (p0['1280'] as string)) ||
-        (typeof p0['640'] === 'string' && (p0['640'] as string)) ||
-        (typeof p0.formatted_thumbnail === 'string' &&
-          (p0.formatted_thumbnail as string)) ||
-        undefined;
+      let card: Element | null = a;
+      let chosen: Element | null = null;
+      for (let depth = 0; depth < 12 && card; depth++) {
+        card = card.parentElement;
+        if (!card) break;
+        const imgs = card.querySelectorAll('img');
+        const links = card.querySelectorAll('a[href*="/products/"]');
+        if (imgs.length > 0 && links.length > 0) {
+          chosen = card;
+          break;
+        }
+      }
+      if (!chosen) continue;
+
+      let title = '';
+      const pEls = chosen.querySelectorAll('p');
+      for (const p of pEls) {
+        const tx = p.textContent?.trim() || '';
+        if (tx.length > 4 && tx.length < 240 && !/^[\d£€$.,\s]+$/.test(tx)) {
+          title = tx;
+          break;
+        }
+      }
+      if (!title) {
+        const h = chosen.querySelector('h1,h2,h3,h4');
+        title = h?.textContent?.trim() || slug;
+      }
+
+      let priceText = '';
+      const cand = chosen.querySelectorAll('span, div, p');
+      for (const el of cand) {
+        const tx = el.textContent?.trim() || '';
+        if (tx.length > 40) continue;
+        if (/[\d.,]+\s*[€£$]|[€£$]\s*[\d.,]+|\bEUR\b|\bUSD\b|\bGBP\b/.test(tx)) {
+          priceText = tx;
+          break;
+        }
+      }
+
+      const img = chosen.querySelector('img') as HTMLImageElement | null;
+      const imageUrl = img?.currentSrc || img?.src || '';
+
+      seen.add(slug);
+      out.push({
+        slug,
+        listingUrl: absUrl(href),
+        title,
+        priceText,
+        imageUrl,
+      });
+      if (out.length >= 52) break;
     }
-    if (!imageUrl && typeof row.preview_image === 'string') {
-      imageUrl = row.preview_image;
-    }
-
-    const listingUrl = `https://www.depop.com/products/${slug}/`;
-    out.push({
-      id: idStr,
-      source: 'depop',
-      title: description.slice(0, 500),
-      price,
-      currency,
-      imageUrl,
-      thumbnailUrl: imageUrl,
-      listingUrl,
-    });
-  }
-
-  console.log('[DEPOP_PARSE]', parseContext, {
-    validListings: out.length,
-    sampleTitle: out[0]?.title?.slice(0, 80),
+    return out;
   });
-  return out;
 }
 
 /**
- * Depop — Playwright + fetch JSON dans le navigateur (contourne 403 serveur).
+ * Depop — navigation Playwright + parsing cartes dans le DOM (aucun fetch in-page).
  */
 export async function fetchDepopScraperListings(
   searchText: string
 ): Promise<MarketplaceListingDTO[]> {
-  const country = process.env.DEPOP_COUNTRY?.trim() || 'fr';
-  const language = process.env.DEPOP_LANGUAGE?.trim() || 'fr';
-  const count = process.env.DEPOP_SCRAPER_ITEMS?.trim() || '24';
+  const q = searchText.trim();
+  const primary = `https://www.depop.com/search/?q=${encodeURIComponent(q)}`;
+  console.log('[DEPOP_URL]', primary);
 
   const browser = await launchChromiumHeadless();
   try {
     const ctx = await browser.newContext({
       userAgent: PLAYWRIGHT_UA,
-      locale: 'fr-FR',
-      viewport: { width: 1280, height: 900 },
+      locale: 'en-GB',
+      viewport: { width: 1365, height: 900 },
+      timezoneId: 'Europe/London',
     });
     const page = await ctx.newPage();
 
-    console.log('[DEPOP_FETCH] start', {
-      searchText: searchText.slice(0, 120),
-      country,
-      language,
-      itemsCount: count,
-    });
-
-    await page.goto('https://www.depop.com/', {
+    await page.goto(primary, {
       waitUntil: 'domcontentloaded',
-      timeout: 45000,
+      timeout: 55000,
     });
 
-    const payload = await page.evaluate(
-      async ({
-        what,
-        items_count,
-        country: cty,
-        language: lang,
-      }: {
-        what: string;
-        items_count: string;
-        country: string;
-        language: string;
-      }) => {
-        const params = new URLSearchParams({
-          what,
-          items_count: items_count,
-          country: cty,
-          language: lang,
-        });
-        const url = `https://webapi.depop.com/api/v2/search/products/?${params.toString()}`;
-        const r = await fetch(url, {
-          headers: {
-            Accept: 'application/json',
-            Origin: 'https://www.depop.com',
-            Referer: 'https://www.depop.com/',
-          },
-        });
-        const text = await r.text();
-        return { status: r.status, text, requestUrl: url };
-      },
-      {
-        what: searchText,
-        items_count: count,
-        country,
-        language,
-      }
-    );
-
-    console.log('[DEPOP_FETCH] response', {
-      status: payload.status,
-      bodyChars: payload.text.length,
-      head: payload.text.slice(0, 160).replace(/\s+/g, ' '),
-    });
-
-    if (payload.status === 403) {
-      throw new ProviderScrapeError(
-        'depop: accès API refusé HTTP 403 depuis le navigateur',
-        403,
-        true
-      );
-    }
-
-    if (payload.status >= 400) {
-      throw new Error(
-        `depop: API HTTP ${payload.status} ${payload.text.slice(0, 280)}`
-      );
-    }
-
-    let data: unknown;
     try {
-      data = JSON.parse(payload.text);
+      await page.waitForLoadState('networkidle', { timeout: 28000 });
     } catch {
+      await page.waitForLoadState('load', { timeout: 12000 }).catch(() => {});
+    }
+
+    await new Promise((r) => setTimeout(r, 1200));
+
+    console.log('[DEPOP_HTML_READY]', {
+      finalUrl: page.url().slice(0, 200),
+    });
+
+    let rows = await extractDepopRowsFromDom(page);
+    let linkApprox = await page.locator('a[href*="/products/"]').count();
+    console.log('[DEPOP_CARDS_COUNT]', {
+      productAnchorsApprox: linkApprox,
+      parsedRows: rows.length,
+    });
+
+    if (rows.length === 0) {
+      const fallback = `https://www.depop.com/search/all/?query=${encodeURIComponent(q)}`;
+      console.log('[DEPOP_URL]', 'fallback', fallback);
+      await page.goto(fallback, { waitUntil: 'domcontentloaded', timeout: 55000 });
+      try {
+        await page.waitForLoadState('networkidle', { timeout: 22000 });
+      } catch {
+        await page.waitForLoadState('load', { timeout: 10000 }).catch(() => {});
+      }
+      await new Promise((r) => setTimeout(r, 1200));
+      rows = await extractDepopRowsFromDom(page);
+      linkApprox = await page.locator('a[href*="/products/"]').count();
+      console.log('[DEPOP_CARDS_COUNT]', {
+        productAnchorsApprox: linkApprox,
+        parsedRows: rows.length,
+        pass: 'fallback',
+      });
+    }
+
+    const listings: MarketplaceListingDTO[] = [];
+    for (const row of rows) {
+      const { price, currency } = parseDepopPriceText(row.priceText);
+      listings.push({
+        id: row.slug,
+        source: 'depop',
+        title: row.title.slice(0, 500),
+        price,
+        currency,
+        imageUrl: row.imageUrl || undefined,
+        thumbnailUrl: row.imageUrl || undefined,
+        listingUrl: row.listingUrl,
+      });
+    }
+
+    console.log('[DEPOP_PARSED_COUNT]', listings.length);
+
+    if (listings.length === 0) {
+      const html = await page.content();
+      console.log(
+        '[DEPOP_HTML_SNIP]',
+        html.slice(0, 1500).replace(/\s+/g, ' ')
+      );
       throw new Error(
-        `depop: corps non-JSON HTTP ${payload.status} ${payload.text.slice(0, 220)}`
+        'depop: 0 cartes produit — sélecteurs DOM ou URL search à ajuster'
       );
     }
 
-    const listings = parseDepopProducts(data, 'api_v2_search_products');
-    if (listings.length === 0) {
-      throw new Error(
-        'depop: aucun produit extrait (clés API ou schéma modifié — voir [DEPOP_PARSE])'
-      );
-    }
     return listings;
   } finally {
     await browser.close();

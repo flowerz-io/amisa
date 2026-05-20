@@ -47,6 +47,7 @@ export interface ProviderStatusDTO {
     | 'error'
     | 'timeout'
     | 'skipped'
+    | 'blocked'
     | 'blocked_403'
     | 'browser_missing';
   reason?: string;
@@ -72,8 +73,10 @@ export interface AnalyzeSearchResponseJSON {
   providerCounts?: unknown;
   /** Vrai si la réponse est une vague partielle (d’autres providers pourraient encore fusionner côté serveur — ici une seule réponse HTTP). */
   moreProvidersPending?: boolean;
-  /** État détaillé par provider pour le debug (iOS peut ignorer ce champ). */
-  providerStatuses?: ProviderStatusDTO[];
+  /** État synthétique par provider (ex. { "ebay": "success", "grailed": "blocked" }). */
+  providerStatuses?: Record<string, string>;
+  /** Raison normalisée pour statuts blocked (ex. grailed_cloudflare). */
+  providerStatusReasons?: Record<string, string>;
   /** Message synthétique si aucune annonce n’a été trouvée malgré une vision OK. */
   searchDebugMessage?: string;
 }

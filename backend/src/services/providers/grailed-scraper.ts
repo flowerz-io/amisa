@@ -1,6 +1,6 @@
 import type { MarketplaceListingDTO } from '../../types.js';
-import { ProviderScrapeError } from '../../lib/provider-scrape-error.js';
 import { fetchHtmlViaPlaywright } from '../../lib/playwright-browser.js';
+import { GrailedBlockedError } from './grailed-blocked.js';
 
 function extractNextDataJson(html: string): unknown | null {
   const m = html.match(
@@ -177,68 +177,45 @@ function rowToListing(row: Record<string, unknown>): MarketplaceListingDTO | nul
   };
 }
 
+function isCloudflareChallengeHtml(html: string): boolean {
+  return (
+    html.includes('cf-browser-verification') ||
+    html.includes('Just a moment') ||
+    html.includes('challenge-platform')
+  );
+}
+
 /**
- * Grailed — page /shop + extraction __NEXT_DATA__ (Playwright).
+ * Grailed — HTML shop + __NEXT_DATA__ si disponible.
+ * Cloudflare / 403 : erreur dédiée (pas d’échec HTTP global du pipeline).
  */
 export async function fetchGrailedScraperListings(
   searchText: string
 ): Promise<MarketplaceListingDTO[]> {
   const url = `https://www.grailed.com/shop?query=${encodeURIComponent(searchText)}`;
 
-  console.log('[GRAILED_FETCH] start', { url: url.slice(0, 200), q: searchText.slice(0, 80) });
-
   const { status, html } = await fetchHtmlViaPlaywright(url, {
     referer: 'https://www.grailed.com/',
     settleMs: 2200,
   });
 
-  console.log('[GRAILED_FETCH] page', {
-    httpStatus: status,
-    htmlChars: html.length,
-    hasNextData: html.includes('__NEXT_DATA__'),
-    cfChallenge:
-      html.includes('cf-browser-verification') ||
-      html.includes('Just a moment') ||
-      html.includes('challenge-platform'),
-  });
-
-  if (status === 403) {
-    throw new ProviderScrapeError(
-      'grailed: HTTP 403 (origine / bot)',
-      403,
-      true
-    );
-  }
-
-  if (
-    html.includes('cf-browser-verification') ||
-    html.includes('Just a moment') ||
-    html.includes('challenge-platform')
-  ) {
-    throw new ProviderScrapeError(
-      'grailed: page protégée Cloudflare',
-      403,
-      true
-    );
+  if (status === 403 || isCloudflareChallengeHtml(html)) {
+    throw new GrailedBlockedError('grailed_cloudflare');
   }
 
   if (!html || status >= 400) {
-    throw new Error(`grailed scraper: HTTP ${status} page trop courte`);
+    throw new GrailedBlockedError('grailed_cloudflare');
   }
 
   const next = extractNextDataJson(html);
   if (!next) {
     throw new Error(
-      'grailed scraper: __NEXT_DATA__ introuvable (anti-bot ou HTML changé)'
+      'grailed scraper: __NEXT_DATA__ introuvable (HTML changé ou blocage léger)'
     );
   }
 
   const candidates: Record<string, unknown>[] = [];
   walkGrailedCandidates(next, candidates, 0);
-
-  console.log('[GRAILED_PARSE] candidates', {
-    rawCandidates: candidates.length,
-  });
 
   const seen = new Set<string>();
   const out: MarketplaceListingDTO[] = [];
@@ -252,12 +229,6 @@ export async function fetchGrailedScraperListings(
     if (out.length >= 40) break;
   }
 
-  console.log('[GRAILED_PARSE] listings', {
-    count: out.length,
-    sampleTitle: out[0]?.title?.slice(0, 80),
-    sampleUrl: out[0]?.listingUrl,
-  });
-
   if (out.length === 0) {
     throw new Error(
       'grailed scraper: aucune annonce extraite (__NEXT_DATA__ sans listings reconnus)'
@@ -265,3 +236,5 @@ export async function fetchGrailedScraperListings(
   }
   return out;
 }
+
+export { GrailedBlockedError } from './grailed-blocked.js';

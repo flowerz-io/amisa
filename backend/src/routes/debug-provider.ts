@@ -10,6 +10,7 @@ import {
 } from '../lib/provider-env.js';
 import { ProviderScrapeError } from '../lib/provider-scrape-error.js';
 import { PlaywrightChromiumMissingError } from '../lib/playwright-browser.js';
+import { GrailedBlockedError } from '../services/providers/grailed-blocked.js';
 import {
   searchDepopListings,
   searchEbayListings,
@@ -209,6 +210,19 @@ export async function debugProviderRoute(app: FastifyInstance): Promise<void> {
           durationMs: durationMs(),
         };
       } catch (e) {
+        if (name === 'grailed' && e instanceof GrailedBlockedError) {
+          return {
+            provider: name,
+            enabled: true,
+            mode,
+            status: 'blocked',
+            count: 0,
+            sampleTitles: [],
+            error: e.reasonCode,
+            httpStatus: 403,
+            durationMs: durationMs(),
+          };
+        }
         const err = e instanceof Error ? e.message : String(e);
         const o = scrapeDebugOutcome(e);
         return {

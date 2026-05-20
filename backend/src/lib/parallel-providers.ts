@@ -22,6 +22,7 @@ export interface ProviderRunResult {
     | 'disabled'
     | 'rate_limited'
     | 'error'
+    | 'blocked'
     | 'blocked_403'
     | 'browser_missing';
   reason?: string;
@@ -39,6 +40,7 @@ export interface ProviderTaskResult {
     | 'error'
     | 'disabled'
     | 'rate_limited'
+    | 'blocked'
     | 'blocked_403'
     | 'browser_missing';
   reason?: string;
@@ -62,6 +64,13 @@ function mapRunResult(r: ProviderRunResult): {
       return {
         listings: [],
         status: 'blocked_403',
+        reason: r.reason,
+        httpStatus: r.httpStatus ?? 403,
+      };
+    case 'blocked':
+      return {
+        listings: [],
+        status: 'blocked',
         reason: r.reason,
         httpStatus: r.httpStatus ?? 403,
       };
@@ -297,7 +306,7 @@ export function failedFlagsFromResults(
 
   for (const r of results) {
     if (!enabled.has(r.name)) continue;
-    /** blocked_403 / browser_missing : non bloquants pour les drapeaux top-level UX. */
+    /** blocked / blocked_403 : non bloquants pour les drapeaux top-level UX. */
     const hard =
       r.status === 'timeout' ||
       r.status === 'error' ||

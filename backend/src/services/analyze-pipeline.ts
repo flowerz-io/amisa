@@ -32,6 +32,34 @@ import {
 import { EbayRateLimitedError } from './providers/ebay-browse-search.js';
 import { ProviderScrapeError } from '../lib/provider-scrape-error.js';
 import { PlaywrightChromiumMissingError } from '../lib/playwright-browser.js';
+import { GrailedBlockedError } from './providers/grailed-blocked.js';
+
+function buildPublicProviderStatuses(
+  rows: ProviderStatusDTO[]
+): Record<string, string> {
+  const m: Record<string, string> = {};
+  for (const r of rows) {
+    let st = r.status;
+    if (st === 'blocked_403' || st === 'blocked') st = 'blocked';
+    m[r.provider] = st;
+  }
+  return m;
+}
+
+function buildPublicProviderStatusReasons(
+  rows: ProviderStatusDTO[]
+): Record<string, string> | undefined {
+  const m: Record<string, string> = {};
+  for (const r of rows) {
+    if (r.status !== 'blocked' && r.status !== 'blocked_403') continue;
+    if (r.provider === 'grailed' && r.reason === 'grailed_cloudflare') {
+      m.grailed = 'grailed_cloudflare';
+    } else if (r.reason) {
+      m[r.provider] = r.reason.slice(0, 200);
+    }
+  }
+  return Object.keys(m).length ? m : undefined;
+}
 
 function logAnalyzeResponseCounts(listings: MarketplaceListingDTO[]): void {
   let ebay = 0;
@@ -138,6 +166,15 @@ async function adaptGrailed(queries: string[]): Promise<ProviderRunResult> {
     const listings = await searchGrailedListings(queries);
     return { listings, runStatus: 'success' };
   } catch (e) {
+    if (e instanceof GrailedBlockedError) {
+      console.log('[GRAILED_BLOCKED]', e.reasonCode);
+      return {
+        listings: [],
+        runStatus: 'blocked',
+        reason: e.reasonCode,
+        httpStatus: 403,
+      };
+    }
     return runResultFromScrapeCatch('grailed', e);
   }
 }
@@ -193,7 +230,7 @@ export async function runAnalyzePipeline(
     enabled.add('leboncoin');
   }
 
-  const providerStatuses: ProviderStatusDTO[] = [];
+  const providerStatusRows: ProviderStatusDTO[] = [];
 
   const tasks: Array<{
     name: ProviderName;
@@ -205,7 +242,7 @@ export async function runAnalyzePipeline(
     const g = gateVintedServer();
     if (!g.ready) {
       logSkipped('vinted', g.reason);
-      providerStatuses.push({
+      providerStatusRows.push({
         provider: 'vinted',
         status: 'skipped',
         reason: g.reason,
@@ -224,7 +261,7 @@ export async function runAnalyzePipeline(
     const g = gateEbayServer();
     if (!g.ready) {
       logSkipped('ebay', g.reason);
-      providerStatuses.push({
+      providerStatusRows.push({
         provider: 'ebay',
         status: 'skipped',
         reason: g.reason,
@@ -243,7 +280,7 @@ export async function runAnalyzePipeline(
     const g = gateGrailedServer();
     if (!g.ready) {
       logSkipped('grailed', g.reason);
-      providerStatuses.push({
+      providerStatusRows.push({
         provider: 'grailed',
         status: 'skipped',
         reason: g.reason,
@@ -262,7 +299,7 @@ export async function runAnalyzePipeline(
     const g = gateDepopServer();
     if (!g.ready) {
       logSkipped('depop', g.reason);
-      providerStatuses.push({
+      providerStatusRows.push({
         provider: 'depop',
         status: 'skipped',
         reason: g.reason,
@@ -281,7 +318,7 @@ export async function runAnalyzePipeline(
     const g = gateLeboncoinServer();
     if (!g.ready) {
       logSkipped('leboncoin', g.reason);
-      providerStatuses.push({
+      providerStatusRows.push({
         provider: 'leboncoin',
         status: 'skipped',
         reason: g.reason,
@@ -303,7 +340,7 @@ export async function runAnalyzePipeline(
   if (tasks.length > 0) {
     console.log('[PROVIDERS_PARALLEL] mode=allSettled tasks=', tasks.length);
     snapshot = await runProvidersAllSettled(tasks);
-    providerStatuses.push(...snapshot.map(taskResultToDTO));
+    providerStatusRows.push(...snapshot.map(taskResultToDTO));
   }
 
   const chunks = snapshot
@@ -326,7 +363,7 @@ export async function runAnalyzePipeline(
 
   let searchDebugMessage: string | undefined;
   if (listings.length === 0) {
-    const summary = providerStatuses
+    const summary = providerStatusRows
       .map((s) => `${s.provider}=${s.status}${s.reason ? `:${s.reason}` : ''}`)
       .join('; ');
     searchDebugMessage = summary
@@ -367,7 +404,9 @@ export async function runAnalyzePipeline(
         : undefined,
     initialResponseTimeMs: total,
     moreProvidersPending: false,
-    providerStatuses,
+    providerStatuses: buildPublicProviderStatuses(providerStatusRows),
+    providerStatusReasons:
+      buildPublicProviderStatusReasons(providerStatusRows),
     searchDebugMessage,
   };
 }
