@@ -216,9 +216,13 @@ export interface MergeAndCapStats {
 }
 
 export function mergeAndCapListings(
-  chunks: MarketplaceListingDTO[][]
+  chunks: MarketplaceListingDTO[][],
+  maxCapOverride?: number
 ): { listings: MarketplaceListingDTO[]; stats: MergeAndCapStats } {
-  const maxCap = getMaxResultsPerSearch();
+  const maxCap =
+    typeof maxCapOverride === 'number' && maxCapOverride > 0
+      ? Math.min(maxCapOverride, getMaxResultsPerSearch())
+      : getMaxResultsPerSearch();
   const queues = chunks.map((c) => [...c]);
   const chunkCounts = chunks.map((c) => c.length);
   const inputSum = chunkCounts.reduce((a, b) => a + b, 0);

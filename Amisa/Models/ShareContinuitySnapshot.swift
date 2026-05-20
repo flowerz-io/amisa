@@ -42,7 +42,8 @@ extension ShareContinuityListingRow {
             size: nil,
             condition: nil,
             publishedAtRelative: nil,
-            relevanceScore: nil
+            relevanceScore: nil,
+            visualSimilarityScore: nil
         )
     }
 }

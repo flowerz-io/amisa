@@ -17,7 +17,7 @@ struct OnboardingGenderView: View {
             Color(uiColor: .systemBackground).ignoresSafeArea()
 
             VStack(spacing: 0) {
-                Spacer(minLength: 195) // 30% de plus que l'ancienne valeur, identique sur toutes les pages
+                Spacer(minLength: 24)
 
                 OnboardingStepHeader(
                     currentStep: 1,

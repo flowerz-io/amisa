@@ -4,16 +4,30 @@ import { fetchVintedCatalogPage } from '../services/providers/vinted-api-search.
 
 export async function vintedListingsRoute(app: FastifyInstance): Promise<void> {
   app.post<{
-    Body: { searchText?: string; page?: number };
+    Body: { searchText?: string; page?: number; offset?: number; limit?: number };
   }>('/vinted-listings', async (req, reply) => {
     const body = req.body ?? {};
     const searchText =
       typeof body.searchText === 'string' ? body.searchText.trim() : '';
     const pageRaw = body.page;
-    const page =
+    const offsetRaw = body.offset;
+    const perPage = 25;
+    let page =
       typeof pageRaw === 'number' && Number.isFinite(pageRaw) && pageRaw >= 1
         ? Math.floor(pageRaw)
-        : 1;
+        : NaN;
+    if (
+      (!Number.isFinite(page) || page < 1) &&
+      typeof offsetRaw === 'number' &&
+      Number.isFinite(offsetRaw) &&
+      offsetRaw >= 0
+    ) {
+      page = Math.floor(offsetRaw / perPage) + 1;
+    }
+    if (!Number.isFinite(page) || page < 1) {
+      page = 1;
+    }
+    const effectiveOffset = (page - 1) * perPage;
 
     if (!searchText) {
       return reply
@@ -30,7 +44,20 @@ export async function vintedListingsRoute(app: FastifyInstance): Promise<void> {
     }
 
     try {
+      console.log('[PAGINATION_TRIGGER]', {
+        route: 'vinted-listings',
+        page,
+        offset: effectiveOffset,
+        limit: perPage,
+      });
       const r = await fetchVintedCatalogPage(searchText, page);
+      console.log('[VINTED_OFFSET]', {
+        page,
+        offset: effectiveOffset,
+        limit: perPage,
+        batch: r.listings.length,
+        hasMore: r.hasMore,
+      });
       return reply.send({
         listings: r.listings,
         page,

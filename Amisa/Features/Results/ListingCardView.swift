@@ -121,6 +121,22 @@ struct MarketplaceVisualCard: View {
             .overlay(alignment: .bottom) { textBlock }
             // Couche 4 — badge marketplace top-right
             .overlay(alignment: .topTrailing) { providerBadge }
+            // Couche 5 — score similarité discret (analyse image)
+            .overlay(alignment: .topLeading) { visualSimilarityBadge }
+    }
+
+    @ViewBuilder
+    private var visualSimilarityBadge: some View {
+        if let s = listing.visualSimilarityScore, s >= 85 {
+            Text("\(Int(round(s)))% similaire")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 4)
+                .background(.black.opacity(0.42), in: Capsule())
+                .padding(.top, Layout.topEdgePadding)
+                .padding(.leading, Layout.topEdgePadding)
+        }
     }
 
     // MARK: - Image (légère harmonisation)

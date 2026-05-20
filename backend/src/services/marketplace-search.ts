@@ -6,11 +6,19 @@ const USE_MOCK =
   process.env.USE_MOCK?.toLowerCase() === 'true' ||
   process.env.MOCK_MODE?.toLowerCase() === 'true';
 
-function logStart(name: string, queries: string[]): void {
+export interface SearchVintedOptions {
+  /** Arrête la fusion après N annonces (premier écran rapide). */
+  maxMergedListings?: number;
+  /** Nombre max de requêtes texte à exécuter (défaut 2). */
+  maxQueries?: number;
+}
+
+function logStart(name: string, queries: string[], opts?: SearchVintedOptions): void {
   console.log(`[PROVIDER_START] ${name}`, {
     queries,
     enabled: true,
     mock: USE_MOCK,
+    opts,
   });
 }
 
@@ -46,17 +54,21 @@ export interface SearchVintedWithMeta {
   primaryHasMore: boolean;
 }
 
-/** Agrège jusqu’à 2 requêtes (aligné pipeline analyze-search). */
+/** Agrège jusqu’à `maxQueries` requêtes ; respecte `maxMergedListings` si défini. */
 export async function searchVintedListingsWithMeta(
-  queries: string[]
+  queries: string[],
+  options?: SearchVintedOptions
 ): Promise<SearchVintedWithMeta> {
-  const qs = queries.map((q) => q.trim()).filter(Boolean).slice(0, 2);
-  logStart('vinted', qs);
+  const maxQ = options?.maxQueries ?? 2;
+  const qs = queries.map((q) => q.trim()).filter(Boolean).slice(0, maxQ);
+  const cap = options?.maxMergedListings;
+  logStart('vinted', qs, options);
   const t0 = performance.now();
   try {
     if (USE_MOCK) {
       const out = await mockDelayListings('vinted', 'Vinted');
       logSuccess('vinted', out.length, Math.round(performance.now() - t0));
+      console.log('[RESULTS_BATCH]', { merged: out.length, mock: true });
       return { listings: out, primaryHasMore: true };
     }
     if (qs.length === 0) {
@@ -65,19 +77,27 @@ export async function searchVintedListingsWithMeta(
     const merged: MarketplaceListingDTO[] = [];
     const seen = new Set<string>();
     let primaryHasMore = false;
-    for (let i = 0; i < qs.length; i++) {
+    outer: for (let i = 0; i < qs.length; i++) {
       const q = qs[i]!;
       const page = await fetchVintedCatalogPage(q, 1);
       if (i === 0) primaryHasMore = page.hasMore;
       for (const L of page.listings) {
+        if (cap !== undefined && merged.length >= cap) break outer;
         const k = marketplaceListingDedupeKey(L);
         if (seen.has(k)) continue;
         seen.add(k);
         merged.push(L);
+        if (cap !== undefined && merged.length >= cap) break outer;
       }
     }
     const ms = Math.round(performance.now() - t0);
     logSuccess('vinted', merged.length, ms);
+    console.log('[RESULTS_BATCH]', {
+      merged: merged.length,
+      queriesUsed: qs.length,
+      primaryHasMore,
+      capped: cap != null,
+    });
     return { listings: merged, primaryHasMore };
   } catch (e) {
     logError('vinted', e);
@@ -86,7 +106,8 @@ export async function searchVintedListingsWithMeta(
 }
 
 export async function searchVintedListings(
-  queries: string[]
+  queries: string[],
+  options?: SearchVintedOptions
 ): Promise<MarketplaceListingDTO[]> {
-  return (await searchVintedListingsWithMeta(queries)).listings;
+  return (await searchVintedListingsWithMeta(queries, options)).listings;
 }

@@ -23,11 +23,16 @@ struct OnboardingDemoView: View {
     @State private var phase: DemoPhase = .picking
     @State private var appeared = false
     @State private var showCTA = false
-    @State private var ctaPulse = false
 
     private var selectedLook: OnboardingLookOptionData? {
         guard let id = model.selectedLookId else { return nil }
         return OnboardingMockData.lookOptions.first { $0.id == id }
+    }
+
+    /// Image du look analysé (étape scan) pour le header résultats.
+    private var analyzedLookAssetName: String {
+        if let look = selectedLook { return look.imageName }
+        return OnboardingMockData.lookOptions.first?.imageName ?? ""
     }
 
     private var currentResults: [OnboardingFakeResultData] {
@@ -59,6 +64,18 @@ struct OnboardingDemoView: View {
         }
         .ignoresSafeArea()
         .animation(.spring(response: 0.52, dampingFraction: 0.84), value: phase)
+        .onChange(of: model.step) { _, newStep in
+            guard newStep == .demo else { return }
+            syncDemoPhaseWithModel()
+        }
+        .onChange(of: model.isDemoInResultsPhase) { _, _ in
+            guard model.step == .demo else { return }
+            syncDemoPhaseWithModel()
+        }
+        .onChange(of: model.progressTapStamp) { _, _ in
+            guard model.step == .demo else { return }
+            syncDemoPhaseWithModel()
+        }
         .onAppear {
             withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.1)) {
                 appeared = true
@@ -66,11 +83,38 @@ struct OnboardingDemoView: View {
         }
     }
 
+    private func syncDemoPhaseWithModel() {
+        if model.isDemoInResultsPhase {
+            if model.selectedLookId == nil {
+                model.selectedLookId = OnboardingMockData.lookOptions.first?.id
+            }
+            showCTA = false
+            withAnimation(.spring(response: 0.52, dampingFraction: 0.84)) {
+                phase = .results
+            }
+        } else {
+            withAnimation(.spring(response: 0.52, dampingFraction: 0.84)) {
+                phase = .picking
+                showCTA = false
+            }
+        }
+    }
+
+    private func updateResultsCTAProximity(distanceFromBottom: CGFloat) {
+        guard phase == .results else { return }
+        let threshold: CGFloat = 120
+        let nearBottom = distanceFromBottom <= threshold
+        guard nearBottom != showCTA else { return }
+        withAnimation(.easeOut(duration: 0.28)) {
+            showCTA = nearBottom
+        }
+    }
+
     // MARK: - Phase 1: Picking
 
     private var pickerContent: some View {
         VStack(spacing: 0) {
-            Spacer(minLength: 195) // 30% de plus, identique sur toutes les pages
+            Spacer(minLength: 24)
 
             OnboardingStepHeader(
                 currentStep: 3,
@@ -112,7 +156,7 @@ struct OnboardingDemoView: View {
 
     private var scanContent: some View {
         VStack(spacing: 0) {
-            Spacer(minLength: 195)
+            Spacer(minLength: 24)
 
             if let look = selectedLook {
                 ScanAnimationCard(item: look)
@@ -134,79 +178,70 @@ struct OnboardingDemoView: View {
         }
     }
 
-    // MARK: - Phase 3: Results
+    // MARK: - Phase 3: Résultats (header clair + scroll ; CTA près du bas)
+
+    private var demoResultsLightHeader: some View {
+        HStack(alignment: .center, spacing: 14) {
+            OnboardingAssetImageView(imageName: analyzedLookAssetName, contentMode: .fill)
+                .frame(width: 64, height: 64)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+                }
+
+            Text(String(localized: "Annonces similaires trouvées"))
+                .font(.system(size: 17, weight: .bold))
+                .foregroundStyle(.primary)
+                .multilineTextAlignment(.leading)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color(uiColor: .secondarySystemGroupedBackground))
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
+        }
+    }
 
     private var resultsContent: some View {
-        // GeometryReader pour lire safeAreaInsets et synchroniser la position du header
-        // avec la barre de progression rendue par OnboardingRootView (safeAreaTop + 10).
-        GeometryReader { geo in
-            let safeTop = geo.safeAreaInsets.top
-            // Progress bar bottom ≈ safeTop + 10 (padding) + 4 (barre height)
-            let progressBarBottom = safeTop + 14
-            // Texte compact sous la progress bar (aligné avec OnboardingRootView : safeTop + 10 + barre 4 pt)
-            let headerTextPaddingTop = progressBarBottom + 18
-            let headerHeight = max(132, headerTextPaddingTop + 52)
+        let columns = [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
 
-            let columns = [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
-            // Trigger CTA : premier item de l'avant-dernière ligne (grille 2 col → -4)
-            let penultimateTriggerIndex = max(currentResults.count - 4, 0)
+        return VStack(spacing: 0) {
+            demoResultsLightHeader
+                .padding(.horizontal, 16)
+                .padding(.top, 6)
+                .padding(.bottom, 10)
 
-            ZStack(alignment: .top) {
-                // Grille scrollable — padding top = headerHeight → première carte sous le header.
-                NoBounceScrollView(bounces: !showCTA) {
-                    LazyVGrid(columns: columns, spacing: 10) {
-                        ForEach(currentResults) { result in
-                            ResultCard(result: result)
-                                .onAppear {
-                                    guard !showCTA else { return }
-                                    if let idx = currentResults.firstIndex(where: { $0.id == result.id }),
-                                       idx == penultimateTriggerIndex {
-                                        withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
-                                            showCTA = true
-                                        }
-                                    }
-                                }
-                        }
+            NoBounceScrollView(
+                bounces: true,
+                onDistanceFromContentBottom: updateResultsCTAProximity
+            ) {
+                LazyVGrid(columns: columns, spacing: 10) {
+                    ForEach(currentResults) { result in
+                        ResultCard(result: result)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, headerHeight)
-                    .padding(.bottom, 40)
                 }
-
-                // Header sticky — blur iOS + couche sombre ~50%.
-                Text("240 annonces similaires trouvées sur ✓")
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.82)
-                    .frame(maxWidth: .infinity)
-                    .multilineTextAlignment(.center)
-                    .padding(.top, headerTextPaddingTop)
-                    .padding(.bottom, 6)
-                    .padding(.horizontal, 24)
-                .frame(maxWidth: .infinity, alignment: .top)
-                .frame(height: headerHeight, alignment: .top)
-                .background(
-                    ZStack {
-                        Rectangle().fill(.ultraThinMaterial)
-                        Color.black.opacity(0.50)
-                    }
-                    .ignoresSafeArea(edges: .top)
-                )
-                .overlay(
-                    LinearGradient(
-                        colors: [Color.black.opacity(0.2), Color.clear],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .allowsHitTesting(false)
+                .padding(.horizontal, 16)
+                .padding(.bottom, showCTA ? 118 : 28)
             }
-            .overlay(alignment: .bottom) {
-                if showCTA {
-                    ctaOverlay
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
+        }
+        .overlay(alignment: .bottom) {
+            if showCTA {
+                ctaOverlay
+                    .transition(
+                        .asymmetric(
+                            insertion: .move(edge: .bottom).combined(with: .opacity),
+                            removal: .move(edge: .bottom).combined(with: .opacity)
+                        )
+                    )
             }
         }
     }
@@ -254,27 +289,22 @@ struct OnboardingDemoView: View {
             .shadow(color: BrandColors.secondaryOrange.opacity(0.35), radius: 14, x: 0, y: 5)
         }
         .buttonStyle(BouncyButtonStyle())
-        .scaleEffect(ctaPulse ? 1.035 : 1.0)
-        .onAppear {
-            withAnimation(.easeInOut(duration: 1.4).repeatForever(autoreverses: true)) {
-                ctaPulse = true
-            }
-        }
     }
 
     // MARK: - Actions
 
     private func selectItem(_ item: OnboardingLookOptionData) {
         showCTA = false                    // reset CTA pour la prochaine session résultats
-        model.isDemoInResultsPhase = false // reset barre de progression → étape 3
+        model.isDemoInResultsPhase = false
         model.selectedLookId = item.id
         withAnimation(.spring(response: 0.5, dampingFraction: 0.84)) {
             phase = .scanning
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.6) {
+            showCTA = false
             withAnimation(.spring(response: 0.52, dampingFraction: 0.84)) {
                 phase = .results
-                model.isDemoInResultsPhase = true  // → barre passe à l'étape 4
+                model.isDemoInResultsPhase = true
             }
         }
     }
@@ -486,7 +516,7 @@ private struct ResultCard: View {
                 HStack(alignment: .center, spacing: 4) {
                     Text(result.price)
                         .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(Color.accentColor)
+                        .foregroundStyle(BrandColors.primary)
 
                     if let size = result.size {
                         Text(size)

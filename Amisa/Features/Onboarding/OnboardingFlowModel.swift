@@ -79,8 +79,11 @@ final class OnboardingFlowModel: ObservableObject {
     /// ID du look sélectionné dans la démo (ex: "leather", "sneaker")
     @Published var selectedLookId: String?
 
-    /// Vrai quand la démo est en phase résultats → progress bar étape 4
+    /// Vrai quand la démo affiche la grille résultats → 5ᵉ segment de la barre rempli.
     @Published var isDemoInResultsPhase: Bool = false
+
+    /// Incrémenté à chaque tap sur la barre de progression (y compris sur l’étape déjà affichée) pour resynchroniser la démo.
+    @Published private(set) var progressTapStamp: Int = 0
 
     let onComplete: () -> Void
 
@@ -106,6 +109,33 @@ final class OnboardingFlowModel: ObservableObject {
     func advance(to target: OnboardingStep) {
         withAnimation(.spring(response: 0.52, dampingFraction: 0.84)) {
             step = target
+        }
+    }
+
+    /// Barre de progression : segments 1…5 = genre / zone / notifs / démo (look+scan) / démo résultats.
+    func jumpToProgressSegment(_ segment: Int) {
+        guard segment >= 1, segment <= 5 else { return }
+        withAnimation(.spring(response: 0.52, dampingFraction: 0.84)) {
+            progressTapStamp += 1
+            switch segment {
+            case 1:
+                step = .gender
+            case 2:
+                step = .country
+            case 3:
+                step = .notifications
+            case 4:
+                step = .demo
+                isDemoInResultsPhase = false
+            case 5:
+                step = .demo
+                isDemoInResultsPhase = true
+                if selectedLookId == nil {
+                    selectedLookId = OnboardingMockData.lookOptions.first?.id
+                }
+            default:
+                break
+            }
         }
     }
 

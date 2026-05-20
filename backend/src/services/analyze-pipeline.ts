@@ -128,8 +128,16 @@ export async function runAnalyzePipeline(
         timeoutMs: PROVIDER_TIMEOUT_MS.vinted,
         run: async (): Promise<ProviderRunResult> => {
           try {
-            const r = await searchVintedListingsWithMeta(queries);
+            const r = await searchVintedListingsWithMeta(queries, {
+              maxMergedListings: 25,
+              maxQueries: 2,
+            });
             metaHolder.primaryHasMore = r.primaryHasMore;
+            console.log('[RESULTS_BATCH]', {
+              phase: 'analyze_initial',
+              count: r.listings.length,
+              hasMore: r.primaryHasMore,
+            });
             return { listings: r.listings, runStatus: 'success' };
           } catch (e) {
             return runResultFromVintedCatch(e);
@@ -139,9 +147,11 @@ export async function runAnalyzePipeline(
     ]);
     const r0 = snapshot[0]!;
     const merged = mergeAndCapListings(
-      r0.status === 'success' ? [r0.listings] : [[]]
+      r0.status === 'success' ? [r0.listings] : [[]],
+      25
     );
     listings = merged.listings;
+    console.log('[VISIBLE_RESULTS]', { analyzePipe: listings.length });
     primaryHasMore = metaHolder.primaryHasMore;
 
     const failed = failedFlagsFromResults(snapshot, enabled);

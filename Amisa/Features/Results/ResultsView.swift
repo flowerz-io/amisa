@@ -23,6 +23,8 @@ struct ResultsView: View {
     @State private var selectedFilterTab: ResultsFilterTab = .marketplace
     @State private var isFavorite              = false
     @State private var scrollOffset: CGFloat   = 0
+    @State private var scrollContentHeight: CGFloat = 0
+    @State private var viewportHeight: CGFloat = 0
     @State private var analyzedHeroMinY: CGFloat = .greatestFiniteMagnitude
     @State private var resultsFilterBarMinY: CGFloat = .greatestFiniteMagnitude
 
@@ -164,9 +166,6 @@ struct ResultsView: View {
                                 ForEach(viewModel.displayedListings) { listing in
                                     ListingCardView(listing: listing)
                                         .transition(.opacity.combined(with: .scale(scale: 0.985)))
-                                        .onAppear {
-                                            viewModel.loadMoreIfNeeded(currentItem: listing)
-                                        }
                                 }
                                 if viewModel.shouldShowTrailingSkeletonTiles {
                                     ForEach(0..<2, id: \.self) { _ in
@@ -178,20 +177,36 @@ struct ResultsView: View {
                             .animation(.easeOut(duration: 0.28), value: viewModel.displayedListings.count)
 
                             if viewModel.shouldShowPaginationProgress {
-                                ProgressView()
-                                    .controlSize(.regular)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, DesignTokens.spacingM)
-                                    .padding(.horizontal, DesignTokens.spacingM)
+                                HStack(spacing: 10) {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                    Text(String(localized: "Chargement de nouvelles annonces…"))
+                                        .font(DesignTokens.caption)
+                                        .foregroundStyle(Color.secondary)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .center)
+                                .padding(.vertical, DesignTokens.spacingM)
+                                .padding(.horizontal, DesignTokens.spacingM)
                             }
                         }
                     }
                     .padding(.top, safeTop + topImagePadding)
                     .padding(.bottom, 120)
+                    .background(
+                        GeometryReader { proxy in
+                            Color.clear.preference(
+                                key: ResultsScrollContentHeightKey.self,
+                                value: proxy.size.height
+                            )
+                        }
+                    )
                 }
                 .coordinateSpace(name: "resultsScroll")
                 .onPreferenceChange(ResultsScrollOffsetKey.self) { minY in
                     scrollOffset = max(0, -minY)
+                }
+                .onPreferenceChange(ResultsScrollContentHeightKey.self) { height in
+                    scrollContentHeight = height
                 }
                 .onPreferenceChange(AnalyzedHeroMinYPreferenceKey.self) { minY in
                     analyzedHeroMinY = minY
@@ -218,8 +233,21 @@ struct ResultsView: View {
                 )
                 .zIndex(10_000)
             }
+            .onAppear { viewportHeight = geo.size.height }
+            .onChange(of: geo.size.height) { _, newHeight in
+                viewportHeight = newHeight
+            }
         }
         .ignoresSafeArea(edges: .top)
+        .onChange(of: scrollOffset) { _, _ in
+            reportScrollDepthToViewModel()
+        }
+        .onChange(of: scrollContentHeight) { _, _ in
+            reportScrollDepthToViewModel()
+        }
+        .onChange(of: viewportHeight) { _, _ in
+            reportScrollDepthToViewModel()
+        }
         .task {
             await viewModel.bootstrapInitialListingsIfNeeded()
             await viewModel.pollSlowSearchSessionIfNeeded()
@@ -301,6 +329,15 @@ struct ResultsView: View {
     private func openFilterSheet(_ tab: ResultsFilterTab) {
         selectedFilterTab = tab
         showFiltersSheet = true
+    }
+
+    private func reportScrollDepthToViewModel() {
+        let visibleBottom = scrollOffset + viewportHeight
+        viewModel.reportScrollProgress(
+            visibleBottom: visibleBottom,
+            contentHeight: scrollContentHeight,
+            viewportHeight: viewportHeight
+        )
     }
 
     // MARK: - États erreur / vide

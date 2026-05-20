@@ -10,7 +10,7 @@ export async function fetchVintedViaBearer(
 ): Promise<{ listings: MarketplaceListingDTO[]; hasMore: boolean }> {
   const base =
     process.env.VINTED_API_BASE?.trim() || 'https://www.vinted.fr/api/v2';
-  const perPage = process.env.VINTED_SCRAPER_PER_PAGE?.trim() || '24';
+  const perPage = process.env.VINTED_SCRAPER_PER_PAGE?.trim() || '25';
   const path = `/catalog/items?search_text=${encodeURIComponent(
     searchText
   )}&per_page=${perPage}&page=${Math.max(1, Math.floor(page))}`;

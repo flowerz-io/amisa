@@ -33,6 +33,14 @@ struct ResultsScrollOffsetKey: PreferenceKey {
     }
 }
 
+/// Hauteur totale du contenu scrollable (VStack résultats) pour calculer la profondeur de scroll.
+struct ResultsScrollContentHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
 /// Position Y globale (écran) du haut du bloc hero image analysée.
 struct AnalyzedHeroMinYPreferenceKey: PreferenceKey {
     static var defaultValue: CGFloat = .greatestFiniteMagnitude

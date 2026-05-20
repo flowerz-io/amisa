@@ -24,6 +24,8 @@ struct MarketplaceListingDTO: Decodable {
     let condition: String?
     let publishedAtRelative: String?
     let relevanceScore: Double?
+    /// Score similarité visuelle / couleur 0…100 (calcul client, optionnel).
+    let visualSimilarityScore: Double?
 
     init(
         id: String,
@@ -38,7 +40,8 @@ struct MarketplaceListingDTO: Decodable {
         size: String?,
         condition: String?,
         publishedAtRelative: String? = nil,
-        relevanceScore: Double? = nil
+        relevanceScore: Double? = nil,
+        visualSimilarityScore: Double? = nil
     ) {
         self.id = id
         self.source = source
@@ -53,6 +56,7 @@ struct MarketplaceListingDTO: Decodable {
         self.condition = condition
         self.publishedAtRelative = publishedAtRelative
         self.relevanceScore = relevanceScore
+        self.visualSimilarityScore = visualSimilarityScore
     }
 }
 
@@ -73,6 +77,8 @@ struct MarketplaceListing: Identifiable, Codable, Equatable, Hashable {
     let condition: String?
     let publishedAtRelative: String?
     let relevanceScore: Double?
+    /// Score similarité (re-classement couleur côté app, 0…100).
+    var visualSimilarityScore: Double?
 
     /// Libellé badge (Vinted, Grailed, …) ; jamais vide côté UI.
     var sourceDisplayLabel: String {
@@ -134,7 +140,8 @@ extension MarketplaceListing {
             size: dto.size,
             condition: dto.condition,
             publishedAtRelative: dto.publishedAtRelative,
-            relevanceScore: dto.relevanceScore
+            relevanceScore: dto.relevanceScore,
+            visualSimilarityScore: dto.visualSimilarityScore
         )
     }
 }
@@ -156,7 +163,8 @@ extension MarketplaceListing {
             size: "41",
             condition: "Très bon état",
             publishedAtRelative: nil,
-            relevanceScore: 90
+            relevanceScore: 90,
+            visualSimilarityScore: nil
         ),
         MarketplaceListing(
             id: "v-mock-2",
@@ -171,7 +179,8 @@ extension MarketplaceListing {
             size: "40",
             condition: "Bon état",
             publishedAtRelative: nil,
-            relevanceScore: 72
+            relevanceScore: 72,
+            visualSimilarityScore: nil
         ),
     ]
 }
