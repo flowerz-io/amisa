@@ -58,7 +58,7 @@ export async function searchVintedListings(
   const t0 = performance.now();
   try {
     if (USE_MOCK) {
-      const out = await mockDelayListings('Vinted', 'Vinted');
+      const out = await mockDelayListings('vinted', 'Vinted');
       logSuccess('vinted', out.length, Math.round(performance.now() - t0));
       return out;
     }

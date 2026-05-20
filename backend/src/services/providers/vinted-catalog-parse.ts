@@ -76,7 +76,7 @@ export function parseVintedCatalogPayload(
 
     out.push({
       id: idStr,
-      source: 'Vinted',
+      source: 'vinted',
       title,
       price: Number.isFinite(price) ? price : 0,
       currency,

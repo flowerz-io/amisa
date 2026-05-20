@@ -58,8 +58,11 @@ enum SearchSessionFromRemote {
     static func decodeAnalyzeResponse(data: Data) throws -> AnalyzeSearchResponse {
         if let poll = try? JSONDecoder().decode(SearchSessionPollResponse.self, from: data),
            let nested = poll.response {
+            nested.logIOSResultsDecoded(context: "session-poll")
             return nested
         }
-        return try JSONDecoder().decode(AnalyzeSearchResponse.self, from: data)
+        let decoded = try JSONDecoder().decode(AnalyzeSearchResponse.self, from: data)
+        decoded.logIOSResultsDecoded(context: "decode-analyze-raw")
+        return decoded
     }
 }

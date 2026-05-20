@@ -71,7 +71,9 @@ actor APIClient: APIClientProtocol {
         switch httpResponse.statusCode {
         case 200:
             do {
-                return try decoder.decode(AnalyzeSearchResponse.self, from: data)
+                let decoded = try decoder.decode(AnalyzeSearchResponse.self, from: data)
+                decoded.logIOSResultsDecoded(context: "analyze-image")
+                return decoded
             } catch {
                 throw APIError.invalidResponse
             }
@@ -179,7 +181,9 @@ actor APIClient: APIClientProtocol {
 
         switch httpResponse.statusCode {
         case 200:
-            return try decoder.decode(AnalyzeSearchResponse.self, from: data)
+            let decoded = try decoder.decode(AnalyzeSearchResponse.self, from: data)
+            decoded.logIOSResultsDecoded(context: "analyze-text")
+            return decoded
         case 400:
             throw APIError.badRequest
         case 422:

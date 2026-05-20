@@ -167,7 +167,7 @@ final class ResultsViewModel: ObservableObject {
             self.nextPageToFetch = 2
             self.currentPage = 1
             let q = session.vintedPaginationQuery.trimmingCharacters(in: .whitespacesAndNewlines)
-            let vintedOnFirstLoad = session.listings.filter { $0.source == "Vinted" }.count
+            let vintedOnFirstLoad = session.listings.filter { MarketplaceSource.canonicalKey(from: $0.source) == "vinted" }.count
             let more = !q.isEmpty && vintedOnFirstLoad > 0
             self.hasMoreResults = more
             self.hasMoreVinted = more
@@ -227,7 +227,7 @@ final class ResultsViewModel: ObservableObject {
             nextPageToFetch = 2
             currentPage = 1
             let q = session.vintedPaginationQuery.trimmingCharacters(in: .whitespacesAndNewlines)
-            let vintedOnFirstLoad = session.listings.filter { $0.source == "Vinted" }.count
+            let vintedOnFirstLoad = session.listings.filter { MarketplaceSource.canonicalKey(from: $0.source) == "vinted" }.count
             let more = !q.isEmpty && vintedOnFirstLoad > 0
             hasMoreResults = more
             hasMoreVinted = more
@@ -520,7 +520,7 @@ final class ResultsViewModel: ObservableObject {
     }
 
     private func logPaginationState(context: String) {
-        let vinted = allListings.filter { $0.source == "Vinted" }.count
+        let vinted = allListings.filter { MarketplaceSource.canonicalKey(from: $0.source) == "vinted" }.count
         let grailed = allListings.filter { $0.source == "Grailed" }.count
         let ebay = allListings.filter { MarketplaceSource.canonicalKey(from: $0.source) == "ebay" }.count
         let leboncoin = allListings.filter { MarketplaceSource.canonicalKey(from: $0.source) == "leboncoin" }.count

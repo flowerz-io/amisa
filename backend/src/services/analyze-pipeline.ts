@@ -1,6 +1,7 @@
 import type {
   AnalyzeSearchBody,
   AnalyzeSearchResponseJSON,
+  MarketplaceListingDTO,
   ProviderStatusDTO,
 } from '../types.js';
 import {
@@ -31,6 +32,23 @@ import {
 import { EbayRateLimitedError } from './providers/ebay-browse-search.js';
 import { ProviderScrapeError } from '../lib/provider-scrape-error.js';
 import { PlaywrightChromiumMissingError } from '../lib/playwright-browser.js';
+
+function logAnalyzeResponseCounts(listings: MarketplaceListingDTO[]): void {
+  let ebay = 0;
+  let vinted = 0;
+  let grailed = 0;
+  let depop = 0;
+  for (const L of listings) {
+    const s = (L.source ?? '').trim().toLowerCase();
+    if (s.includes('ebay')) ebay += 1;
+    else if (s.includes('vinted')) vinted += 1;
+    else if (s.includes('grailed')) grailed += 1;
+    else if (s.includes('depop')) depop += 1;
+  }
+  console.log(
+    `[ANALYZE_RESPONSE] total=${listings.length} ebay=${ebay} vinted=${vinted} grailed=${grailed} depop=${depop}`
+  );
+}
 
 function logSkipped(provider: string, reason: string): void {
   console.log(`[PROVIDER_DISABLED] ${provider} reason=${reason}`);
@@ -315,6 +333,8 @@ export async function runAnalyzePipeline(
       ? `Aucune annonce fusionnée. ${summary}`
       : 'Aucun provider exécuté (vérifie enabledProviders côté app et *_ENABLED sur Railway).';
   }
+
+  logAnalyzeResponseCounts(listings);
 
   return {
     visionResult: vision,

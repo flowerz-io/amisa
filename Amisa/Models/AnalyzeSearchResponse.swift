@@ -28,3 +28,16 @@ struct AnalyzeSearchResponse: Decodable {
     /// Message explicatif si aucune annonce (ex. résumé des erreurs providers côté Railway).
     let searchDebugMessage: String?
 }
+
+// MARK: - Debug logs (compteurs par source après décodage)
+
+extension AnalyzeSearchResponse {
+    /// Logs `[IOS_RESULTS]` — aligné sur le backend `[ANALYZE_RESPONSE]`.
+    func logIOSResultsDecoded(context: String) {
+        let ebay = listings.filter { MarketplaceSource.canonicalKey(from: $0.source) == "ebay" }.count
+        let vinted = listings.filter { MarketplaceSource.canonicalKey(from: $0.source) == "vinted" }.count
+        let grailed = listings.filter { MarketplaceSource.canonicalKey(from: $0.source) == "grailed" }.count
+        let depop = listings.filter { MarketplaceSource.canonicalKey(from: $0.source) == "depop" }.count
+        print("[IOS_RESULTS] context=\(context) total=\(listings.count) ebay=\(ebay) vinted=\(vinted) grailed=\(grailed) depop=\(depop)")
+    }
+}

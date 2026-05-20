@@ -93,7 +93,7 @@ export async function fetchVintedViaPlaywright(
 
     return ids.slice(0, 24).map((id) => ({
       id,
-      source: 'Vinted',
+      source: 'vinted',
       title: `Vinted ${id}`,
       price: 0,
       currency: 'EUR',

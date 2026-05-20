@@ -164,7 +164,8 @@ export async function runProvidersAllSettled(
     }
   }
 
-  out.sort((a, b) => a.name.localeCompare(b.name));
+  // Conserver l’ordre d’enregistrement du pipeline (vinted avant ebay, etc.) pour les logs
+  // et pour toute fusion séquentielle ; ne pas trier par nom (sinon ebay avant vinted).
   return out;
 }
 
@@ -216,39 +217,43 @@ export interface MergeAndCapStats {
   perProviderSkips: number;
 }
 
+/**
+ * Fusion avec plafond global + **tour à tour** par provider (round-robin).
+ * Évite qu’un provider placé tôt alphabétiquement (ex. eBay) remplisse tout `MAX_RESULTS_PER_SEARCH`
+ * et fasse disparaître Vinted / les autres.
+ */
 export function mergeAndCapListings(
   chunks: MarketplaceListingDTO[][]
 ): { listings: MarketplaceListingDTO[]; stats: MergeAndCapStats } {
   const maxCap = getMaxResultsPerSearch();
-  const maxPerProvider = maxCap;
-
-  const perProv = new Map<string, number>();
-  const seen = new Set<string>();
-  const out: MarketplaceListingDTO[] = [];
-  let dedupeSkips = 0;
-  let perProviderSkips = 0;
-
+  const queues = chunks.map((c) => [...c]);
   const chunkCounts = chunks.map((c) => c.length);
   const inputSum = chunkCounts.reduce((a, b) => a + b, 0);
 
-  outer: for (const chunk of chunks) {
-    for (const L of chunk) {
-      const key = marketplaceListingDedupeKey(L);
-      if (seen.has(key)) {
-        dedupeSkips += 1;
-        continue;
+  const seen = new Set<string>();
+  const out: MarketplaceListingDTO[] = [];
+  let dedupeSkips = 0;
+
+  while (out.length < maxCap) {
+    let tookThisRound = false;
+    for (const q of queues) {
+      if (out.length >= maxCap) break;
+      while (q.length > 0) {
+        const L = q[0]!;
+        const key = marketplaceListingDedupeKey(L);
+        if (seen.has(key)) {
+          q.shift();
+          dedupeSkips += 1;
+          continue;
+        }
+        q.shift();
+        seen.add(key);
+        out.push(L);
+        tookThisRound = true;
+        break;
       }
-      const prov = (L.source ?? 'unknown').toLowerCase();
-      const n = perProv.get(prov) ?? 0;
-      if (n >= maxPerProvider) {
-        perProviderSkips += 1;
-        continue;
-      }
-      if (out.length >= maxCap) break outer;
-      seen.add(key);
-      perProv.set(prov, n + 1);
-      out.push(L);
     }
+    if (!tookThisRound) break;
   }
 
   const stats: MergeAndCapStats = {
@@ -257,7 +262,7 @@ export function mergeAndCapListings(
     afterDedupAndCap: out.length,
     maxCap,
     dedupeSkips,
-    perProviderSkips,
+    perProviderSkips: 0,
   };
 
   console.log('[LISTINGS_MERGE]', {
@@ -266,7 +271,7 @@ export function mergeAndCapListings(
     afterDedupAndCap: stats.afterDedupAndCap,
     maxCap: stats.maxCap,
     dedupeSkips: stats.dedupeSkips,
-    perProviderSkips: stats.perProviderSkips,
+    mode: 'round_robin',
   });
 
   return { listings: out, stats };
