@@ -22,7 +22,7 @@ struct SearchSession: Identifiable, Equatable, Hashable {
     let searchQuery: String
     let generatedQueries: [String]
     let attributes: FashionVisionResult?
-    let listings: [MarketplaceListing]
+    var listings: [MarketplaceListing]
     let createdAt: Date
     /// La recherche Vinted initiale n’a pas pu être chargée (vision OK).
     var vintedSearchFailed: Bool
@@ -45,6 +45,8 @@ struct SearchSession: Identifiable, Equatable, Hashable {
     var moreProvidersPending: Bool
     /// Détails côté API si aucune annonce (providers en échec, etc.).
     var searchDebugMessage: String?
+    /// Identifiant `GET /search-sessions/:id` tant que les providers lents peuvent encore enrichir les résultats.
+    var searchSessionId: String?
 
     init(
         id: UUID = UUID(),
@@ -66,7 +68,8 @@ struct SearchSession: Identifiable, Equatable, Hashable {
         awaitsRailwayHydration: Bool = false,
         hydratingBackendResults: Bool = false,
         moreProvidersPending: Bool = false,
-        searchDebugMessage: String? = nil
+        searchDebugMessage: String? = nil,
+        searchSessionId: String? = nil
     ) {
         self.id = id
         self.imageFileName = imageFileName
@@ -88,6 +91,7 @@ struct SearchSession: Identifiable, Equatable, Hashable {
         self.hydratingBackendResults = hydratingBackendResults
         self.moreProvidersPending = moreProvidersPending
         self.searchDebugMessage = searchDebugMessage
+        self.searchSessionId = searchSessionId
     }
 
     /// Recherche lancée uniquement depuis du texte (pas d’image source).
@@ -169,7 +173,7 @@ extension SearchSession: Codable {
         case id, imageFileName, thumbnailImageURL, searchQuery, generatedQueries, attributes, listings, createdAt,
              vintedSearchFailed, paginationState, rankingContext, providerAvailability, providerCounts,
              initialResponseTimeMs, mode, previewImageURLs, awaitsRailwayHydration, hydratingBackendResults,
-             moreProvidersPending, searchDebugMessage
+             moreProvidersPending, searchDebugMessage, searchSessionId
     }
 
     init(from decoder: Decoder) throws {
@@ -195,6 +199,7 @@ extension SearchSession: Codable {
         let hydratingBackendResults = try c.decodeIfPresent(Bool.self, forKey: .hydratingBackendResults) ?? false
         let moreProvidersPending = try c.decodeIfPresent(Bool.self, forKey: .moreProvidersPending) ?? false
         let searchDebugMessage = try c.decodeIfPresent(String.self, forKey: .searchDebugMessage)
+        let searchSessionId = try c.decodeIfPresent(String.self, forKey: .searchSessionId)
         self.init(
             id: id,
             imageFileName: imageFileName,
@@ -215,7 +220,8 @@ extension SearchSession: Codable {
             awaitsRailwayHydration: awaitsRailwayHydration,
             hydratingBackendResults: hydratingBackendResults,
             moreProvidersPending: moreProvidersPending,
-            searchDebugMessage: searchDebugMessage
+            searchDebugMessage: searchDebugMessage,
+            searchSessionId: searchSessionId
         )
     }
 
@@ -241,5 +247,6 @@ extension SearchSession: Codable {
         try c.encode(hydratingBackendResults, forKey: .hydratingBackendResults)
         try c.encode(moreProvidersPending, forKey: .moreProvidersPending)
         try c.encodeIfPresent(searchDebugMessage, forKey: .searchDebugMessage)
+        try c.encodeIfPresent(searchSessionId, forKey: .searchSessionId)
     }
 }

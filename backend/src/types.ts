@@ -49,7 +49,9 @@ export interface ProviderStatusDTO {
     | 'skipped'
     | 'blocked'
     | 'blocked_403'
-    | 'browser_missing';
+    | 'browser_missing'
+    /** En attente côté phase lente (réponse HTTP partielle uniquement). */
+    | 'running';
   reason?: string;
   listingsCount?: number;
   durationMs?: number;
@@ -58,6 +60,13 @@ export interface ProviderStatusDTO {
 }
 
 export interface AnalyzeSearchResponseJSON {
+  /**
+   * partial = providers lents encore en cours (Depop / Grailed / …).
+   * completed = toutes les phases terminées pour cette requête.
+   */
+  status?: 'partial' | 'completed';
+  /** Présent si une phase lente est en cours ou pour GET /search-sessions/:id. */
+  searchSessionId?: string;
   visionResult: FashionVisionResult;
   generatedQueries: string[];
   listings: MarketplaceListingDTO[];

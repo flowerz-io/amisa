@@ -48,6 +48,8 @@ final class HomeViewModel: ObservableObject {
 
         let snapshot = ManualSearchSnapshot(query: trimmed, createdAt: Date(), listings: listings)
 
+        let pendingSlow =
+            response.moreProvidersPending ?? (response.status == "partial")
         let session = SearchSession(
             id: presetSessionId ?? UUID(),
             imageFileName: nil,
@@ -66,8 +68,9 @@ final class HomeViewModel: ObservableObject {
             mode: .textQuery,
             previewImageURLs: snapshot.previewImageURLs,
             hydratingBackendResults: false,
-            moreProvidersPending: response.moreProvidersPending ?? false,
-            searchDebugMessage: response.searchDebugMessage
+            moreProvidersPending: pendingSlow,
+            searchDebugMessage: response.searchDebugMessage,
+            searchSessionId: response.searchSessionId
         )
 
         searchHistoryService.addSession(session)

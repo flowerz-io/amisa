@@ -28,6 +28,8 @@ enum SearchSessionFromRemote {
 
         ProviderRuntimeAvailabilityStore.shared.merge(from: response.providerAvailability)
 
+        let pendingSlow =
+            response.moreProvidersPending ?? (response.status == "partial")
         var session = SearchSession(
             id: UUID(),
             imageFileName: imageFileName,
@@ -43,8 +45,9 @@ enum SearchSessionFromRemote {
             providerAvailability: response.providerAvailability,
             providerCounts: response.providerCounts,
             initialResponseTimeMs: response.initialResponseTimeMs,
-            moreProvidersPending: response.moreProvidersPending ?? false,
-            searchDebugMessage: response.searchDebugMessage
+            moreProvidersPending: pendingSlow,
+            searchDebugMessage: response.searchDebugMessage,
+            searchSessionId: response.searchSessionId
         )
 
         if let thumbURL = ImagePersistenceService.shared.persistThumbnail(for: session) {

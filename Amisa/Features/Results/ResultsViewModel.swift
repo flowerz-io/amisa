@@ -42,6 +42,9 @@ final class ResultsViewModel: ObservableObject {
     @Published private(set) var initialResponseTimeMs: Int?
     /// Réponse snapshot avant fin de tous les providers (early cutoff serveur).
     @Published private(set) var moreProvidersPending: Bool = false
+    /// Poll `search-sessions` tant que le backend indique une phase lente active.
+    @Published private(set) var slowProvidersInProgress: Bool = false
+
     /// Historique debug : page Vinted courante (legacy + nouveau flow).
     @Published private(set) var currentPage: Int
     /// Liste vide au chargement mais requête Vinted disponible (favori) : première page à charger.
@@ -55,6 +58,8 @@ final class ResultsViewModel: ObservableObject {
     private var didRunBootstrap: Bool = false
     private let awaitsRailwayHydration: Bool
 
+    private var activeSlowPollSessionId: String?
+
     // MARK: - Grille : skeletons / vide (UX recherche)
 
     private var loadedSession: SearchSession? {
@@ -67,9 +72,12 @@ final class ResultsViewModel: ObservableObject {
         guard let s = loadedSession else { return false }
         return s.hydratingBackendResults
             || s.awaitsRailwayHydration
-            || s.moreProvidersPending
-            || moreProvidersPending
             || needsInitialListingsBootstrap
+    }
+
+    /// Bandeau discret : providers lents (Depop / Grailed) encore en cours.
+    var shouldShowSlowProvidersBanner: Bool {
+        slowProvidersInProgress
     }
 
     /// Grille : shimmer tant que l’une des sources ci-dessus est active ou qu’un chargement réseau est en cours.
@@ -112,6 +120,11 @@ final class ResultsViewModel: ObservableObject {
         self.providerCounts = session.providerCounts ?? Self.providerCounts(from: session.paginationState)
         self.initialResponseTimeMs = session.initialResponseTimeMs
         self.moreProvidersPending = session.moreProvidersPending
+        self.activeSlowPollSessionId = session.searchSessionId
+        self.slowProvidersInProgress =
+            session.searchSessionId != nil
+            && session.searchSessionId?.isEmpty == false
+            && session.moreProvidersPending
 
         if let paginationState = session.paginationState {
             self.currentPage = max(1, paginationState.vinted.nextPage - 1)
@@ -196,6 +209,11 @@ final class ResultsViewModel: ObservableObject {
         providerCounts = session.providerCounts ?? Self.providerCounts(from: session.paginationState)
         initialResponseTimeMs = session.initialResponseTimeMs
         moreProvidersPending = session.moreProvidersPending
+        slowProvidersInProgress =
+            session.searchSessionId != nil
+            && !(session.searchSessionId?.isEmpty ?? true)
+            && session.moreProvidersPending
+        activeSlowPollSessionId = session.searchSessionId
         providerAvailabilityMap = session.providerAvailability
         ProviderRuntimeAvailabilityStore.shared.merge(from: session.providerAvailability)
 
@@ -242,6 +260,77 @@ final class ResultsViewModel: ObservableObject {
 
         applyDisplayedFilters()
         logPaginationState(context: "hydration_merge")
+    }
+
+    func mergeSlowPoll(_ response: AnalyzeSearchResponse, httpPollStatus: String?) {
+        guard case .loaded(var session) = state else { return }
+        let merged = response.listings.map { MarketplaceListing.from($0) }
+        allListings = Self.sortByRelevance(merged)
+        moreProvidersPending = response.moreProvidersPending ?? false
+        session.listings = allListings
+        session.moreProvidersPending = moreProvidersPending
+        if let sid = response.searchSessionId, !sid.isEmpty {
+            session.searchSessionId = sid
+            activeSlowPollSessionId = sid
+        }
+        let done =
+            response.status == "completed"
+            || httpPollStatus == "completed"
+            || httpPollStatus == "failed"
+            || !moreProvidersPending
+        if done {
+            session.searchSessionId = nil
+            activeSlowPollSessionId = nil
+            slowProvidersInProgress = false
+        } else {
+            slowProvidersInProgress =
+                session.searchSessionId != nil
+                && !(session.searchSessionId?.isEmpty ?? true)
+                && moreProvidersPending
+        }
+        state = .loaded(session)
+        applyDisplayedFilters()
+        logPaginationState(context: "slow_poll_merge")
+    }
+
+    func pollSlowSearchSessionIfNeeded() async {
+        let sid = activeSlowPollSessionId ?? loadedSession?.searchSessionId
+        guard let sid, !sid.isEmpty else { return }
+        guard slowProvidersInProgress else { return }
+        let deadline = Date().addingTimeInterval(45)
+        while Date() < deadline {
+            if Task.isCancelled { return }
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            do {
+                let poll = try await apiClient.fetchSearchSessionStatus(sessionId: sid)
+                if poll.status == "failed" {
+                    await MainActor.run {
+                        slowProvidersInProgress = false
+                    }
+                    return
+                }
+                if let r = poll.response {
+                    await MainActor.run {
+                        mergeSlowPoll(r, httpPollStatus: poll.status)
+                    }
+                    let terminal =
+                        poll.status == "completed"
+                        || r.status == "completed"
+                        || !(r.moreProvidersPending ?? false)
+                    if terminal {
+                        return
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    slowProvidersInProgress = false
+                }
+                return
+            }
+        }
+        await MainActor.run {
+            slowProvidersInProgress = false
+        }
     }
 
     func applyHydrationFailure(message: String) {
@@ -494,9 +583,13 @@ final class ResultsViewModel: ObservableObject {
     }()
 
     private static func listingMergeKey(_ listing: MarketplaceListing) -> String {
+        let src = MarketplaceSource.canonicalKey(from: listing.source)
+        let id = listing.id.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !src.isEmpty && !id.isEmpty { return "ext:\(src)|\(id)" }
         let url = listing.listingURL?.absoluteString.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !src.isEmpty && !url.isEmpty { return "url:\(src)|\(url)" }
         if !url.isEmpty { return "url:\(url)" }
-        return "\(listing.source)|\(listing.id)"
+        return "fallback:\(src)|\(id)"
     }
 
     private static func mergeUnique(existing: [MarketplaceListing], new: [MarketplaceListing]) -> [MarketplaceListing] {

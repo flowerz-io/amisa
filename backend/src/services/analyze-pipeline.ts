@@ -1,6 +1,7 @@
 import type {
   AnalyzeSearchBody,
   AnalyzeSearchResponseJSON,
+  FashionVisionResult,
   MarketplaceListingDTO,
   ProviderStatusDTO,
 } from '../types.js';
@@ -15,11 +16,17 @@ import {
   failedFlagsFromResults,
   mergeAndCapListings,
   PROVIDER_TIMEOUT_MS,
+  SLOW_PROVIDER_TIMEOUT_MS,
   runProvidersAllSettled,
   type ProviderName,
   type ProviderRunResult,
   type ProviderTaskResult,
 } from '../lib/parallel-providers.js';
+import {
+  getSearchSession,
+  newSearchSessionId,
+  putSearchSession,
+} from '../lib/search-session-store.js';
 import { analyzeFashionVision } from './vision-openai.js';
 import { buildPrimaryQueries } from '../lib/query-from-vision.js';
 import {
@@ -44,6 +51,86 @@ function buildPublicProviderStatuses(
     m[r.provider] = st;
   }
   return m;
+}
+
+function mergeRunningProviderStatuses(
+  rows: ProviderStatusDTO[],
+  runningSlowNames: string[]
+): Record<string, string> {
+  const m = buildPublicProviderStatuses(rows);
+  for (const n of runningSlowNames) {
+    m[n] = 'running';
+  }
+  return m;
+}
+
+function assembleAnalyzeResponse(params: {
+  wall: number;
+  vision: FashionVisionResult;
+  queries: string[];
+  listings: MarketplaceListingDTO[];
+  providerRows: ProviderStatusDTO[];
+  runningSlowNames: string[];
+  searchStatus: 'partial' | 'completed';
+  searchSessionId?: string;
+  enabled: Set<string>;
+  resultsForFlags: ProviderTaskResult[];
+}): AnalyzeSearchResponseJSON {
+  const failed = failedFlagsFromResults(params.resultsForFlags, params.enabled);
+  const hideTopLevelSearchFailures = params.listings.length > 0;
+
+  let searchDebugMessage: string | undefined;
+  if (params.listings.length === 0) {
+    const summary = params.providerRows
+      .map((s) => `${s.provider}=${s.status}${s.reason ? `:${s.reason}` : ''}`)
+      .join('; ');
+    searchDebugMessage = summary
+      ? `Aucune annonce fusionnée. ${summary}`
+      : 'Aucun provider exécuté (vérifie enabledProviders côté app et *_ENABLED sur Railway).';
+  }
+
+  logAnalyzeResponseCounts(params.listings);
+
+  return {
+    status: params.searchStatus,
+    searchSessionId: params.searchSessionId,
+    visionResult: params.vision,
+    generatedQueries: params.queries,
+    listings: params.listings,
+    vintedSearchFailed: hideTopLevelSearchFailures
+      ? undefined
+      : params.enabled.has('vinted')
+        ? failed.vintedSearchFailed
+        : undefined,
+    grailedSearchFailed: hideTopLevelSearchFailures
+      ? undefined
+      : params.enabled.has('grailed')
+        ? failed.grailedSearchFailed
+        : undefined,
+    ebaySearchFailed: hideTopLevelSearchFailures
+      ? undefined
+      : params.enabled.has('ebay')
+        ? failed.ebaySearchFailed
+        : undefined,
+    leboncoinSearchFailed: hideTopLevelSearchFailures
+      ? undefined
+      : params.enabled.has('leboncoin')
+        ? failed.leboncoinSearchFailed
+        : undefined,
+    depopSearchFailed: hideTopLevelSearchFailures
+      ? undefined
+      : params.enabled.has('depop')
+        ? failed.depopSearchFailed
+        : undefined,
+    initialResponseTimeMs: Math.round(performance.now() - params.wall),
+    moreProvidersPending: params.searchStatus === 'partial',
+    providerStatuses: mergeRunningProviderStatuses(
+      params.providerRows,
+      params.runningSlowNames
+    ),
+    providerStatusReasons: buildPublicProviderStatusReasons(params.providerRows),
+    searchDebugMessage,
+  };
 }
 
 function buildPublicProviderStatusReasons(
@@ -197,8 +284,18 @@ async function adaptLeboncoin(queries: string[]): Promise<ProviderRunResult> {
   }
 }
 
+/** eBay + Vinted d’abord ; Depop + Grailed + Leboncoin ensuite (timeouts plus longs). */
+const FAST_ORDER: ProviderName[] = ['vinted', 'ebay'];
+const SLOW_ORDER: ProviderName[] = ['grailed', 'depop', 'leboncoin'];
+
+export type RunAnalyzePipelineOptions = {
+  awaitSlowCompletion?: boolean;
+  fixedSessionId?: string;
+};
+
 export async function runAnalyzePipeline(
-  body: AnalyzeSearchBody
+  body: AnalyzeSearchBody,
+  options?: RunAnalyzePipelineOptions
 ): Promise<AnalyzeSearchResponseJSON> {
   const wall = performance.now();
   console.log('[PERF] image received');
@@ -230,183 +327,237 @@ export async function runAnalyzePipeline(
     enabled.add('leboncoin');
   }
 
-  const providerStatusRows: ProviderStatusDTO[] = [];
-
-  const tasks: Array<{
+  const skippedRows: ProviderStatusDTO[] = [];
+  const fastTasks: Array<{
+    name: ProviderName;
+    timeoutMs: number;
+    run: () => Promise<ProviderRunResult>;
+  }> = [];
+  const slowTasks: Array<{
     name: ProviderName;
     timeoutMs: number;
     run: () => Promise<ProviderRunResult>;
   }> = [];
 
-  if (enabled.has('vinted')) {
-    const g = gateVintedServer();
-    if (!g.ready) {
-      logSkipped('vinted', g.reason);
-      providerStatusRows.push({
-        provider: 'vinted',
+  const appendProvider = (name: ProviderName, bucket: 'fast' | 'slow') => {
+    if (!enabled.has(name)) return;
+    const gate =
+      name === 'vinted'
+        ? gateVintedServer()
+        : name === 'ebay'
+          ? gateEbayServer()
+          : name === 'grailed'
+            ? gateGrailedServer()
+            : name === 'depop'
+              ? gateDepopServer()
+              : gateLeboncoinServer();
+    if (!gate.ready) {
+      logSkipped(name, gate.reason);
+      skippedRows.push({
+        provider: name,
         status: 'skipped',
-        reason: g.reason,
+        reason: gate.reason,
         listingsCount: 0,
       });
-    } else {
-      tasks.push({
-        name: 'vinted',
-        timeoutMs: PROVIDER_TIMEOUT_MS.vinted,
-        run: () => adaptVinted(queries),
-      });
+      return;
     }
+    const timeoutMs =
+      bucket === 'fast'
+        ? PROVIDER_TIMEOUT_MS[name]
+        : SLOW_PROVIDER_TIMEOUT_MS[name];
+    const run =
+      name === 'vinted'
+        ? () => adaptVinted(queries)
+        : name === 'ebay'
+          ? () => adaptEbay(queries)
+          : name === 'grailed'
+            ? () => adaptGrailed(queries)
+            : name === 'depop'
+              ? () => adaptDepop(queries)
+              : () => adaptLeboncoin(queries);
+    const task = { name, timeoutMs, run };
+    if (bucket === 'fast') fastTasks.push(task);
+    else slowTasks.push(task);
+  };
+
+  for (const n of FAST_ORDER) appendProvider(n, 'fast');
+  for (const n of SLOW_ORDER) appendProvider(n, 'slow');
+
+  console.log(
+    '[PROVIDERS_ACTIVE]',
+    'fast=',
+    fastTasks.map((t) => t.name),
+    'slow=',
+    slowTasks.map((t) => t.name)
+  );
+
+  let snapshotFast: ProviderTaskResult[] = [];
+  if (fastTasks.length > 0) {
+    snapshotFast = await runProvidersAllSettled(fastTasks);
   }
 
-  if (enabled.has('ebay')) {
-    const g = gateEbayServer();
-    if (!g.ready) {
-      logSkipped('ebay', g.reason);
-      providerStatusRows.push({
-        provider: 'ebay',
-        status: 'skipped',
-        reason: g.reason,
-        listingsCount: 0,
-      });
-    } else {
-      tasks.push({
-        name: 'ebay',
-        timeoutMs: PROVIDER_TIMEOUT_MS.ebay,
-        run: () => adaptEbay(queries),
-      });
-    }
-  }
+  console.log('[FAST_PROVIDERS_DONE]', {
+    ms: Math.round(performance.now() - wall),
+    results: snapshotFast.map((r) => ({
+      provider: r.name,
+      status: r.status,
+      count: r.listings.length,
+    })),
+  });
 
-  if (enabled.has('grailed')) {
-    const g = gateGrailedServer();
-    if (!g.ready) {
-      logSkipped('grailed', g.reason);
-      providerStatusRows.push({
-        provider: 'grailed',
-        status: 'skipped',
-        reason: g.reason,
-        listingsCount: 0,
-      });
-    } else {
-      tasks.push({
-        name: 'grailed',
-        timeoutMs: PROVIDER_TIMEOUT_MS.grailed,
-        run: () => adaptGrailed(queries),
-      });
-    }
-  }
+  const rowsAfterFast: ProviderStatusDTO[] = [
+    ...skippedRows,
+    ...snapshotFast.map(taskResultToDTO),
+  ];
 
-  if (enabled.has('depop')) {
-    const g = gateDepopServer();
-    if (!g.ready) {
-      logSkipped('depop', g.reason);
-      providerStatusRows.push({
-        provider: 'depop',
-        status: 'skipped',
-        reason: g.reason,
-        listingsCount: 0,
-      });
-    } else {
-      tasks.push({
-        name: 'depop',
-        timeoutMs: PROVIDER_TIMEOUT_MS.depop,
-        run: () => adaptDepop(queries),
-      });
-    }
-  }
-
-  if (enabled.has('leboncoin')) {
-    const g = gateLeboncoinServer();
-    if (!g.ready) {
-      logSkipped('leboncoin', g.reason);
-      providerStatusRows.push({
-        provider: 'leboncoin',
-        status: 'skipped',
-        reason: g.reason,
-        listingsCount: 0,
-      });
-    } else {
-      tasks.push({
-        name: 'leboncoin',
-        timeoutMs: PROVIDER_TIMEOUT_MS.leboncoin,
-        run: () => adaptLeboncoin(queries),
-      });
-    }
-  }
-
-  console.log('[PROVIDERS_ACTIVE]', tasks.map((t) => t.name));
-
-  let snapshot: ProviderTaskResult[] = [];
-
-  if (tasks.length > 0) {
-    console.log('[PROVIDERS_PARALLEL] mode=allSettled tasks=', tasks.length);
-    snapshot = await runProvidersAllSettled(tasks);
-    providerStatusRows.push(...snapshot.map(taskResultToDTO));
-  }
-
-  const chunks = snapshot
+  const fastChunks = snapshotFast
     .filter((r) => r.status === 'success')
     .map((r) => r.listings);
-  const { listings, stats: mergeStats } = mergeAndCapListings(chunks);
-  const mergeMs = Math.round(performance.now() - wall);
+  const { listings: listingsFast, stats: mergeStatsFast } =
+    mergeAndCapListings(fastChunks);
+
   console.log(
-    `[PERF] merge=${mergeMs}ms total_listings=${listings.length} merge_input_sum=${mergeStats.inputSum} merge_after_dedup_cap=${mergeStats.afterDedupAndCap} merge_max_cap=${mergeStats.maxCap}`
+    `[PERF] merge_fast=${Math.round(performance.now() - wall)}ms total_listings=${listingsFast.length} merge_input_sum=${mergeStatsFast.inputSum} merge_after_dedup_cap=${mergeStatsFast.afterDedupAndCap} merge_max_cap=${mergeStatsFast.maxCap}`
   );
-  console.log('[PERF] final_listings_to_client', listings.length);
+  console.log('[PERF] fast_listings_to_client', listingsFast.length);
 
-  const total = Math.round(performance.now() - wall);
-  console.log(`[PERF] total=${total}ms`);
+  const slowNames = slowTasks.map((t) => t.name);
+  const fastChunksFrozen = fastChunks;
+  const opts = options ?? {};
 
-  const failed = failedFlagsFromResults(snapshot, enabled);
+  const runSlowPhase = async (
+    sessionId: string,
+    rowsBase: ProviderStatusDTO[]
+  ): Promise<void> => {
+    try {
+      console.log('[SLOW_PROVIDERS_STARTED]', {
+        searchSessionId: sessionId,
+        providers: slowNames,
+      });
+      const snapshotSlow =
+        slowTasks.length > 0 ? await runProvidersAllSettled(slowTasks) : [];
+      for (const r of snapshotSlow) {
+        console.log(
+          `[SLOW_PROVIDER_DONE] ${r.name} count=${r.listings.length} status=${r.status}`
+        );
+      }
+      const rowsComplete = [
+        ...rowsBase,
+        ...snapshotSlow.map(taskResultToDTO),
+      ];
+      const slowChunks = snapshotSlow
+        .filter((r) => r.status === 'success')
+        .map((r) => r.listings);
+      const { listings: listingsAll, stats: mergeStatsSlow } =
+        mergeAndCapListings([...fastChunksFrozen, ...slowChunks]);
+      console.log(
+        `[PERF] merge_slow total_listings=${listingsAll.length} merge_input_sum=${mergeStatsSlow.inputSum} merge_after_dedup_cap=${mergeStatsSlow.afterDedupAndCap}`
+      );
+      const snapshotAll = [...snapshotFast, ...snapshotSlow];
+      const completed = assembleAnalyzeResponse({
+        wall,
+        vision,
+        queries,
+        listings: listingsAll,
+        providerRows: rowsComplete,
+        runningSlowNames: [],
+        searchStatus: 'completed',
+        searchSessionId: sessionId,
+        enabled,
+        resultsForFlags: snapshotAll,
+      });
+      putSearchSession(sessionId, {
+        pollStatus: 'completed',
+        response: completed,
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error('[SLOW_PROVIDERS_FATAL]', sessionId, msg);
+      const errored: ProviderStatusDTO[] = slowNames.map((n) => ({
+        provider: n,
+        status: 'error',
+        reason: msg.slice(0, 300),
+        listingsCount: 0,
+      }));
+      const rowsComplete = [...rowsBase, ...errored];
+      const completed = assembleAnalyzeResponse({
+        wall,
+        vision,
+        queries,
+        listings: listingsFast,
+        providerRows: rowsComplete,
+        runningSlowNames: [],
+        searchStatus: 'completed',
+        searchSessionId: sessionId,
+        enabled,
+        resultsForFlags: snapshotFast,
+      });
+      putSearchSession(sessionId, {
+        pollStatus: 'completed',
+        response: completed,
+      });
+    }
+  };
 
-  /** Dès qu’au moins un listing est renvoyé (ex. eBay OK), on n’expose plus les échecs partiels en flags top-level. */
-  const hideTopLevelSearchFailures = listings.length > 0;
+  /** Session Railway : GET /search-sessions — toujours l’UUID POST ; sinon seulement si phase lente. */
+  const sessionIdForStore: string | undefined =
+    opts.fixedSessionId ??
+    (slowTasks.length > 0 ? newSearchSessionId() : undefined);
 
-  let searchDebugMessage: string | undefined;
-  if (listings.length === 0) {
-    const summary = providerStatusRows
-      .map((s) => `${s.provider}=${s.status}${s.reason ? `:${s.reason}` : ''}`)
-      .join('; ');
-    searchDebugMessage = summary
-      ? `Aucune annonce fusionnée. ${summary}`
-      : 'Aucun provider exécuté (vérifie enabledProviders côté app et *_ENABLED sur Railway).';
+  if (slowTasks.length === 0) {
+    const completed = assembleAnalyzeResponse({
+      wall,
+      vision,
+      queries,
+      listings: listingsFast,
+      providerRows: rowsAfterFast,
+      runningSlowNames: [],
+      searchStatus: 'completed',
+      searchSessionId: opts.fixedSessionId,
+      enabled,
+      resultsForFlags: snapshotFast,
+    });
+    const total = Math.round(performance.now() - wall);
+    console.log(`[PERF] total=${total}ms (no_slow_providers)`);
+    if (opts.fixedSessionId) {
+      putSearchSession(opts.fixedSessionId, {
+        pollStatus: 'completed',
+        response: completed,
+      });
+    }
+    return completed;
   }
 
-  logAnalyzeResponseCounts(listings);
+  const sessionId = sessionIdForStore!;
+  const partialResponse = assembleAnalyzeResponse({
+    wall,
+    vision,
+    queries,
+    listings: listingsFast,
+    providerRows: rowsAfterFast,
+    runningSlowNames: slowNames,
+    searchStatus: 'partial',
+    searchSessionId: sessionId,
+    enabled,
+    resultsForFlags: snapshotFast,
+  });
 
-  return {
-    visionResult: vision,
-    generatedQueries: queries,
-    listings,
-    vintedSearchFailed: hideTopLevelSearchFailures
-      ? undefined
-      : enabled.has('vinted')
-        ? failed.vintedSearchFailed
-        : undefined,
-    grailedSearchFailed: hideTopLevelSearchFailures
-      ? undefined
-      : enabled.has('grailed')
-        ? failed.grailedSearchFailed
-        : undefined,
-    ebaySearchFailed: hideTopLevelSearchFailures
-      ? undefined
-      : enabled.has('ebay')
-        ? failed.ebaySearchFailed
-        : undefined,
-    leboncoinSearchFailed: hideTopLevelSearchFailures
-      ? undefined
-      : enabled.has('leboncoin')
-        ? failed.leboncoinSearchFailed
-        : undefined,
-    depopSearchFailed: hideTopLevelSearchFailures
-      ? undefined
-      : enabled.has('depop')
-        ? failed.depopSearchFailed
-        : undefined,
-    initialResponseTimeMs: total,
-    moreProvidersPending: false,
-    providerStatuses: buildPublicProviderStatuses(providerStatusRows),
-    providerStatusReasons:
-      buildPublicProviderStatusReasons(providerStatusRows),
-    searchDebugMessage,
-  };
+  putSearchSession(sessionId, {
+    pollStatus: 'partial',
+    response: partialResponse,
+  });
+
+  const finishSlow = () => runSlowPhase(sessionId, rowsAfterFast);
+
+  if (opts.awaitSlowCompletion) {
+    await finishSlow();
+    const total = Math.round(performance.now() - wall);
+    console.log(`[PERF] total=${total}ms (await_slow)`);
+    return getSearchSession(sessionId)?.response ?? partialResponse;
+  }
+
+  void finishSlow();
+  const total = Math.round(performance.now() - wall);
+  console.log(`[PERF] total=${total}ms (fast_path_return)`);
+  return partialResponse;
 }

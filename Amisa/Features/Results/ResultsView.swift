@@ -146,6 +146,14 @@ struct ResultsView: View {
                         annoncesCountRow(session: session)
                             .padding(.horizontal, DesignTokens.spacingM)
 
+                        if viewModel.shouldShowSlowProvidersBanner {
+                            Text(String(localized: "Résultats encore en cours…"))
+                                .font(DesignTokens.caption)
+                                .foregroundStyle(Color.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, DesignTokens.spacingM)
+                        }
+
                         // 4–6. Grille : état vide dans la page / skeletons / résultats (+ shimmer fin de vague partielle)
                         if viewModel.shouldShowEmptyGridState {
                             ResultsEmptyGridStateView(debugMessage: session.searchDebugMessage)
@@ -222,6 +230,7 @@ struct ResultsView: View {
         .ignoresSafeArea(edges: .top)
         .task {
             await viewModel.bootstrapInitialListingsIfNeeded()
+            await viewModel.pollSlowSearchSessionIfNeeded()
         }
         .onAppear {
             isFavorite = FavoriteSearchService.shared.isFavorite(id: session.id)

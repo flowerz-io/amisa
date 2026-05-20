@@ -38,7 +38,9 @@ struct MockAPIClient: APIClientProtocol {
             status: "completed",
             searchQuery: AnalyzeSearchResponse.mock.generatedQueries.first,
             error: nil,
-            response: AnalyzeSearchResponse.mock
+            response: AnalyzeSearchResponse.mock,
+            listings: AnalyzeSearchResponse.mock.listings,
+            providerStatuses: [:]
         )
     }
 
@@ -111,6 +113,14 @@ struct MockAPIClient: APIClientProtocol {
 extension AnalyzeSearchResponse {
     static var mock: AnalyzeSearchResponse {
         AnalyzeSearchResponse(
+            status: "completed",
+            searchSessionId: nil,
+            providerStatuses: [
+                "ebay": "success",
+                "vinted": "success",
+                "grailed": "success",
+                "depop": "success",
+            ],
             visionResult: FashionVisionResult(
                 category: "footwear",
                 subcategory: "ankle boots",

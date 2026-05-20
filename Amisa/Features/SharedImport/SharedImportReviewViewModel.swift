@@ -89,6 +89,8 @@ final class SharedImportReviewViewModel: ObservableObject {
 
         ProviderRuntimeAvailabilityStore.shared.merge(from: response.providerAvailability)
 
+        let pendingSlow =
+            response.moreProvidersPending ?? (response.status == "partial")
         let session = SearchSession(
             id: presetId,
             imageFileName: savedFileName,
@@ -105,8 +107,9 @@ final class SharedImportReviewViewModel: ObservableObject {
             providerCounts: response.providerCounts,
             initialResponseTimeMs: response.initialResponseTimeMs,
             hydratingBackendResults: false,
-            moreProvidersPending: response.moreProvidersPending ?? false,
-            searchDebugMessage: response.searchDebugMessage
+            moreProvidersPending: pendingSlow,
+            searchDebugMessage: response.searchDebugMessage,
+            searchSessionId: response.searchSessionId
         )
 
         searchHistoryService?.addSession(session)

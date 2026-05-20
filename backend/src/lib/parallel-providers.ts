@@ -14,6 +14,15 @@ export const PROVIDER_TIMEOUT_MS: Record<ProviderName, number> = {
   leboncoin: 50000,
 };
 
+/** Timeouts plus longs pour la phase lente (une seconde passe après eBay / Vinted). */
+export const SLOW_PROVIDER_TIMEOUT_MS: Record<ProviderName, number> = {
+  vinted: 50000,
+  ebay: 8000,
+  grailed: 75000,
+  depop: 75000,
+  leboncoin: 75000,
+};
+
 /** Retour attendu par chaque tâche provider (sans throw en usage nominal). */
 export interface ProviderRunResult {
   listings: MarketplaceListingDTO[];

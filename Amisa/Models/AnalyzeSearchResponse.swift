@@ -9,6 +9,12 @@ import Foundation
 
 /// Réponse complète de l'analyse + recherche.
 struct AnalyzeSearchResponse: Decodable {
+    /// `partial` tant que Depop / Grailed / … peuvent encore enrichir ; `completed` sinon.
+    let status: String?
+    /// Présent si `status == partial` — poll `GET /search-sessions/:id`.
+    let searchSessionId: String?
+    /// Synthèse des providers (ex. `depop`: `running`).
+    let providerStatuses: [String: String]?
     let visionResult: FashionVisionResult
     let generatedQueries: [String]
     let listings: [MarketplaceListingDTO]

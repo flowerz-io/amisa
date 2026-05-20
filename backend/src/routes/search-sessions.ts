@@ -1,15 +1,11 @@
 import type { FastifyInstance } from 'fastify';
-import { randomUUID } from 'node:crypto';
 import type { AnalyzeSearchBody } from '../types.js';
+import {
+  getSearchSession,
+  newSearchSessionId,
+  putSearchSession,
+} from '../lib/search-session-store.js';
 import { runAnalyzePipeline } from '../services/analyze-pipeline.js';
-
-type Job = {
-  status: 'queued' | 'running' | 'completed' | 'failed';
-  response?: unknown;
-  error?: string;
-};
-
-const jobs = new Map<string, Job>();
 
 export async function searchSessionsRoute(app: FastifyInstance): Promise<void> {
   app.post<{ Body: AnalyzeSearchBody }>('/search-sessions', async (req, reply) => {
@@ -17,18 +13,17 @@ export async function searchSessionsRoute(app: FastifyInstance): Promise<void> {
     if (!body?.enabledProviders?.length) {
       return reply.code(400).send({ error: 'bad_request' });
     }
-    const sessionId = randomUUID();
-    jobs.set(sessionId, { status: 'queued' });
+    const sessionId = newSearchSessionId();
+    putSearchSession(sessionId, { pollStatus: 'queued' });
     void (async () => {
-      const j = jobs.get(sessionId);
-      if (!j) return;
-      j.status = 'running';
       try {
-        const response = await runAnalyzePipeline(body);
-        jobs.set(sessionId, { status: 'completed', response });
+        await runAnalyzePipeline(body, {
+          awaitSlowCompletion: true,
+          fixedSessionId: sessionId,
+        });
       } catch (e) {
-        jobs.set(sessionId, {
-          status: 'failed',
+        putSearchSession(sessionId, {
+          pollStatus: 'failed',
           error: e instanceof Error ? e.message : String(e),
         });
       }
@@ -44,32 +39,30 @@ export async function searchSessionsRoute(app: FastifyInstance): Promise<void> {
     '/search-sessions/:sessionId',
     async (req, reply) => {
       const { sessionId } = req.params;
-      const job = jobs.get(sessionId);
+      const job = getSearchSession(sessionId);
       if (!job) return reply.code(404).send({ error: 'not_found' });
-      if (job.status === 'completed') {
-        return reply.send({
-          sessionId,
-          status: 'completed',
-          searchQuery: null,
-          error: null,
-          response: job.response,
-        });
-      }
-      if (job.status === 'failed') {
+
+      if (job.pollStatus === 'failed') {
         return reply.send({
           sessionId,
           status: 'failed',
           searchQuery: null,
           error: job.error ?? 'error',
           response: null,
+          listings: [],
+          providerStatuses: {},
         });
       }
+
+      const res = job.response;
       return reply.send({
         sessionId,
-        status: 'running',
+        status: job.pollStatus,
         searchQuery: null,
         error: null,
-        response: null,
+        response: res ?? null,
+        listings: res?.listings ?? [],
+        providerStatuses: res?.providerStatuses ?? {},
       });
     }
   );

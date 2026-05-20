@@ -51,6 +51,6 @@ await app.listen({ port, host: '0.0.0.0' });
 
 console.log('[Amisa API] base ready');
 console.log(
-  '[Amisa API] routes: GET /health, GET /debug-provider, GET /debug-ebay, POST /analyze-search, POST /resolve-shared-url, POST /search-sessions'
+  '[Amisa API] routes: GET /health, GET /debug-provider, GET /debug-ebay, POST /analyze-search, GET /search-sessions/:sessionId, POST /resolve-shared-url, POST /search-sessions'
 );
 console.log(`[Amisa API] listening on http://localhost:${port}`);
