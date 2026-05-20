@@ -61,7 +61,8 @@ function vintedDebugMode(): string {
 }
 
 /**
- * GET /debug-provider?provider=ebay&q=black+loafers
+ * GET /debug-provider?provider=ebay|vinted|depop|grailed|leboncoin&q=test
+ * Exemples : `?provider=depop&q=test`, `?provider=grailed&q=test`.
  * Désactiver : DEBUG_PROVIDER_ROUTE=0
  */
 export async function debugProviderRoute(app: FastifyInstance): Promise<void> {

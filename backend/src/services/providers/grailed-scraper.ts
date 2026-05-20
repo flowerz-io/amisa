@@ -14,37 +14,121 @@ function extractNextDataJson(html: string): unknown | null {
   }
 }
 
-/** Parcourt l’arbre JSON pour des objets ressemblant à une annonce Grailed. */
-function collectListingLikeObjects(v: unknown, out: Record<string, unknown>[]): void {
-  if (!v || typeof v !== 'object') return;
+function readDesignerName(row: Record<string, unknown>): string | undefined {
+  const d = row.designer;
+  if (typeof d === 'string' && d.trim()) return d.trim();
+  if (d && typeof d === 'object') {
+    const o = d as Record<string, unknown>;
+    if (typeof o.name === 'string' && o.name.trim()) return o.name.trim();
+  }
+  if (typeof row.designer_name === 'string' && row.designer_name.trim()) {
+    return row.designer_name.trim();
+  }
+  return undefined;
+}
+
+function grailedSlugFromRow(row: Record<string, unknown>): string | null {
+  if (typeof row.slug === 'string' && row.slug.length > 0) return row.slug;
+  for (const k of ['url', 'href', 'path', 'permalink'] as const) {
+    const u = row[k];
+    if (typeof u !== 'string') continue;
+    const m = u.match(/\/listings\/([^/?#]+)/);
+    if (m?.[1]) return m[1];
+  }
+  return null;
+}
+
+function extractGrailedMoney(
+  row: Record<string, unknown>
+): { price: number; currency: string } {
+  let price = 0;
+  let currency = 'USD';
+  const candidates = [
+    row.asking_price,
+    row.lowest_price,
+    row.price,
+    row.sold_price,
+    row.listing_price,
+  ];
+  for (const ap of candidates) {
+    if (ap == null) continue;
+    if (typeof ap === 'number') {
+      price = ap;
+      break;
+    }
+    if (typeof ap === 'string') {
+      const n = Number(ap);
+      if (Number.isFinite(n)) {
+        price = n;
+        break;
+      }
+    }
+    if (typeof ap === 'object') {
+      const p = ap as Record<string, unknown>;
+      const amt = p.amount ?? p.value ?? p.price_amount;
+      if (typeof amt === 'number') price = amt;
+      else if (typeof amt === 'string') price = Number(amt);
+      if (typeof p.currency === 'string') currency = String(p.currency).toUpperCase();
+      if (typeof p.currency_code === 'string') {
+        currency = String(p.currency_code).toUpperCase();
+      }
+      if (Number.isFinite(price) && price > 0) break;
+    }
+  }
+  return { price: Number.isFinite(price) ? price : 0, currency };
+}
+
+function rowHasListingTitle(row: Record<string, unknown>): boolean {
+  const bits = [
+    typeof row.title === 'string' ? row.title : '',
+    typeof row.name === 'string' ? row.name : '',
+    typeof row.short_description === 'string' ? row.short_description : '',
+    readDesignerName(row) ?? '',
+  ];
+  return bits.some((s) => s.trim().length > 0);
+}
+
+function looksLikeGrailedListing(row: Record<string, unknown>): boolean {
+  const slug = grailedSlugFromRow(row);
+  if (!slug) return false;
+  if (!rowHasListingTitle(row)) return false;
+  const { price } = extractGrailedMoney(row);
+  if (Number.isFinite(price) && price > 0) return true;
+  if (
+    row.asking_price != null ||
+    row.price != null ||
+    row.lowest_price != null ||
+    row.listing_price != null
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function walkGrailedCandidates(
+  v: unknown,
+  out: Record<string, unknown>[],
+  depth: number
+): void {
+  if (depth > 32 || !v || typeof v !== 'object') return;
   if (Array.isArray(v)) {
-    for (const x of v) collectListingLikeObjects(x, out);
+    for (const x of v) walkGrailedCandidates(x, out, depth + 1);
     return;
   }
   const o = v as Record<string, unknown>;
-  const hasSlug = typeof o.slug === 'string';
-  const hasPrice =
-    o.price !== undefined ||
-    o.lowest_price !== undefined ||
-    o.asking_price !== undefined;
-  if (hasSlug && hasTitleish(o) && hasPrice) {
+  if (looksLikeGrailedListing(o)) {
     out.push(o);
     return;
   }
-  for (const x of Object.values(o)) collectListingLikeObjects(x, out);
-}
-
-function hasTitleish(o: Record<string, unknown>): boolean {
-  return (
-    typeof o.title === 'string' ||
-    typeof o.designer === 'string' ||
-    typeof o.name === 'string'
-  );
+  for (const x of Object.values(o)) {
+    walkGrailedCandidates(x, out, depth + 1);
+  }
 }
 
 function rowToListing(row: Record<string, unknown>): MarketplaceListingDTO | null {
-  const slug = typeof row.slug === 'string' ? row.slug : null;
+  const slug = grailedSlugFromRow(row);
   if (!slug) return null;
+
   const idRaw = row.id ?? row.listing_id ?? slug;
   const idStr =
     typeof idRaw === 'number'
@@ -53,26 +137,17 @@ function rowToListing(row: Record<string, unknown>): MarketplaceListingDTO | nul
         ? idRaw
         : slug;
 
+  const designer = readDesignerName(row);
   const title =
     (typeof row.title === 'string' && row.title) ||
-    (typeof row.designer === 'string' && typeof row.name === 'string'
-      ? `${row.designer} — ${row.name}`
+    (designer && typeof row.name === 'string'
+      ? `${designer} — ${row.name}`
       : null) ||
     (typeof row.name === 'string' && row.name) ||
-    `Grailed ${idStr.replace(/^l-/, '')}`;
+    (typeof row.short_description === 'string' && row.short_description) ||
+    `grailed ${slug}`;
 
-  let price = 0;
-  let currency = 'USD';
-  const ap = row.asking_price ?? row.lowest_price ?? row.price;
-  if (typeof ap === 'number') price = ap;
-  else if (typeof ap === 'string') price = Number(ap);
-  else if (ap && typeof ap === 'object') {
-    const p = ap as Record<string, unknown>;
-    const amt = p.amount ?? p.value;
-    if (typeof amt === 'number') price = amt;
-    if (typeof amt === 'string') price = Number(amt);
-    if (typeof p.currency === 'string') currency = p.currency;
-  }
+  const { price, currency } = extractGrailedMoney(row);
 
   let imageUrl: string | undefined;
   if (Array.isArray(row.pictures) && row.pictures[0]) {
@@ -80,14 +155,19 @@ function rowToListing(row: Record<string, unknown>): MarketplaceListingDTO | nul
     imageUrl =
       (typeof p.url === 'string' && p.url) ||
       (typeof p.largest === 'string' && (p.largest as string)) ||
+      (typeof p.small === 'string' && (p.small as string)) ||
       undefined;
-  } else if (typeof row.cover_photo_url === 'string') {
+  }
+  if (!imageUrl && typeof row.cover_photo_url === 'string') {
     imageUrl = row.cover_photo_url;
+  }
+  if (!imageUrl && typeof row.hero_image_url === 'string') {
+    imageUrl = row.hero_image_url;
   }
 
   return {
     id: idStr,
-    source: 'Grailed',
+    source: 'grailed',
     title: title.slice(0, 500),
     price: Number.isFinite(price) ? price : 0,
     currency,
@@ -98,14 +178,28 @@ function rowToListing(row: Record<string, unknown>): MarketplaceListingDTO | nul
 }
 
 /**
- * Grailed — page / shop + extraction __NEXT_DATA__ (pas de token).
+ * Grailed — page /shop + extraction __NEXT_DATA__ (Playwright).
  */
 export async function fetchGrailedScraperListings(
   searchText: string
 ): Promise<MarketplaceListingDTO[]> {
   const url = `https://www.grailed.com/shop?query=${encodeURIComponent(searchText)}`;
+
+  console.log('[GRAILED_FETCH] start', { url: url.slice(0, 200), q: searchText.slice(0, 80) });
+
   const { status, html } = await fetchHtmlViaPlaywright(url, {
     referer: 'https://www.grailed.com/',
+    settleMs: 2200,
+  });
+
+  console.log('[GRAILED_FETCH] page', {
+    httpStatus: status,
+    htmlChars: html.length,
+    hasNextData: html.includes('__NEXT_DATA__'),
+    cfChallenge:
+      html.includes('cf-browser-verification') ||
+      html.includes('Just a moment') ||
+      html.includes('challenge-platform'),
   });
 
   if (status === 403) {
@@ -140,23 +234,33 @@ export async function fetchGrailedScraperListings(
   }
 
   const candidates: Record<string, unknown>[] = [];
-  collectListingLikeObjects(next, candidates);
+  walkGrailedCandidates(next, candidates, 0);
+
+  console.log('[GRAILED_PARSE] candidates', {
+    rawCandidates: candidates.length,
+  });
 
   const seen = new Set<string>();
   const out: MarketplaceListingDTO[] = [];
   for (const row of candidates) {
     const L = rowToListing(row);
     if (!L) continue;
-    const k = L.listingUrl ?? `${L.source}|${L.id}`;
+    const k = L.listingUrl ?? `grailed|${L.id}`;
     if (seen.has(k)) continue;
     seen.add(k);
     out.push(L);
     if (out.length >= 40) break;
   }
 
+  console.log('[GRAILED_PARSE] listings', {
+    count: out.length,
+    sampleTitle: out[0]?.title?.slice(0, 80),
+    sampleUrl: out[0]?.listingUrl,
+  });
+
   if (out.length === 0) {
     throw new Error(
-      'grailed scraper: aucune annonce extraite (structure JSON évolutive)'
+      'grailed scraper: aucune annonce extraite (__NEXT_DATA__ sans listings reconnus)'
     );
   }
   return out;

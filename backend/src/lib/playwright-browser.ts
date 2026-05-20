@@ -89,9 +89,16 @@ export const PLAYWRIGHT_UA =
   process.env.PLAYWRIGHT_USER_AGENT?.trim() ||
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36';
 
+/** Options pour `fetchHtmlViaPlaywright`. */
+export type FetchHtmlPlaywrightOpts = {
+  referer?: string;
+  /** Délai (ms) après navigation avant lecture du HTML (hydration). */
+  settleMs?: number;
+};
+
 export async function fetchHtmlViaPlaywright(
   url: string,
-  opts?: { referer?: string }
+  opts?: FetchHtmlPlaywrightOpts
 ): Promise<{ status: number; html: string }> {
   const browser = await launchChromiumHeadless();
   try {
@@ -110,7 +117,8 @@ export async function fetchHtmlViaPlaywright(
       timeout: 50000,
     });
     const status = res?.status() ?? 0;
-    await new Promise((r) => setTimeout(r, 400));
+    const settle = opts?.settleMs ?? 400;
+    await new Promise((r) => setTimeout(r, settle));
     const html = await page.content();
     return { status, html };
   } finally {

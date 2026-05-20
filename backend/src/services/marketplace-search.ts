@@ -146,7 +146,7 @@ export async function searchGrailedListings(
   const t0 = performance.now();
   try {
     if (USE_MOCK) {
-      const out = await mockDelayListings('Grailed', 'Grailed');
+      const out = await mockDelayListings('grailed', 'Grailed');
       logSuccess('grailed', out.length, Math.round(performance.now() - t0));
       return out;
     }
@@ -180,7 +180,7 @@ export async function searchDepopListings(
   const t0 = performance.now();
   try {
     if (USE_MOCK) {
-      const out = await mockDelayListings('Depop', 'Depop');
+      const out = await mockDelayListings('depop', 'Depop');
       logSuccess('depop', out.length, Math.round(performance.now() - t0));
       return out;
     }

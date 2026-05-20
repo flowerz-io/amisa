@@ -46,7 +46,7 @@ function logAnalyzeResponseCounts(listings: MarketplaceListingDTO[]): void {
     else if (s.includes('depop')) depop += 1;
   }
   console.log(
-    `[ANALYZE_RESPONSE] total=${listings.length} ebay=${ebay} vinted=${vinted} grailed=${grailed} depop=${depop}`
+    `[ANALYZE_RESPONSE] total=${listings.length} ebay=${ebay} vinted=${vinted} depop=${depop} grailed=${grailed}`
   );
 }
 
