@@ -19,7 +19,7 @@ private struct PaywallFeature: Identifiable {
 
 private let paywallFeatures: [PaywallFeature] = [
     PaywallFeature(icon: "magnifyingglass.circle.fill", iconColor: Color.accentColor, title: "Analyses illimitées",          subtitle: "Scanne autant de looks que tu veux"),
-    PaywallFeature(icon: "storefront.fill",             iconColor: BrandColors.secondaryOrange, title: "Recherche multi-marketplaces", subtitle: "Vinted, Grailed, eBay, Depop et plus"),
+    PaywallFeature(icon: "storefront.fill",             iconColor: BrandColors.secondaryOrange, title: "Recherche Vinted", subtitle: "Annonces Vinted triées à partir de ton image ou de ta requête"),
     PaywallFeature(icon: "bolt.fill",                   iconColor: Color.yellow,      title: "Résultats plus rapides",       subtitle: "Priorité dans la file d'analyse"),
     PaywallFeature(icon: "bell.badge.fill",             iconColor: BrandColors.secondary, title: "Alertes meilleures offres",    subtitle: "Notifié dès qu'un prix baisse"),
     PaywallFeature(icon: "heart.fill",                  iconColor: Color.pink,        title: "Favoris & moodboards",         subtitle: "Sauvegarde tes pièces préférées"),

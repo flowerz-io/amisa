@@ -39,12 +39,9 @@ final class ProviderSettingsStore: ObservableObject {
         enabledProviderIDs.map(\.backendKey)
     }
 
+    /// Toujours Vinted — seul provider supporté par le backend.
     static func enabledProviderBackendKeysSnapshot(userDefaults: UserDefaults = .standard) -> [String] {
-        ProviderID.allCases
-            .filter { provider in
-                (userDefaults.object(forKey: provider.userDefaultsKey) as? Bool) ?? provider.defaultEnabled
-            }
-            .map(\.backendKey)
+        _ = userDefaults
+        return ["vinted"]
     }
 }
-

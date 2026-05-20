@@ -15,7 +15,6 @@ enum TextSearchError: LocalizedError {
 @MainActor
 final class HomeViewModel: ObservableObject {
     @Published var recentSessions: [SearchSession] = []
-    /// Uniquement `mode == .textQuery` (onglet Recherche), ordre historique complet.
     @Published private(set) var recentTextOnlySessions: [SearchSession] = []
     @Published var textSearchError: String?
 
@@ -44,12 +43,8 @@ final class HomeViewModel: ObservableObject {
         let response = try await apiClient.analyzeTextSearch(query: trimmed)
         let listings = response.listings.map { MarketplaceListing.from($0) }
 
-        ProviderRuntimeAvailabilityStore.shared.merge(from: response.providerAvailability)
-
         let snapshot = ManualSearchSnapshot(query: trimmed, createdAt: Date(), listings: listings)
 
-        let pendingSlow =
-            response.moreProvidersPending ?? (response.status == "partial")
         let session = SearchSession(
             id: presetSessionId ?? UUID(),
             imageFileName: nil,
@@ -60,18 +55,11 @@ final class HomeViewModel: ObservableObject {
             listings: listings,
             createdAt: snapshot.createdAt,
             vintedSearchFailed: response.vintedSearchFailed ?? false,
-            paginationState: response.pagination,
-            rankingContext: response.rankingContext,
-            providerAvailability: response.providerAvailability,
-            providerCounts: response.providerCounts,
+            vintedPagination: response.pagination,
             initialResponseTimeMs: response.initialResponseTimeMs,
             mode: .textQuery,
             previewImageURLs: snapshot.previewImageURLs,
-            hydratingBackendResults: false,
-            moreProvidersPending: pendingSlow,
-            searchDebugMessage: response.searchDebugMessage,
-            searchSessionId: response.searchSessionId,
-            providerStatuses: response.providerStatuses
+            searchDebugMessage: response.searchDebugMessage
         )
 
         searchHistoryService.addSession(session)

@@ -60,7 +60,7 @@ struct SettingsView: View {
                     lumaDivider()
                     lumaNavLink(icon: "circle.lefthalf.filled", color: .gray,   label: "Apparence")     { AppearanceSettingsView()    }
                     lumaDivider()
-                    lumaNavLink(icon: "storefront.fill",        color: BrandColors.secondary, label: "Providers")      { ProvidersSettingsView()     }
+                    lumaNavLink(icon: "storefront.fill",        color: BrandColors.secondary, label: "Recherche Vinted")      { ProvidersSettingsView()     }
                 }
 
                 // MARK: Ressources
@@ -236,7 +236,7 @@ struct SettingsView: View {
     private var aboutPlaceholder: some View {
         VStack(alignment: .leading, spacing: DesignTokens.spacingM) {
             Text("Amisa").font(DesignTokens.titleFont)
-            Text("Trouve des pièces similaires sur les marketplaces à partir d'une image.")
+            Text("Trouve les meilleures annonces Vinted à partir d'une photo.")
                 .font(DesignTokens.bodyFont)
                 .foregroundStyle(DesignTokens.textSecondary)
             Spacer()

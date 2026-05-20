@@ -5,9 +5,6 @@ import { runAnalyzePipeline } from '../services/analyze-pipeline.js';
 export async function analyzeSearchRoute(app: FastifyInstance): Promise<void> {
   app.post<{ Body: AnalyzeSearchBody }>('/analyze-search', async (req, reply) => {
     const body = req.body as AnalyzeSearchBody;
-    if (!body?.enabledProviders?.length) {
-      return reply.code(400).send({ error: 'bad_request', message: 'enabledProviders required' });
-    }
     if (!body.imageBase64 && !(body.textQuery && body.textQuery.trim())) {
       return reply.code(400).send({ error: 'bad_request', message: 'image or text required' });
     }

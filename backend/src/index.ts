@@ -6,15 +6,9 @@ import { logVisionProviderDiagnostic } from './config.js';
 import { logProviderEnvironmentDiagnostics } from './lib/provider-env.js';
 import { logPlaywrightReadinessAtStartup } from './lib/playwright-browser.js';
 import { analyzeSearchRoute } from './routes/analyze-search.js';
-import { debugProviderRoute } from './routes/debug-provider.js';
-import { debugEbayRoute } from './routes/debug-ebay.js';
+import { debugVintedRoute } from './routes/debug-vinted.js';
 import { resolveSharedUrlRoute } from './routes/resolve-shared-url.js';
 import { vintedListingsRoute } from './routes/vinted-listings.js';
-import { grailedListingsRoute } from './routes/grailed-listings.js';
-import { ebayListingsRoute } from './routes/ebay-listings.js';
-import { leBonCoinListingsRoute } from './routes/leboncoin-listings.js';
-import { depopListingsRoute } from './routes/depop-listings.js';
-import { searchMoreRoute } from './routes/search-more.js';
 import { searchSessionsRoute } from './routes/search-sessions.js';
 import { PROVIDERS_ENABLED } from './providers-config.js';
 
@@ -37,13 +31,7 @@ app.register(analyzeSearchRoute, { prefix: '/' });
 app.register(searchSessionsRoute, { prefix: '/' });
 app.register(resolveSharedUrlRoute, { prefix: '/' });
 app.register(vintedListingsRoute, { prefix: '/' });
-app.register(grailedListingsRoute, { prefix: '/' });
-app.register(ebayListingsRoute, { prefix: '/' });
-app.register(leBonCoinListingsRoute, { prefix: '/' });
-app.register(depopListingsRoute, { prefix: '/' });
-app.register(searchMoreRoute, { prefix: '/' });
-app.register(debugProviderRoute, { prefix: '/' });
-app.register(debugEbayRoute, { prefix: '/' });
+app.register(debugVintedRoute, { prefix: '/' });
 
 const port = parseInt(process.env.PORT ?? '3000', 10);
 console.log('Amisa API running');
@@ -51,6 +39,6 @@ await app.listen({ port, host: '0.0.0.0' });
 
 console.log('[Amisa API] base ready');
 console.log(
-  '[Amisa API] routes: GET /health, GET /debug-provider, GET /debug-ebay, POST /analyze-search, GET /search-sessions/:sessionId, POST /resolve-shared-url, POST /search-sessions'
+  '[Amisa API] routes: GET /health, GET /debug-vinted, POST /analyze-search, GET /search-sessions/:sessionId, POST /search-sessions, POST /resolve-shared-url, POST /vinted-listings'
 );
 console.log(`[Amisa API] listening on http://localhost:${port}`);

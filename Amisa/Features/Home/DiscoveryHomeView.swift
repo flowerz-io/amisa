@@ -80,8 +80,6 @@ struct DiscoveryHomeView: View {
 
     @State private var showHomeFiltersSheet = false
     @State private var selectedHomeFilterTab: ResultsFilterTab = .marketplace
-    /// Sources désactivées dans la sheet (le reste du feed reste visible).
-    @State private var homeDisabledProviderKeys: Set<String> = []
 
     private var listingGridColumns: [GridItem] {
         [
@@ -95,10 +93,7 @@ struct DiscoveryHomeView: View {
     }
 
     private var displayedHomeListings: [MarketplaceListing] {
-        viewModel.feedListings.filter { listing in
-            let key = MarketplaceSource.canonicalKey(from: listing.source)
-            return !homeDisabledProviderKeys.contains(key)
-        }
+        viewModel.feedListings
     }
 
     var body: some View {
@@ -132,14 +127,6 @@ struct DiscoveryHomeView: View {
                             emptyState
                                 .padding(.horizontal, gridHorizontalPadding)
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                        } else if displayedHomeListings.isEmpty {
-                            EmptyStateView(
-                                icon: "line.3.horizontal.decrease.circle",
-                                title: String(localized: "Aucune annonce"),
-                                message: String(localized: "Réactive au moins une source dans Filtrer.")
-                            )
-                            .padding(.horizontal, gridHorizontalPadding)
-                            .frame(maxWidth: .infinity, alignment: .leading)
                         } else {
                             LazyVGrid(columns: listingGridColumns, spacing: gridRowSpacing) {
                                 ForEach(displayedHomeListings) { listing in
@@ -177,7 +164,6 @@ struct DiscoveryHomeView: View {
         .toolbar(.hidden, for: .navigationBar)
         .onAppear {
             viewModel.load()
-            pruneHomeDisabledProvidersForFeed()
         }
         .onChange(of: router.path.count) { _, _ in
             viewModel.load()
@@ -189,14 +175,11 @@ struct DiscoveryHomeView: View {
         .onReceive(NotificationCenter.default.publisher(for: .amisaSearchHistoryDidUpdate)) { _ in
             viewModel.load(forceRefresh: true)
         }
-        .onChange(of: viewModel.feedListings.count) { _, _ in
-            pruneHomeDisabledProvidersForFeed()
-        }
         .sheet(isPresented: $showHomeFiltersSheet) {
             ResultsFiltersPagerSheet(
                 selectedTab: $selectedHomeFilterTab,
-                enabledProviderKeys: homeFiltersEnabledBinding,
-                availableProviders: homeFilterAvailableSources,
+                enabledProviderKeys: .constant(Set(["vinted"])),
+                availableProviders: ["Vinted"],
                 providerAvailability: nil,
                 providerCounts: homeProviderCountsDTO(),
                 countFormatter: { "\($0)" },
@@ -218,50 +201,9 @@ struct DiscoveryHomeView: View {
         }
     }
 
-    private var homeFiltersEnabledBinding: Binding<Set<String>> {
-        Binding(
-            get: {
-                homeCanonicalKeysInFeed().subtracting(homeDisabledProviderKeys)
-            },
-            set: { enabled in
-                let all = homeCanonicalKeysInFeed()
-                homeDisabledProviderKeys = all.subtracting(enabled)
-            }
-        )
-    }
-
-    private func homeCanonicalKeysInFeed() -> Set<String> {
-        Set(viewModel.feedListings.map { MarketplaceSource.canonicalKey(from: $0.source) })
-    }
-
-    /// Une entrée par clé canonique (libellé source du premier listing rencontré).
-    private var homeFilterAvailableSources: [String] {
-        let grouped = Dictionary(grouping: viewModel.feedListings, by: { MarketplaceSource.canonicalKey(from: $0.source) })
-        return grouped.keys.sorted().compactMap { key in grouped[key]?.first?.source }
-    }
-
     private func homeProviderCountsDTO() -> ProviderCountsDTO {
-        var vinted = 0
-        var grailed = 0
-        var ebay = 0
-        var leboncoin = 0
-        var depop = 0
-        for listing in viewModel.feedListings {
-            switch MarketplaceSource.canonicalKey(from: listing.source) {
-            case "vinted": vinted += 1
-            case "grailed": grailed += 1
-            case "ebay": ebay += 1
-            case "leboncoin": leboncoin += 1
-            case "depop": depop += 1
-            default: break
-            }
-        }
-        return ProviderCountsDTO(vinted: vinted, grailed: grailed, ebay: ebay, leboncoin: leboncoin, depop: depop)
-    }
-
-    private func pruneHomeDisabledProvidersForFeed() {
-        let all = homeCanonicalKeysInFeed()
-        homeDisabledProviderKeys = homeDisabledProviderKeys.intersection(all)
+        let n = viewModel.feedListings.filter { MarketplaceSource.canonicalKey(from: $0.source) == "vinted" }.count
+        return ProviderCountsDTO(vinted: n)
     }
 
     private func openHomeFilterSheet(_ tab: ResultsFilterTab) {

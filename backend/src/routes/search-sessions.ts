@@ -10,7 +10,7 @@ import { runAnalyzePipeline } from '../services/analyze-pipeline.js';
 export async function searchSessionsRoute(app: FastifyInstance): Promise<void> {
   app.post<{ Body: AnalyzeSearchBody }>('/search-sessions', async (req, reply) => {
     const body = req.body as AnalyzeSearchBody;
-    if (!body?.enabledProviders?.length) {
+    if (!body.imageBase64 && !(body.textQuery && body.textQuery.trim())) {
       return reply.code(400).send({ error: 'bad_request' });
     }
     const sessionId = newSearchSessionId();
@@ -50,7 +50,6 @@ export async function searchSessionsRoute(app: FastifyInstance): Promise<void> {
           error: job.error ?? 'error',
           response: null,
           listings: [],
-          providerStatuses: {},
         });
       }
 
@@ -62,7 +61,6 @@ export async function searchSessionsRoute(app: FastifyInstance): Promise<void> {
         error: null,
         response: res ?? null,
         listings: res?.listings ?? [],
-        providerStatuses: res?.providerStatuses ?? {},
       });
     }
   );

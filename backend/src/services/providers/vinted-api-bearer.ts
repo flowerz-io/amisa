@@ -1,18 +1,19 @@
 import type { MarketplaceListingDTO } from '../../types.js';
 import { browserLikeHeaders } from '../../lib/scrape-http.js';
-import { parseVintedCatalogPayload } from './vinted-catalog-parse.js';
+import { parseVintedCatalogResponse } from './vinted-catalog-parse.js';
 
 /** Appel API Vinted **uniquement** avec Bearer (session mobile capturée). */
 export async function fetchVintedViaBearer(
   searchText: string,
-  token: string
-): Promise<MarketplaceListingDTO[]> {
+  token: string,
+  page: number = 1
+): Promise<{ listings: MarketplaceListingDTO[]; hasMore: boolean }> {
   const base =
     process.env.VINTED_API_BASE?.trim() || 'https://www.vinted.fr/api/v2';
   const perPage = process.env.VINTED_SCRAPER_PER_PAGE?.trim() || '24';
   const path = `/catalog/items?search_text=${encodeURIComponent(
     searchText
-  )}&per_page=${perPage}&page=1`;
+  )}&per_page=${perPage}&page=${Math.max(1, Math.floor(page))}`;
 
   const res = await fetch(`${base.replace(/\/$/, '')}${path}`, {
     headers: {
@@ -35,5 +36,5 @@ export async function fetchVintedViaBearer(
     );
   }
 
-  return parseVintedCatalogPayload(data, res.status);
+  return parseVintedCatalogResponse(data, res.status);
 }

@@ -147,7 +147,7 @@ struct OnboardingHeroView: View {
                 .multilineTextAlignment(.leading)
                 .lineSpacing(2)
 
-            Text("Importe une photo ou partage une image depuis Pinterest, Instagram ou TikTok. Amisa retrouve les annonces similaires sur les marketplaces.")
+            Text("Importe une photo ou partage une image depuis Pinterest, Instagram ou TikTok. Amisa retrouve les meilleures annonces Vinted similaires.")
                 .font(.system(size: 15, weight: .regular))
                 .foregroundStyle(Color.white.opacity(0.62))
                 .multilineTextAlignment(.leading)

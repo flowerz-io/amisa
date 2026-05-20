@@ -1,13 +1,53 @@
 import type { MarketplaceListingDTO } from '../../types.js';
 
+function perPageFromEnv(): number {
+  const n = Number(process.env.VINTED_SCRAPER_PER_PAGE?.trim() || '24');
+  return Number.isFinite(n) && n > 0 ? n : 24;
+}
+
 /**
- * Parse la réponse JSON `catalog/items` Vinted (items[]).
- * Lance si code !== 0 avec message sans référence « jeton invalide ».
+ * Déduit s'il existe une page suivante sur le catalogue Vinted.
  */
-export function parseVintedCatalogPayload(
+export function vintedCatalogHasMore(
+  data: unknown,
+  itemsLength: number,
+  perPage: number
+): boolean {
+  const root = data as Record<string, unknown>;
+  const pag = root.pagination;
+  if (pag && typeof pag === 'object' && !Array.isArray(pag)) {
+    const p = pag as Record<string, unknown>;
+    const cur = p.current_page ?? p.currentPage;
+    const total = p.total_pages ?? p.totalPages;
+    if (typeof cur === 'number' && typeof total === 'number') {
+      return cur < total;
+    }
+    const totalEntries = p.total_entries ?? p.totalEntries;
+    const per = Number(p.per_page ?? p.perPage ?? perPage);
+    if (
+      typeof totalEntries === 'number' &&
+      typeof cur === 'number' &&
+      Number.isFinite(per) &&
+      per > 0
+    ) {
+      return cur * per < totalEntries;
+    }
+  }
+  return itemsLength >= perPage;
+}
+
+export interface VintedCatalogParseResult {
+  listings: MarketplaceListingDTO[];
+  hasMore: boolean;
+}
+
+/**
+ * Parse la réponse JSON `catalog/items` Vinted (items[]) + pagination.
+ */
+export function parseVintedCatalogResponse(
   data: unknown,
   httpStatus: number
-): MarketplaceListingDTO[] {
+): VintedCatalogParseResult {
   const root = data as Record<string, unknown>;
 
   if (typeof root.code === 'number' && root.code !== 0) {
@@ -30,6 +70,7 @@ export function parseVintedCatalogPayload(
     );
   }
 
+  const perPage = perPageFromEnv();
   const out: MarketplaceListingDTO[] = [];
   for (const raw of items) {
     if (!raw || typeof raw !== 'object') continue;
@@ -86,5 +127,16 @@ export function parseVintedCatalogPayload(
     });
   }
 
-  return out;
+  return {
+    listings: out,
+    hasMore: vintedCatalogHasMore(data, out.length, perPage),
+  };
+}
+
+/** @deprecated Préférer parseVintedCatalogResponse pour obtenir hasMore. */
+export function parseVintedCatalogPayload(
+  data: unknown,
+  httpStatus: number
+): MarketplaceListingDTO[] {
+  return parseVintedCatalogResponse(data, httpStatus).listings;
 }

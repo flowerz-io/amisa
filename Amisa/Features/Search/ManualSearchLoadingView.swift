@@ -15,7 +15,7 @@ struct ManualSearchLoadingView: View {
     var body: some View {
         LoadingSearchView(
             textQuery: query,
-            message: String(localized: "Recherche des annonces similaires…")
+            message: String(localized: "Recherche des annonces Vinted similaires…")
         )
         .toolbar(.hidden, for: .navigationBar)
         .onAppear {
@@ -77,12 +77,6 @@ struct ManualSearchLoadingView: View {
                 attributes: nil,
                 listings: [],
                 createdAt: Date(),
-                vintedSearchFailed: false,
-                paginationState: nil,
-                rankingContext: nil,
-                providerAvailability: nil,
-                providerCounts: nil,
-                initialResponseTimeMs: nil,
                 mode: .textQuery,
                 previewImageURLs: [],
                 hydratingBackendResults: true

@@ -2,13 +2,10 @@
 //  MockAPIClient.swift
 //  Balibu
 //
-//  Client mock pour tester sans backend réel.
-//
 
 import Foundation
 import UIKit
 
-/// Implémentation mock de APIClientProtocol pour tests et développement.
 struct MockAPIClient: APIClientProtocol {
     var delaySeconds: Double = 1.0
 
@@ -39,8 +36,7 @@ struct MockAPIClient: APIClientProtocol {
             searchQuery: AnalyzeSearchResponse.mock.generatedQueries.first,
             error: nil,
             response: AnalyzeSearchResponse.mock,
-            listings: AnalyzeSearchResponse.mock.listings,
-            providerStatuses: [:]
+            listings: AnalyzeSearchResponse.mock.listings
         )
     }
 
@@ -52,7 +48,7 @@ struct MockAPIClient: APIClientProtocol {
         let extra: [MarketplaceListingDTO] = [
             MarketplaceListingDTO(
                 id: "mock-p\(page)-1",
-                source: "Vinted",
+                source: "vinted",
                 title: "Mock page \(page) — item A",
                 price: 45,
                 currency: "EUR",
@@ -65,7 +61,7 @@ struct MockAPIClient: APIClientProtocol {
             ),
             MarketplaceListingDTO(
                 id: "mock-p\(page)-2",
-                source: "Vinted",
+                source: "vinted",
                 title: "Mock page \(page) — item B",
                 price: 52,
                 currency: "EUR",
@@ -79,48 +75,13 @@ struct MockAPIClient: APIClientProtocol {
         ]
         return VintedListingsResponse(listings: extra, page: page, hasMore: page < 4)
     }
-
-    func fetchSearchMore(request: SearchMoreRequest) async throws -> SearchMoreResponse {
-        try await Task.sleep(nanoseconds: UInt64(delaySeconds * 500_000_000))
-        let nextCounts = ProviderCountsDTO(
-            vinted: (request.pagination.vinted.totalCount ?? request.pagination.vinted.loadedCount) + 2,
-            grailed: request.pagination.grailed.totalCount ?? request.pagination.grailed.loadedCount,
-            ebay: request.pagination.ebay?.totalCount ?? request.pagination.ebay?.loadedCount,
-            leboncoin: request.pagination.leboncoin?.totalCount ?? request.pagination.leboncoin?.loadedCount,
-            depop: request.pagination.depop?.totalCount ?? request.pagination.depop?.loadedCount
-        )
-        return SearchMoreResponse(
-            listings: [],
-            vintedListings: [],
-            grailedListings: [],
-            ebayListings: [],
-            leboncoinListings: [],
-            depopListings: [],
-            pagination: request.pagination,
-            hasMoreVinted: false,
-            hasMoreGrailed: false,
-            hasMoreEbay: false,
-            hasMoreLeboncoin: false,
-            hasMoreDepop: false,
-            providerAvailability: nil,
-            providerCounts: nextCounts
-        )
-    }
 }
-
-// MARK: - Mock response
 
 extension AnalyzeSearchResponse {
     static var mock: AnalyzeSearchResponse {
         AnalyzeSearchResponse(
             status: "completed",
             searchSessionId: nil,
-            providerStatuses: [
-                "ebay": "success",
-                "vinted": "success",
-                "grailed": "success",
-                "depop": "success",
-            ],
             visionResult: FashionVisionResult(
                 category: "footwear",
                 subcategory: "ankle boots",
@@ -139,37 +100,17 @@ extension AnalyzeSearchResponse {
             ),
             generatedQueries: [
                 "Maison Margiela tabi boots black",
-                "black leather split toe boots"
+                "black leather split toe boots",
             ],
             listings: MarketplaceListingDTO.mockListings,
-            pagination: SearchPaginationStateDTO(
+            pagination: VintedPaginationDTO(
                 primaryQuery: "Maison Margiela tabi boots black",
-                batchSizePerProvider: 50,
-                vinted: ProviderPaginationStateDTO(nextPage: 2, hasMore: true, loadedCount: 1, totalCount: 120),
-                grailed: ProviderPaginationStateDTO(nextPage: 2, hasMore: true, loadedCount: 1, totalCount: 1750),
-                ebay: ProviderPaginationStateDTO(nextPage: 2, hasMore: true, loadedCount: 0, totalCount: 116),
-                leboncoin: ProviderPaginationStateDTO(nextPage: 2, hasMore: false, loadedCount: 0, totalCount: 0),
-                depop: ProviderPaginationStateDTO(nextPage: 2, hasMore: true, loadedCount: 0, totalCount: 10)
-            ),
-            rankingContext: SearchRankingContextDTO(
-                primaryQuery: "Maison Margiela tabi boots black",
-                probableBrand: "Maison Margiela",
-                dominantColor: "black",
-                category: "footwear",
-                subcategory: "ankle boots",
-                dominantItem: "black leather ankle boots",
-                inferredModel: "Tabi",
-                itemTypeCanonical: "boots"
+                nextPage: 2,
+                hasMore: true,
+                loadedCount: 2
             ),
             vintedSearchFailed: nil,
-            grailedSearchFailed: nil,
-            ebaySearchFailed: nil,
-            leboncoinSearchFailed: nil,
-            depopSearchFailed: nil,
-            providerAvailability: nil,
-            initialResponseTimeMs: 58900,
-            providerCounts: ProviderCountsDTO(vinted: 120, grailed: 1750, ebay: 116, leboncoin: 0, depop: 10),
-            moreProvidersPending: false,
+            initialResponseTimeMs: 1200,
             searchDebugMessage: nil
         )
     }
@@ -179,30 +120,30 @@ extension MarketplaceListingDTO {
     static var mockListings: [MarketplaceListingDTO] {
         [
             MarketplaceListingDTO(
-                id: "gr-1",
-                source: "Grailed",
-                title: "Maison Margiela Tabi Ankle Boots",
-                price: 390,
-                currency: "EUR",
-                imageUrl: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=400",
-                thumbnailUrl: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=400",
-                listingUrl: "https://grailed.com/listings/gr-1",
-                brand: "Maison Margiela",
-                size: "42",
-                condition: "Very Good"
-            ),
-            MarketplaceListingDTO(
-                id: "v-1",
-                source: "Vinted",
-                title: "Black Leather Split Toe Boots",
+                id: "v-mock-1",
+                source: "vinted",
+                title: "Bottines cuir noir",
                 price: 185,
                 currency: "EUR",
                 imageUrl: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=400",
                 thumbnailUrl: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=400",
-                listingUrl: "https://vinted.fr/items/example",
+                listingUrl: "https://www.vinted.fr/items/v-mock-1",
                 brand: nil,
                 size: "41",
-                condition: "Good"
+                condition: "Bon état"
+            ),
+            MarketplaceListingDTO(
+                id: "v-mock-2",
+                source: "vinted",
+                title: "Boots Tabi style",
+                price: 220,
+                currency: "EUR",
+                imageUrl: "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=400",
+                thumbnailUrl: "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=400",
+                listingUrl: "https://www.vinted.fr/items/v-mock-2",
+                brand: "Créateur",
+                size: "42",
+                condition: "Très bon état"
             ),
         ]
     }

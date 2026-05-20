@@ -2,37 +2,35 @@
 //  ProvidersSettingsView.swift
 //  Balibu
 //
-//  Sous-page Réglages → Préférences → Providers.
-//  Gère les toggles provider et affiche leur statut runtime.
-//
 
 import SwiftUI
 
 struct ProvidersSettingsView: View {
-    @StateObject private var providerSettings = ProviderSettingsStore.shared
-    @ObservedObject private var runtimeAvailability = ProviderRuntimeAvailabilityStore.shared
-
     var body: some View {
         ScrollView {
-            VStack(spacing: 24) {
-                // Explication
-                Text("Ces réglages contrôlent les marketplaces interrogées lors de tes analyses. Désactive un provider pour l'exclure des résultats.")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 20) {
+                Text("Amisa recherche les annonces sur Vinted à partir de tes photos ou de tes requêtes texte. Les autres places de marché ne sont pas prises en charge pour l’instant.")
+                    .font(.system(size: 15))
+                    .foregroundStyle(.primary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 16)
-                    .padding(.top, 4)
+                    .padding(.top, 8)
 
-                // Carte toggles
-                VStack(spacing: 0) {
-                    ForEach(Array(ProviderCatalog.all.enumerated()), id: \.element.id) { index, provider in
-                        if index > 0 {
-                            Divider()
-                                .padding(.leading, 60)
-                        }
-                        providerRow(provider)
-                    }
+                HStack(spacing: 12) {
+                    ProviderLogoView(
+                        source: "Vinted",
+                        fallbackLabel: "Vinted",
+                        logoHeight: 20,
+                        logoMaxWidth: 72
+                    )
+                    Text("Vinted")
+                        .font(.system(size: 17, weight: .medium))
+                    Spacer()
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                        .imageScale(.large)
                 }
+                .padding(16)
                 .background(.regularMaterial)
                 .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
                 .padding(.horizontal, 16)
@@ -40,54 +38,13 @@ struct ProvidersSettingsView: View {
             .padding(.bottom, 32)
         }
         .background(Color(uiColor: .systemGroupedBackground))
-        .navigationTitle("Providers")
+        .navigationTitle("Recherche Vinted")
         .navigationBarTitleDisplayMode(.large)
-    }
-
-    private func providerRow(_ provider: ProviderMetadata) -> some View {
-        let ebayBlocked = provider.id == .ebay && runtimeAvailability.ebay?.status == .blocked_by_challenge
-
-        return VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 12) {
-                ProviderLogoView(
-                    source: provider.logoSourceName,
-                    fallbackLabel: provider.displayName,
-                    logoHeight: 18,
-                    logoMaxWidth: 72
-                )
-                .frame(width: 72, alignment: .leading)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(provider.displayName)
-                        .font(.system(size: 16))
-                        .foregroundStyle(.primary)
-
-                    if ebayBlocked {
-                        Text("Indisponible temporairement")
-                            .font(.system(size: 12))
-                            .foregroundStyle(DesignTokens.error)
-                    }
-                }
-
-                Spacer()
-
-                Toggle(
-                    "",
-                    isOn: Binding(
-                        get: { providerSettings.isEnabled(provider.id) },
-                        set: { providerSettings.setEnabled($0, for: provider.id) }
-                    )
-                )
-                .labelsHidden()
-            }
-            .padding(.horizontal, 16)
-            .frame(minHeight: 56)
-        }
     }
 }
 
 #Preview {
     NavigationStack {
-        ProvidersSettingsView()
+      ProvidersSettingsView()
     }
 }

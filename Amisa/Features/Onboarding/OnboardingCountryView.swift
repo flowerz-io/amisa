@@ -22,7 +22,7 @@ struct OnboardingCountryView: View {
                 OnboardingStepHeader(
                     currentStep: 2,
                     title: "Depuis quelle zone\nfais-tu tes achats ?",
-                    subtitle: "On adapte les marketplaces, les devises et les résultats disponibles chez toi."
+                    subtitle: "On adapte la devise et les résultats Vinted disponibles selon ta zone."
                 )
                 .opacity(appeared ? 1 : 0)
                 .offset(y: appeared ? 0 : 20)

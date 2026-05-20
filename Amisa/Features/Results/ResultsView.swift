@@ -146,14 +146,6 @@ struct ResultsView: View {
                         annoncesCountRow(session: session)
                             .padding(.horizontal, DesignTokens.spacingM)
 
-                        if viewModel.shouldShowSlowProvidersBanner {
-                            Text(String(localized: "Résultats encore en cours…"))
-                                .font(DesignTokens.caption)
-                                .foregroundStyle(Color.secondary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.horizontal, DesignTokens.spacingM)
-                        }
-
                         // 4–6. Grille : état vide dans la page / skeletons / résultats (+ shimmer fin de vague partielle)
                         if viewModel.shouldShowEmptyGridState {
                             ResultsEmptyGridStateView(debugMessage: session.searchDebugMessage)
@@ -248,10 +240,10 @@ struct ResultsView: View {
         .sheet(isPresented: $showFiltersSheet) {
             ResultsFiltersPagerSheet(
                 selectedTab:         $selectedFilterTab,
-                enabledProviderKeys: $viewModel.enabledProviderKeys,
+                enabledProviderKeys: .constant(Set(["vinted"])),
                 availableProviders:  viewModel.availableMarketplaceSources,
-                providerAvailability: viewModel.providerAvailabilityMap,
-                providerCounts:      viewModel.providerCounts,
+                providerAvailability: nil,
+                providerCounts:      ProviderCountsDTO(vinted: viewModel.totalListingsCount),
                 countFormatter:      viewModel.formatListingsCount,
                 onClose:             { showFiltersSheet = false }
             )
@@ -278,7 +270,7 @@ struct ResultsView: View {
     private func annoncesCountRow(session: SearchSession) -> some View {
         VStack(alignment: .leading, spacing: DesignTokens.spacingS) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text("\(viewModel.formattedTotalListingsCount) annonces")
+                Text("\(viewModel.formattedTotalListingsCount) annonces Vinted")
                     .font(DesignTokens.headline)
                     .foregroundStyle(Color.primary)
 
@@ -296,27 +288,6 @@ struct ResultsView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            if session.moreProvidersPending || viewModel.moreProvidersPending {
-                Text(String(localized: "Résultats encore en cours…"))
-                    .font(DesignTokens.caption)
-                    .foregroundStyle(Color.secondary.opacity(0.9))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
-            #if DEBUG
-            VStack(alignment: .leading, spacing: 3) {
-                Text(viewModel.debugProviderListingCountsLine)
-                    .font(.system(size: 10, design: .monospaced))
-                    .foregroundStyle(Color.orange.opacity(0.92))
-                if let st = viewModel.debugProviderStatusesLine {
-                    Text(st)
-                        .font(.system(size: 9, design: .monospaced))
-                        .foregroundStyle(Color.secondary.opacity(0.88))
-                }
-            }
-            .padding(.top, 4)
-            .accessibilityHidden(true)
-            #endif
         }
     }
 
@@ -375,10 +346,10 @@ private struct ResultsEmptyGridStateView: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 40))
                 .foregroundStyle(Color.secondary)
-            Text(String(localized: "Aucune annonce trouvée"))
+            Text(String(localized: "Aucune annonce Vinted trouvée"))
                 .font(DesignTokens.headline)
                 .foregroundStyle(Color.primary)
-            Text(String(localized: "Essaie d’élargir les filtres ou une autre requête."))
+            Text(String(localized: "Essaie une autre photo ou une requête différente."))
                 .font(DesignTokens.caption)
                 .foregroundStyle(Color.secondary)
                 .multilineTextAlignment(.center)

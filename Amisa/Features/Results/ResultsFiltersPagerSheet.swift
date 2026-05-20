@@ -79,7 +79,7 @@ struct ResultsFiltersPagerSheet: View {
     private var marketplaceTab: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: DesignTokens.spacingS) {
-                Text(String(localized: "Sources affichées"))
+                Text(String(localized: "Résultats Vinted"))
                     .font(DesignTokens.caption)
                     .foregroundStyle(.secondary)
 
@@ -94,9 +94,6 @@ struct ResultsFiltersPagerSheet: View {
     private func providerRow(source: String) -> some View {
         let label = MarketplaceSource.displayLabel(from: source)
         let key = MarketplaceSource.canonicalKey(from: source)
-        let temporarilyUnavailable =
-            key == "ebay" && providerAvailability?.ebay?.status == .blocked_by_challenge
-
         return HStack(alignment: .center, spacing: DesignTokens.spacingS) {
             ProviderLogoView(
                 source: source,
@@ -117,11 +114,6 @@ struct ResultsFiltersPagerSheet: View {
                         .font(DesignTokens.body)
                         .foregroundStyle(.secondary)
                 }
-                if temporarilyUnavailable {
-                    Text(String(localized: "Indisponible temporairement"))
-                        .font(DesignTokens.caption)
-                        .foregroundStyle(.secondary)
-                }
             }
 
             Spacer(minLength: DesignTokens.spacingS)
@@ -129,7 +121,6 @@ struct ResultsFiltersPagerSheet: View {
             Toggle("", isOn: Binding(
                 get: { enabledProviderKeys.contains(key) },
                 set: { enabled in
-                    if temporarilyUnavailable { return }
                     if enabled {
                         enabledProviderKeys.insert(key)
                     } else {
@@ -138,7 +129,6 @@ struct ResultsFiltersPagerSheet: View {
                 }
             ))
             .labelsHidden()
-            .disabled(temporarilyUnavailable)
         }
         .padding(.vertical, DesignTokens.spacingXS)
     }

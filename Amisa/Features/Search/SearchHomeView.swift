@@ -110,7 +110,7 @@ struct SearchHomeView: View {
     }
 
     private var hintLine: some View {
-        Text(String(localized: "Saisis un mot-clé pour chercher sur les marketplaces activées dans Réglages. Utilise le bouton scan pour une analyse à partir d'une photo."))
+        Text(String(localized: "Saisis un mot-clé pour lancer une recherche Vinted. Utilise le bouton scan pour une analyse à partir d'une photo."))
             .font(DesignTokens.captionFont)
             .foregroundStyle(DesignTokens.textSecondary)
             .frame(maxWidth: .infinity, alignment: .leading)

@@ -29,7 +29,7 @@ export async function loadPlaywrightChromium(): Promise<
  * Args Chromium pour conteneurs Linux (Railway / Docker) : sans cela, crash fréquent
  * « Failed to launch ... sandbox » / /dev/shm trop petit.
  */
-const CHROMIUM_LAUNCH_ARGS: string[] = [
+export const CHROMIUM_LAUNCH_ARGS: string[] = [
   '--no-sandbox',
   '--disable-setuid-sandbox',
   '--disable-dev-shm-usage',

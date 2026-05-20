@@ -98,15 +98,8 @@ enum ShareExtensionTeaserListingParser {
 private enum MarketplaceSource {
     static func displayLabel(from raw: String) -> String {
         let key = canonicalKey(from: raw)
-        switch key {
-        case "vinted": return "Vinted"
-        case "grailed": return "Grailed"
-        case "ebay": return "eBay"
-        case "depop": return "Depop"
-        case "leboncoin": return "Leboncoin"
-        default:
-            return raw.isEmpty ? "Marketplace" : raw
-        }
+        if key == "vinted" || raw.isEmpty { return "Vinted" }
+        return raw
     }
 
     static func canonicalKey(from source: String) -> String {

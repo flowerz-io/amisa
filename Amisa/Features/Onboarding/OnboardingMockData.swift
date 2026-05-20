@@ -32,9 +32,9 @@
 //  ├──────────────────────────────────────────────────────────────────────┤
 //  │  PROVIDER LOGOS (Assets.xcassets root, déjà présents)               │
 //  │    provider_vinted                                                   │
-//  │    provider_grailed                                                  │
-//  │    provider_ebay                                                     │
-//  │    provider_depop                                                    │
+//  │    provider_vinted                                                  │
+//  │    provider_vinted                                                     │
+//  │    provider_vinted                                                    │
 //  └──────────────────────────────────────────────────────────────────────┘
 
 import SwiftUI
@@ -93,7 +93,7 @@ enum OnboardingMockData {
             title:           "Air Force 1 '07",
             price:           "120 €",
             size:            "42",
-            providerLogoName: "provider_grailed"
+            providerLogoName: "provider_vinted"
         ),
         OnboardingHeroCardData(
             imageName:       "onboarding_hero_card_03",
@@ -101,7 +101,7 @@ enum OnboardingMockData {
             title:           "Trench coat classique",
             price:           "185 €",
             size:            "S",
-            providerLogoName: "provider_ebay"
+            providerLogoName: "provider_vinted"
         ),
     ]
 
@@ -136,24 +136,24 @@ enum OnboardingMockData {
         prefix: "onboarding_result_leather",
         items: [
             ("Schott NYC",    "Veste biker cuir",      "149 €", "M",   "provider_vinted"),
-            ("Lewis Leathers","Perfecto cuir vintage",  "285 €", "L",   "provider_grailed"),
-            ("Acne Studios",  "Veste cuir oversize",    "320 €", "S",   "provider_ebay"),
-            ("AllSaints",     "Biker jacket noir",       "89 €", "M",   "provider_depop"),
-            ("Our Legacy",    "Leather jacket slim",    "210 €", "L",   "provider_grailed"),
+            ("Lewis Leathers","Perfecto cuir vintage",  "285 €", "L",   "provider_vinted"),
+            ("Acne Studios",  "Veste cuir oversize",    "320 €", "S",   "provider_vinted"),
+            ("AllSaints",     "Biker jacket noir",       "89 €", "M",   "provider_vinted"),
+            ("Our Legacy",    "Leather jacket slim",    "210 €", "L",   "provider_vinted"),
             ("Sandro",        "Veste cuir camel",       "145 €", "S",   "provider_vinted"),
-            ("ZARA",          "Biker cuir perfecto",     "45 €", nil,   "provider_depop"),
-            ("Weekday",       "Veste cuir brodée",       "65 €", "M",   "provider_ebay"),
+            ("ZARA",          "Biker cuir perfecto",     "45 €", nil,   "provider_vinted"),
+            ("Weekday",       "Veste cuir brodée",       "65 €", "M",   "provider_vinted"),
             ("& Other Stories","Perfecto court",         "99 €", "36",  "provider_vinted"),
-            ("Maje",          "Veste cuir cognac",      "175 €", "M",   "provider_depop"),
-            ("Closed",        "Leather blouson",        "240 €", "M",   "provider_grailed"),
-            ("Arket",         "Biker beige",            "180 €", "S",   "provider_ebay"),
+            ("Maje",          "Veste cuir cognac",      "175 €", "M",   "provider_vinted"),
+            ("Closed",        "Leather blouson",        "240 €", "M",   "provider_vinted"),
+            ("Arket",         "Biker beige",            "180 €", "S",   "provider_vinted"),
             ("Ikks",          "Veste cuir souple",       "79 €", nil,   "provider_vinted"),
-            ("IRO Paris",     "Blouson cuir zippé",     "265 €", "36",  "provider_depop"),
-            ("Muubaa",        "Moto jacket",            "135 €", "M",   "provider_grailed"),
-            ("Deadwood",      "Paloma jacket",          "190 €", "S",   "provider_ebay"),
-            ("Belstaff",      "Blouson Trialmaster",    "480 €", "L",   "provider_grailed"),
+            ("IRO Paris",     "Blouson cuir zippé",     "265 €", "36",  "provider_vinted"),
+            ("Muubaa",        "Moto jacket",            "135 €", "M",   "provider_vinted"),
+            ("Deadwood",      "Paloma jacket",          "190 €", "S",   "provider_vinted"),
+            ("Belstaff",      "Blouson Trialmaster",    "480 €", "L",   "provider_vinted"),
             ("Serge Pariente","Teddy cuir vintage",      "95 €", "M",   "provider_vinted"),
-            ("Topshop",       "Faux leather jacket",     "35 €", "10",  "provider_depop"),
+            ("Topshop",       "Faux leather jacket",     "35 €", "10",  "provider_vinted"),
             ("Levi's",        "Trucker cuir synthétique","55 €", "M",   "provider_vinted"),
         ]
     )
@@ -164,25 +164,25 @@ enum OnboardingMockData {
         lookId: "sneaker",
         prefix: "onboarding_result_sneaker",
         items: [
-            ("Nike",        "Air Force 1 '07",         "89 €", "42",  "provider_grailed"),
+            ("Nike",        "Air Force 1 '07",         "89 €", "42",  "provider_vinted"),
             ("Converse",    "Chuck Taylor All Star",    "55 €", "41",  "provider_vinted"),
-            ("Nike",        "Dunk Low Retro",          "130 €", "43",  "provider_grailed"),
-            ("Vans",        "Old Skool",                "65 €", "42",  "provider_depop"),
+            ("Nike",        "Dunk Low Retro",          "130 €", "43",  "provider_vinted"),
+            ("Vans",        "Old Skool",                "65 €", "42",  "provider_vinted"),
             ("Adidas",      "Gazelle",                  "79 €", "40",  "provider_vinted"),
-            ("Adidas",      "Stan Smith",               "69 €", "43",  "provider_depop"),
-            ("New Balance",  "574 Classic",             "95 €", "42",  "provider_grailed"),
-            ("Nike",        "Air Max 90",              "110 €", "44",  "provider_ebay"),
-            ("Jordan",      "Air Jordan 1 Retro",      "185 €", "42",  "provider_grailed"),
+            ("Adidas",      "Stan Smith",               "69 €", "43",  "provider_vinted"),
+            ("New Balance",  "574 Classic",             "95 €", "42",  "provider_vinted"),
+            ("Nike",        "Air Max 90",              "110 €", "44",  "provider_vinted"),
+            ("Jordan",      "Air Jordan 1 Retro",      "185 €", "42",  "provider_vinted"),
             ("Adidas",      "Samba OG",                 "99 €", "41",  "provider_vinted"),
-            ("Asics",       "Gel-Lyte III",             "85 €", "42",  "provider_ebay"),
-            ("New Balance",  "990v5",                  "155 €", "43",  "provider_grailed"),
-            ("Nike",        "Blazer Mid '77",           "75 €", "41",  "provider_depop"),
+            ("Asics",       "Gel-Lyte III",             "85 €", "42",  "provider_vinted"),
+            ("New Balance",  "990v5",                  "155 €", "43",  "provider_vinted"),
+            ("Nike",        "Blazer Mid '77",           "75 €", "41",  "provider_vinted"),
             ("Puma",        "Suede Classic",            "55 €", "42",  "provider_vinted"),
-            ("Reebok",      "Classic Leather",          "65 €", "43",  "provider_depop"),
-            ("Salomon",     "XT-6",                    "160 €", "42",  "provider_grailed"),
+            ("Reebok",      "Classic Leather",          "65 €", "43",  "provider_vinted"),
+            ("Salomon",     "XT-6",                    "160 €", "42",  "provider_vinted"),
             ("Vans",        "Sk8-Hi",                   "70 €", "41",  "provider_vinted"),
-            ("Nike",        "Air Max 95",              "140 €", "44",  "provider_ebay"),
-            ("Adidas",      "Forum Low",                "80 €", "42",  "provider_grailed"),
+            ("Nike",        "Air Max 95",              "140 €", "44",  "provider_vinted"),
+            ("Adidas",      "Forum Low",                "80 €", "42",  "provider_vinted"),
             ("New Balance",  "530 Silver",              "89 €", "40",  "provider_vinted"),
         ]
     )
@@ -193,26 +193,26 @@ enum OnboardingMockData {
         lookId: "cap",
         prefix: "onboarding_result_cap",
         items: [
-            ("Supreme",         "Casquette 6-panel",      "65 €", nil, "provider_grailed"),
+            ("Supreme",         "Casquette 6-panel",      "65 €", nil, "provider_vinted"),
             ("Carhartt WIP",    "Dad hat kaki",            "45 €", nil, "provider_vinted"),
-            ("New Era",         "59Fifty Fitted",          "35 €", nil, "provider_depop"),
-            ("Palace",          "Snapback tri-ferg",       "75 €", nil, "provider_grailed"),
-            ("Stüssy",          "Stock Low Pro",           "55 €", nil, "provider_depop"),
-            ("Kith",            "Cap brodé logo",          "55 €", nil, "provider_grailed"),
-            ("Patagonia",       "P-6 Logo Hat",            "45 €", nil, "provider_ebay"),
+            ("New Era",         "59Fifty Fitted",          "35 €", nil, "provider_vinted"),
+            ("Palace",          "Snapback tri-ferg",       "75 €", nil, "provider_vinted"),
+            ("Stüssy",          "Stock Low Pro",           "55 €", nil, "provider_vinted"),
+            ("Kith",            "Cap brodé logo",          "55 €", nil, "provider_vinted"),
+            ("Patagonia",       "P-6 Logo Hat",            "45 €", nil, "provider_vinted"),
             ("Aimé Leon Dore",  "Ball Cap blanc",          "80 €", nil, "provider_vinted"),
-            ("Gramicci",        "Shell camp cap",          "48 €", nil, "provider_depop"),
-            ("Acne Studios",    "Carlino cap",             "95 €", nil, "provider_grailed"),
-            ("Noah",            "Winged foot cap",         "68 €", nil, "provider_grailed"),
-            ("Patta",           "Basic Wool Cap",          "55 €", nil, "provider_ebay"),
-            ("HUF",             "Essentials cap",          "38 €", nil, "provider_depop"),
-            ("Pop Trading Co.", "Volley cap",              "62 €", nil, "provider_grailed"),
+            ("Gramicci",        "Shell camp cap",          "48 €", nil, "provider_vinted"),
+            ("Acne Studios",    "Carlino cap",             "95 €", nil, "provider_vinted"),
+            ("Noah",            "Winged foot cap",         "68 €", nil, "provider_vinted"),
+            ("Patta",           "Basic Wool Cap",          "55 €", nil, "provider_vinted"),
+            ("HUF",             "Essentials cap",          "38 €", nil, "provider_vinted"),
+            ("Pop Trading Co.", "Volley cap",              "62 €", nil, "provider_vinted"),
             ("Aloha Sunday",    "Sunday 5-panel",          "52 €", nil, "provider_vinted"),
-            ("Stone Island",    "Cap brodée logo",        "120 €", nil, "provider_grailed"),
+            ("Stone Island",    "Cap brodée logo",        "120 €", nil, "provider_vinted"),
             ("Lacoste",         "Classic Twill cap",       "42 €", nil, "provider_vinted"),
-            ("Le 31",           "Cap sergé",               "28 €", nil, "provider_depop"),
+            ("Le 31",           "Cap sergé",               "28 €", nil, "provider_vinted"),
             ("Adidas",          "Trefoil cap",             "35 €", nil, "provider_vinted"),
-            ("Nike",            "Club Cap unstructured",   "30 €", nil, "provider_ebay"),
+            ("Nike",            "Club Cap unstructured",   "30 €", nil, "provider_vinted"),
         ]
     )
 
@@ -223,25 +223,25 @@ enum OnboardingMockData {
         prefix: "onboarding_result_shirt",
         items: [
             ("UNIQLO",         "Oxford shirt blanc",      "29 €", "M",  "provider_vinted"),
-            ("Sandro",         "Chemise lin écru",        "95 €", "L",  "provider_depop"),
-            ("Ralph Lauren",   "OCBD button-down",        "85 €", "M",  "provider_grailed"),
-            ("Patagonia",      "Chemise flanelle",        "79 €", "L",  "provider_ebay"),
+            ("Sandro",         "Chemise lin écru",        "95 €", "L",  "provider_vinted"),
+            ("Ralph Lauren",   "OCBD button-down",        "85 €", "M",  "provider_vinted"),
+            ("Patagonia",      "Chemise flanelle",        "79 €", "L",  "provider_vinted"),
             ("COS",            "Chemise popeline",        "69 €", "M",  "provider_vinted"),
-            ("Jacquemus",      "Linen shirt bleu",       "215 €", "S",  "provider_depop"),
-            ("Acne Studios",   "Chemise oversize",       "180 €", "M",  "provider_grailed"),
-            ("Our Legacy",     "Band collar shirt",      "165 €", "M",  "provider_grailed"),
+            ("Jacquemus",      "Linen shirt bleu",       "215 €", "S",  "provider_vinted"),
+            ("Acne Studios",   "Chemise oversize",       "180 €", "M",  "provider_vinted"),
+            ("Our Legacy",     "Band collar shirt",      "165 €", "M",  "provider_vinted"),
             ("AMI Paris",      "Chemise lin blanc",      "175 €", "M",  "provider_vinted"),
-            ("Carhartt WIP",   "Work shirt",              "89 €", "L",  "provider_depop"),
-            ("Officine Générale","Chemise twill",        "145 €", "M",  "provider_grailed"),
+            ("Carhartt WIP",   "Work shirt",              "89 €", "L",  "provider_vinted"),
+            ("Officine Générale","Chemise twill",        "145 €", "M",  "provider_vinted"),
             ("Arket",          "Relaxed oxford shirt",    "75 €", "L",  "provider_vinted"),
-            ("Barbour",        "Chemise tartan",          "95 €", "M",  "provider_ebay"),
-            ("A.P.C.",         "Chemise Teo",            "140 €", "S",  "provider_grailed"),
-            ("Vilebrequin",    "Chemise lin rayée",      "120 €", "L",  "provider_depop"),
+            ("Barbour",        "Chemise tartan",          "95 €", "M",  "provider_vinted"),
+            ("A.P.C.",         "Chemise Teo",            "140 €", "S",  "provider_vinted"),
+            ("Vilebrequin",    "Chemise lin rayée",      "120 €", "L",  "provider_vinted"),
             ("Maison Labiche", "Chemise brodée",         "115 €", "M",  "provider_vinted"),
-            ("Isabel Marant",  "Chemise chemisier",      "195 €", "36", "provider_grailed"),
-            ("Études",         "Chemise logotypée",       "99 €", "M",  "provider_depop"),
+            ("Isabel Marant",  "Chemise chemisier",      "195 €", "36", "provider_vinted"),
+            ("Études",         "Chemise logotypée",       "99 €", "M",  "provider_vinted"),
             ("Filippa K",      "Chemise popeline GOTS",  "130 €", "M",  "provider_vinted"),
-            ("Selected Homme", "Chemise slim",            "45 €", "L",  "provider_ebay"),
+            ("Selected Homme", "Chemise slim",            "45 €", "L",  "provider_vinted"),
         ]
     )
 

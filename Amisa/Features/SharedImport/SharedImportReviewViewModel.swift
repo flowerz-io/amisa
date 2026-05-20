@@ -2,8 +2,6 @@
 //  SharedImportReviewViewModel.swift
 //  Balibu
 //
-//  Created for Balibu MVP.
-//
 
 import SwiftUI
 import Combine
@@ -47,7 +45,6 @@ final class SharedImportReviewViewModel: ObservableObject {
         searchState = .idle
     }
 
-    /// Image déjà dans l’App Group (flux traitement automatique).
     var preparedUIImageForShareImport: UIImage? {
         guard let url = payload.imageURL,
               let data = try? Data(contentsOf: url),
@@ -55,7 +52,6 @@ final class SharedImportReviewViewModel: ObservableObject {
         return ui
     }
 
-    /// JPEG prêt pour l’API + fichier persisté (une seule écriture).
     func preparePersistedImage(from croppedImage: UIImage) throws -> (data: Data, fileName: String) {
         let imageData = try ImageUploadPreprocessor.prepareForUpload(croppedImage)
         guard let fileName = imagePersistence.saveImage(imageData) else {
@@ -64,7 +60,6 @@ final class SharedImportReviewViewModel: ObservableObject {
         return (imageData, fileName)
     }
 
-    /// Session minimale pour ouvrir Results tout de suite (skeletons).
     func hydratingPlaceholderSession(presetId: UUID, savedFileName: String) -> SearchSession {
         SearchSession(
             id: presetId,
@@ -80,17 +75,12 @@ final class SharedImportReviewViewModel: ObservableObject {
         )
     }
 
-    /// Réponse `analyze-search` complète ; réutilise le fichier image déjà sauvé et `presetId`.
     func fetchCompletedImageSession(imageData: Data, presetId: UUID, savedFileName: String) async throws -> SearchSession {
         let response = try await apiClient.analyzeAndSearch(imageData: imageData)
 
         let primaryQuery = response.generatedQueries.first ?? ""
         let listings = response.listings.map { MarketplaceListing.from($0) }
 
-        ProviderRuntimeAvailabilityStore.shared.merge(from: response.providerAvailability)
-
-        let pendingSlow =
-            response.moreProvidersPending ?? (response.status == "partial")
         let session = SearchSession(
             id: presetId,
             imageFileName: savedFileName,
@@ -101,16 +91,11 @@ final class SharedImportReviewViewModel: ObservableObject {
             listings: listings,
             createdAt: Date(),
             vintedSearchFailed: response.vintedSearchFailed ?? false,
-            paginationState: response.pagination,
-            rankingContext: response.rankingContext,
-            providerAvailability: response.providerAvailability,
-            providerCounts: response.providerCounts,
+            vintedPagination: response.pagination,
             initialResponseTimeMs: response.initialResponseTimeMs,
             hydratingBackendResults: false,
-            moreProvidersPending: pendingSlow,
             searchDebugMessage: response.searchDebugMessage,
-            searchSessionId: response.searchSessionId,
-            providerStatuses: response.providerStatuses
+            searchSessionId: response.searchSessionId
         )
 
         searchHistoryService?.addSession(session)
@@ -120,7 +105,6 @@ final class SharedImportReviewViewModel: ObservableObject {
             finalSession.thumbnailImageURL = thumbURL
         }
 
-        imagePersistence.cleanupTemporaryImage(at: payload.imageURL)
         return finalSession
     }
 }

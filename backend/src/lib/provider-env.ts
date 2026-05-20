@@ -1,10 +1,6 @@
 /**
- * Activation stricte des providers Railway : *_ENABLED doit valoir exactement "true".
- * Plus de liste globale implicite "tous actifs" si PROVIDERS_ENABLED est absent.
+ * Railway : Vinted uniquement (`VINTED_ENABLED` strictement `true`).
  */
-
-import { getEbayDebugSnapshot, hasEbayOAuthCredentials } from './ebay-env.js';
-import { logScraperProviderModes } from './provider-modes.js';
 
 /** Uniquement la chaîne `true` (insensible à la casse après trim). */
 export function isEnvStrictlyTrue(key: string): boolean {
@@ -13,18 +9,8 @@ export function isEnvStrictlyTrue(key: string): boolean {
 
 export interface ServerProviderGate {
   ready: boolean;
-  /** Raison log / debug (ex. missing_token) */
+  /** Raison log / debug (ex. VINTED_ENABLED_false) */
   reason: string;
-}
-
-export function gateEbayServer(): ServerProviderGate {
-  if (!isEnvStrictlyTrue('EBAY_ENABLED')) {
-    return { ready: false, reason: 'EBAY_ENABLED_false' };
-  }
-  if (!hasEbayOAuthCredentials()) {
-    return { ready: false, reason: 'missing_ebay_oauth_credentials' };
-  }
-  return { ready: true, reason: 'ok' };
 }
 
 export function gateVintedServer(): ServerProviderGate {
@@ -34,81 +20,38 @@ export function gateVintedServer(): ServerProviderGate {
   return { ready: true, reason: 'ok' };
 }
 
-export function gateGrailedServer(): ServerProviderGate {
-  if (!isEnvStrictlyTrue('GRAILED_ENABLED')) {
-    return { ready: false, reason: 'GRAILED_ENABLED_false' };
-  }
-  return { ready: true, reason: 'ok' };
-}
-
-export function gateDepopServer(): ServerProviderGate {
-  if (!isEnvStrictlyTrue('DEPOP_ENABLED')) {
-    return { ready: false, reason: 'DEPOP_ENABLED_false' };
-  }
-  return { ready: true, reason: 'ok' };
-}
-
-export function gateLeboncoinServer(): ServerProviderGate {
-  if (!isEnvStrictlyTrue('LEBONCOIN_ENABLED')) {
-    return { ready: false, reason: 'LEBONCOIN_ENABLED_false' };
-  }
-  return { ready: true, reason: 'ok' };
-}
-
+/**
+ * Variables utiles au démarrage (aucun secret affiché en clair sauf longueur token).
+ * @see backend/ENV.md pour la liste complète.
+ */
 export function logProviderEnvironmentDiagnostics(): void {
-  logScraperProviderModes();
-
   const nodeEnv = process.env.NODE_ENV ?? '<unset>';
   const useMock = process.env.USE_MOCK ?? '<unset>';
   const mockMode = process.env.MOCK_MODE ?? '<unset>';
-  const ebaySnap = getEbayDebugSnapshot();
+  const vision = process.env.VISION_PROVIDER ?? '<unset>';
 
-  console.log('[ENV_MARKETPLACES]');
+  console.log('[ENV_BACKEND]');
   console.log(`  NODE_ENV=${nodeEnv}`);
+  console.log(`  VISION_PROVIDER=${vision}`);
   console.log(`  USE_MOCK=${useMock}`);
   console.log(`  MOCK_MODE=${mockMode}`);
-  console.log(
-    `  *_ENABLED strict=true only — defaults off unless VINTED_ENABLED=true etc.`
-  );
-  console.log(`  EBAY_ENABLED raw=${process.env.EBAY_ENABLED ?? '<unset>'}`);
-  console.log(
-    `  ebayAppCredentialPresent=${ebaySnap.appIdPresent} (resolvedFrom=${ebaySnap.appIdSource})`
-  );
-  console.log(
-    `  ebayGlobalIdUsed=${ebaySnap.globalId} (resolvedFrom=${ebaySnap.globalIdSource})`
-  );
-  console.log(
-    `  EBAY_ENV=${process.env.EBAY_ENV ?? '<unset>'} EBAY_CLIENT_SECRET=${process.env.EBAY_CLIENT_SECRET ? 'set(len>0)' : '<unset>'}`
-  );
+  console.log(`  VINTED_ENABLED=${process.env.VINTED_ENABLED ?? '<unset>'}`);
 
-  const extra = [
-    'VINTED_ENABLED',
-    'GRAILED_ENABLED',
-    'DEPOP_ENABLED',
-    'LEBONCOIN_ENABLED',
-    'EBAY_CLIENT_ID',
-    'EBAY_CLIENT_SECRET',
-    'EBAY_GLOBAL_ID',
-    'EBAY_MARKETPLACE_ID',
-    'EBAY_RESULTS_LIMIT_PER_QUERY',
-    'MAX_RESULTS_PER_SEARCH',
-    'VINTED_ACCESS_TOKEN',
-    'DEBUG_PROVIDER_ROUTE',
-  ] as const;
-  for (const k of extra) {
-    const v = process.env[k];
-    if (v === undefined) {
-      console.log(`  ${k}=<unset>`);
-    } else if (
-      k === 'EBAY_CLIENT_ID' ||
-      k === 'EBAY_CLIENT_SECRET' ||
-      k === 'VINTED_ACCESS_TOKEN'
-    ) {
-      console.log(
-        `  ${k}=${v.length > 0 ? `set(len=${v.length}), optional legacy Bearer` : '<empty>'}`
-      );
-    } else {
-      console.log(`  ${k}=${v}`);
-    }
-  }
+  const token = process.env.VINTED_ACCESS_TOKEN;
+  console.log(
+    `  VINTED_ACCESS_TOKEN=${token && token.length > 0 ? `set(len=${token.length})` : '<unset>'}`
+  );
+  console.log(`  VINTED_API_BASE=${process.env.VINTED_API_BASE ?? '<default api/v2>'}`);
+  console.log(`  MAX_RESULTS_PER_SEARCH=${process.env.MAX_RESULTS_PER_SEARCH ?? '<default 100>'}`);
+  console.log(`  VINTED_SCRAPER_PER_PAGE=${process.env.VINTED_SCRAPER_PER_PAGE ?? '<default 24>'}`);
+
+  const openai = process.env.OPENAI_API_KEY;
+  const gemini = process.env.GEMINI_API_KEY;
+  console.log(
+    `  OPENAI_API_KEY=${openai && openai.length > 0 ? `set(len=${openai.length})` : '<unset>'}`
+  );
+  console.log(
+    `  GEMINI_API_KEY=${gemini && gemini.length > 0 ? `set(len=${gemini.length})` : '<unset>'}`
+  );
+  console.log(`  DEBUG_PROVIDER_ROUTE=${process.env.DEBUG_PROVIDER_ROUTE ?? '<unset>'} (mettre 0 pour désactiver /debug-vinted)`);
 }

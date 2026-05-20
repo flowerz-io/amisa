@@ -2,8 +2,6 @@
 //  ShareContinuitySessionBuilder.swift
 //  Balibu
 //
-//  Reconstruit une `SearchSession` partielle pour afficher Results pendant le polling Railway.
-//
 
 import Foundation
 
@@ -18,7 +16,6 @@ enum ShareContinuitySessionBuilder {
         let query = pending.searchQuery?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
 
         let terminal = pending.status == "completed" || pending.status == "failed"
-        /// Tant que Railway n’a pas fini, on évite le bootstrap Vinted « fav vide » sur une analyse image partagée.
         let awaitsRailwayHydration = !terminal && pending.originalImagePath != nil
 
         if listings.isEmpty, pending.originalImagePath == nil, query.isEmpty {
@@ -33,12 +30,6 @@ enum ShareContinuitySessionBuilder {
             attributes: nil,
             listings: listings,
             createdAt: pending.createdAt,
-            vintedSearchFailed: false,
-            paginationState: nil,
-            rankingContext: nil,
-            providerAvailability: nil,
-            providerCounts: nil,
-            initialResponseTimeMs: nil,
             mode: .imageAnalysis,
             previewImageURLs: [],
             awaitsRailwayHydration: awaitsRailwayHydration

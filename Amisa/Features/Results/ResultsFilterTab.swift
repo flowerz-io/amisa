@@ -16,7 +16,7 @@ enum ResultsFilterTab: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .marketplace: return String(localized: "Marketplace")
+        case .marketplace: return String(localized: "Vinted")
         case .size: return String(localized: "Taille")
         case .brand: return String(localized: "Marque")
         case .condition: return String(localized: "État")

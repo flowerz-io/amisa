@@ -2,29 +2,18 @@
 //  APIClient.swift
 //  Balibu
 //
-//  Client API pour l'endpoint POST /analyze-search.
-//
 
 import Foundation
 import UIKit
-
-// MARK: - Protocol (pour injection et mock)
 
 protocol APIClientProtocol: Sendable {
     func analyzeAndSearch(image: UIImage) async throws -> AnalyzeSearchResponse
     func analyzeAndSearch(imageData: Data) async throws -> AnalyzeSearchResponse
     func analyzeTextSearch(query: String) async throws -> AnalyzeSearchResponse
-    /// Session async (Share Extension) : lance le pipeline côté Railway, retourne `sessionId`.
     func startSearchSession(imageData: Data) async throws -> StartSearchSessionResponse
-    /// État et résultat d’une session (source de vérité Railway).
     func fetchSearchSessionStatus(sessionId: String) async throws -> SearchSessionPollResponse
-    /// Pages suivantes Vinted (page ≥ 2). La page 1 vient de `analyze-search`.
     func fetchVintedListingsPage(searchText: String, page: Int) async throws -> VintedListingsResponse
-    /// Pagination multi-providers sans ré-analyse vision.
-    func fetchSearchMore(request: SearchMoreRequest) async throws -> SearchMoreResponse
 }
-
-// MARK: - Implémentation réelle
 
 actor APIClient: APIClientProtocol {
     func analyzeAndSearch(image: UIImage) async throws -> AnalyzeSearchResponse {
@@ -33,7 +22,6 @@ actor APIClient: APIClientProtocol {
     }
     static let shared = APIClient()
 
-    /// Fournit le client par défaut (pour injection).
     static func makeDefault() -> APIClient {
         shared
     }
@@ -55,10 +43,9 @@ actor APIClient: APIClientProtocol {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        let enabledProviders = ProviderSettingsStore.enabledProviderBackendKeysSnapshot()
         let body = AnalyzeSearchRequest(
             imageBase64: imageData.base64EncodedString(),
-            enabledProviders: enabledProviders
+            enabledProviders: ProviderSettingsStore.enabledProviderBackendKeysSnapshot()
         )
         request.httpBody = try JSONEncoder().encode(body)
 
@@ -114,10 +101,9 @@ actor APIClient: APIClientProtocol {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        let enabledProviders = ProviderSettingsStore.enabledProviderBackendKeysSnapshot()
         let body = AnalyzeSearchRequest(
             imageBase64: imageData.base64EncodedString(),
-            enabledProviders: enabledProviders
+            enabledProviders: ProviderSettingsStore.enabledProviderBackendKeysSnapshot()
         )
         request.httpBody = try JSONEncoder().encode(body)
 
@@ -164,13 +150,9 @@ actor APIClient: APIClientProtocol {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        let enabledProviders = ProviderSettingsStore.enabledProviderBackendKeysSnapshot()
-        #if DEBUG
-        print("[ANALYZE_TEXT_ENABLED_PROVIDERS]", enabledProviders)
-        #endif
         let body = AnalyzeSearchRequest(
             textQuery: query,
-            enabledProviders: enabledProviders
+            enabledProviders: ProviderSettingsStore.enabledProviderBackendKeysSnapshot()
         )
         request.httpBody = try JSONEncoder().encode(body)
 
@@ -219,41 +201,12 @@ actor APIClient: APIClientProtocol {
             throw APIError.unknown(statusCode: httpResponse.statusCode)
         }
     }
-
-    func fetchSearchMore(request body: SearchMoreRequest) async throws -> SearchMoreResponse {
-        let url = baseURL.appending(path: "search-more")
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        #if DEBUG
-        print("[SEARCH_MORE_ENABLED_PROVIDERS]", body.enabledProviders)
-        #endif
-        request.httpBody = try JSONEncoder().encode(body)
-
-        let (data, response) = try await session.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw APIError.invalidResponse
-        }
-
-        switch httpResponse.statusCode {
-        case 200:
-            return try decoder.decode(SearchMoreResponse.self, from: data)
-        case 400, 502:
-            throw APIError.searchMoreFailed
-        default:
-            throw APIError.unknown(statusCode: httpResponse.statusCode)
-        }
-    }
 }
-
-// MARK: - Error Response
 
 private struct APIErrorBody: Decodable {
     let error: String?
     let message: String?
 }
-
-// MARK: - Errors
 
 enum APIError: LocalizedError {
     case invalidImage
@@ -266,7 +219,6 @@ enum APIError: LocalizedError {
     case payloadTooLarge
     case openAIError
     case vintedSearchFailed
-    case searchMoreFailed
     case unknown(statusCode: Int)
 
     var errorDescription: String? {
@@ -291,8 +243,6 @@ enum APIError: LocalizedError {
             return "L’analyse automatique n’a pas pu aboutir. Réessaie dans quelques instants."
         case .vintedSearchFailed:
             return "Impossible de charger les annonces Vinted pour le moment."
-        case .searchMoreFailed:
-            return "Impossible de charger davantage d’annonces pour le moment."
         case .unknown(let code):
             return "Erreur (\(code))"
         }

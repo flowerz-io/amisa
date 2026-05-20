@@ -144,34 +144,34 @@ extension MarketplaceListing {
 extension MarketplaceListing {
     static let mockListings: [MarketplaceListing] = [
         MarketplaceListing(
-            id: "gr-1",
-            title: "Maison Margiela Tabi Ankle Boots",
-            price: 390,
-            currency: "USD",
-            imageURL: URL(string: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=400"),
-            thumbnailURL: URL(string: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=120"),
-            listingURL: URL(string: "https://grailed.com/listings/gr-1"),
-            source: "Grailed",
-            brand: "Maison Margiela",
-            size: "42",
-            condition: "Very Good",
-            publishedAtRelative: "3 days ago",
-            relevanceScore: 95
-        ),
-        MarketplaceListing(
-            id: "gr-2",
-            title: "Black Leather Split Toe Boots",
-            price: 185,
+            id: "v-mock-1",
+            title: "Bottines cuir noir",
+            price: 45,
             currency: "EUR",
             imageURL: URL(string: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=400"),
             thumbnailURL: URL(string: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=120"),
-            listingURL: URL(string: "https://vinted.fr/items/example"),
-            source: "Vinted",
-            brand: nil,
+            listingURL: URL(string: "https://www.vinted.fr/items/v-mock-1"),
+            source: "vinted",
+            brand: "Vintage",
             size: "41",
-            condition: "Good",
+            condition: "Très bon état",
             publishedAtRelative: nil,
-            relevanceScore: 80
+            relevanceScore: 90
+        ),
+        MarketplaceListing(
+            id: "v-mock-2",
+            title: "Boots style western",
+            price: 32,
+            currency: "EUR",
+            imageURL: URL(string: "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=400"),
+            thumbnailURL: URL(string: "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=120"),
+            listingURL: URL(string: "https://www.vinted.fr/items/v-mock-2"),
+            source: "vinted",
+            brand: nil,
+            size: "40",
+            condition: "Bon état",
+            publishedAtRelative: nil,
+            relevanceScore: 72
         ),
     ]
 }

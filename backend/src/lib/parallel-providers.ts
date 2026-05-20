@@ -3,24 +3,11 @@ import { marketplaceListingDedupeKey } from './listing-dedupe.js';
 import { getMaxResultsPerSearch } from './search-limits.js';
 import { withTimeout } from './with-timeout.js';
 
-export type ProviderName = 'vinted' | 'ebay' | 'grailed' | 'depop' | 'leboncoin';
+export type ProviderName = 'vinted';
 
 export const PROVIDER_TIMEOUT_MS: Record<ProviderName, number> = {
   /** Playwright (catalogue / anti-bot lent). */
-  vinted: 50000,
-  ebay: 8000,
-  grailed: 50000,
-  depop: 50000,
-  leboncoin: 50000,
-};
-
-/** Timeouts plus longs pour la phase lente (une seconde passe après eBay / Vinted). */
-export const SLOW_PROVIDER_TIMEOUT_MS: Record<ProviderName, number> = {
-  vinted: 50000,
-  ebay: 8000,
-  grailed: 75000,
-  depop: 75000,
-  leboncoin: 75000,
+  vinted: 50_000,
 };
 
 /** Retour attendu par chaque tâche provider (sans throw en usage nominal). */
@@ -105,7 +92,6 @@ function isTimeoutMessage(msg: string): boolean {
   return /\btimeout after \d+ms\b/i.test(msg) || msg.includes('timeout:');
 }
 
-/** Une seconde tentative après timeout / erreur réseau typique. */
 function isRetriableTimeoutOrNetwork(msg: string): boolean {
   if (isTimeoutMessage(msg)) return true;
   const m = msg.toLowerCase();
@@ -145,10 +131,6 @@ function logProviderResult(r: ProviderTaskResult): void {
   );
 }
 
-/**
- * Exécute tous les providers en parallèle, attend la fin de chacun (allSettled).
- * Aucune promesse du tableau ne doit rejeter : résultat toujours `fulfilled`.
- */
 export async function runProvidersAllSettled(
   tasks: Array<{
     name: ProviderName;
@@ -182,8 +164,6 @@ export async function runProvidersAllSettled(
     }
   }
 
-  // Conserver l’ordre d’enregistrement du pipeline (vinted avant ebay, etc.) pour les logs
-  // et pour toute fusion séquentielle ; ne pas trier par nom (sinon ebay avant vinted).
   return out;
 }
 
@@ -197,14 +177,14 @@ async function runOneProviderTask(t: {
     const outcome = await withTimeoutMaybeRetry(t.timeoutMs, t.name, t.run);
     const mapped = mapRunResult(outcome);
     const ms = Math.round(performance.now() - p0);
-      const row: ProviderTaskResult = {
-        name: t.name,
-        ms,
-        listings: mapped.listings,
-        status: mapped.status,
-        reason: mapped.reason,
-        httpStatus: mapped.httpStatus,
-      };
+    const row: ProviderTaskResult = {
+      name: t.name,
+      ms,
+      listings: mapped.listings,
+      status: mapped.status,
+      reason: mapped.reason,
+      httpStatus: mapped.httpStatus,
+    };
     logProviderResult(row);
     return row;
   } catch (e) {
@@ -235,11 +215,6 @@ export interface MergeAndCapStats {
   perProviderSkips: number;
 }
 
-/**
- * Fusion avec plafond global + **tour à tour** par provider (round-robin).
- * Évite qu’un provider placé tôt alphabétiquement (ex. eBay) remplisse tout `MAX_RESULTS_PER_SEARCH`
- * et fasse disparaître Vinted / les autres.
- */
 export function mergeAndCapListings(
   chunks: MarketplaceListingDTO[][]
 ): { listings: MarketplaceListingDTO[]; stats: MergeAndCapStats } {
@@ -298,34 +273,17 @@ export function mergeAndCapListings(
 export function failedFlagsFromResults(
   results: ProviderTaskResult[],
   enabled: Set<string>
-): {
-  vintedSearchFailed?: boolean;
-  grailedSearchFailed?: boolean;
-  ebaySearchFailed?: boolean;
-  leboncoinSearchFailed?: boolean;
-  depopSearchFailed?: boolean;
-} {
-  const o: {
-    vintedSearchFailed?: boolean;
-    grailedSearchFailed?: boolean;
-    ebaySearchFailed?: boolean;
-    leboncoinSearchFailed?: boolean;
-    depopSearchFailed?: boolean;
-  } = {};
+): { vintedSearchFailed?: boolean } {
+  const o: { vintedSearchFailed?: boolean } = {};
 
   for (const r of results) {
     if (!enabled.has(r.name)) continue;
-    /** blocked / blocked_403 : non bloquants pour les drapeaux top-level UX. */
     const hard =
       r.status === 'timeout' ||
       r.status === 'error' ||
       r.status === 'rate_limited';
     if (!hard) continue;
     if (r.name === 'vinted') o.vintedSearchFailed = true;
-    if (r.name === 'grailed') o.grailedSearchFailed = true;
-    if (r.name === 'ebay') o.ebaySearchFailed = true;
-    if (r.name === 'leboncoin') o.leboncoinSearchFailed = true;
-    if (r.name === 'depop') o.depopSearchFailed = true;
   }
   return o;
 }
