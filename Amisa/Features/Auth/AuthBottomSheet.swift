@@ -2,66 +2,107 @@
 //  AuthBottomSheet.swift
 //  Balibu
 //
-//  Bottom sheet de connexion — Apple, Google, Email.
-//  Présentée depuis OnboardingHeroView et ProfileView.
-//
-//  Usage :
-//    .sheet(isPresented: $showAuth) {
-//        AuthBottomSheet(onSignedIn: { ... }, onSkip: { ... })
-//    }
+//  Connexion — Apple, Google, Email — partagée entre sheet modale et étape onboarding.
 //
 
 import SwiftUI
 
-// MARK: - AuthBottomSheet
+// MARK: - Sheet modale
 
 struct AuthBottomSheet: View {
-
-    /// Appelé dès que isAuthenticated passe à true.
     var onSignedIn: () -> Void
-    /// Appelé si l'utilisateur tape "Continuer sans compte".
     var onSkip: (() -> Void)?
 
-    @ObservedObject private var auth = AuthManager.shared
     @Environment(\.dismiss) private var dismiss
 
+    var body: some View {
+        AuthCoordinatorCore(
+            embed: .modalSheet(close: { dismiss() }),
+            skipTrailing: onSkip.map { callback in {
+                dismiss()
+                Task { @MainActor in callback() }
+            }},
+            onAuthenticated: onSignedIn
+        )
+    }
+}
+
+// MARK: - Cœur du flux auth
+
+/// `embed` distingue la sheet (fermeture complète du conteneur) et l’onboarding inline.
+struct AuthCoordinatorCore: View {
+
+    enum EmbedKind {
+        case modalSheet(close: () -> Void)
+        case onboardingInline
+    }
+
+    let embed: EmbedKind
+    /// Bouton « Continuer sans compte » ; pour la modal, inclut la fermeture du parent avant le callback utilisateur.
+    var skipTrailing: (() -> Void)? = nil
+
+    /// Succès OAuth / session ; appeler côté app sur MainActor après fermeture modale si besoin.
+    let onAuthenticated: @MainActor () -> Void
+
+    @ObservedObject private var auth = AuthManager.shared
     @State private var screen: AuthScreen = .main
 
-    private enum AuthScreen { case main, email, emailSent }
+    private enum AuthScreen {
+        case main, email, emailSent
+    }
 
-    var body: some View {
-        ZStack {
-            // Fond liquid glass géré par presentationBackground dans le parent
-            Color.clear
-
-            Group {
-                switch screen {
-                case .main:      mainView
-                case .email:     EmailSignInView(onBack: { screen = .main },
-                                                 onSent: { screen = .emailSent })
-                case .emailSent: emailSentView
-                }
-            }
-            .animation(.spring(response: 0.36, dampingFraction: 0.82), value: screen)
-        }
-        .onChange(of: auth.isAuthenticated) { _, authenticated in
-            if authenticated {
-                dismiss()
-                onSignedIn()
-            }
+    private func closeModalOnly() {
+        if case .modalSheet(let close) = embed {
+            close()
         }
     }
 
-    // MARK: - Main screen
+    private func emailSentDismiss() {
+        switch embed {
+        case .modalSheet(let close): close()
+        case .onboardingInline: screen = .main
+        }
+    }
 
-    private var mainView: some View {
-        VStack(alignment: .leading, spacing: 18) {
+    var body: some View {
+        Group {
+            switch screen {
+            case .main:
+                mainScreen
+            case .email:
+                AuthEmailMagicLinkView(
+                    onBack: { screen = .main },
+                    onSent: { screen = .emailSent }
+                )
+            case .emailSent:
+                emailSentConfirmation
+            }
+        }
+        .animation(.spring(response: 0.36, dampingFraction: 0.82), value: screen)
+        .onChange(of: auth.isAuthenticated) { _, ok in
+            guard ok else { return }
+            print("[Onboarding] auth success")
+            Task { await MainActor.run {
+                closeModalOnly()
+                onAuthenticated()
+            }}
+        }
+    }
 
-            // Drag handle centré
-            handle
-                .frame(maxWidth: .infinity, alignment: .center)
+    // MARK: - Main
 
-            // Header : icône + texte à gauche, croix à droite
+    private var mainScreen: some View {
+        let isSheet: Bool = {
+            if case .modalSheet = embed { return true }
+            return false
+        }()
+
+        return VStack(alignment: .leading, spacing: 18) {
+            if isSheet {
+                authHandle
+                    .frame(maxWidth: .infinity)
+            }
+
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 12) {
                     ZStack {
@@ -74,9 +115,8 @@ struct AuthBottomSheet: View {
                     }
 
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Commencer")
+                        Text(String(localized: "Commencer"))
                             .font(.system(size: 26, weight: .bold))
-                            .foregroundStyle(.primary)
 
                         Text("Crée ton compte pour retrouver tes analyses, favoris et recherches sur tous tes appareils.")
                             .font(.system(size: 14))
@@ -85,34 +125,36 @@ struct AuthBottomSheet: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
-
                 Spacer(minLength: 0)
-
-                closeButton
+                if isSheet {
+                    Button {
+                        closeModalOnly()
+                    } label: {
+                        ZStack {
+                            Circle()
+                                .fill(.ultraThinMaterial)
+                                .overlay(Circle().stroke(Color.white.opacity(0.18), lineWidth: 1))
+                            Image(systemName: "xmark")
+                                .font(.system(size: 13, weight: .bold))
+                        }
+                        .frame(width: 34, height: 34)
+                    }
+                    .buttonStyle(.plain)
+                }
             }
 
-            // Auth buttons
-            VStack(spacing: 12) {
-                authButton(label: "Continuer avec Apple",     sfSymbol: "apple.logo",    style: .filled)  { Task { await auth.signInWithApple()  } }
-                googleAuthButton
-                authButton(label: "Continuer avec l'e-mail", sfSymbol: "envelope.fill",  style: .outlined) { screen = .email }
-            }
+            authButtonsGrid
 
-            // Error
             if let err = auth.lastError, let msg = err.errorDescription {
                 Text(msg)
                     .font(.system(size: 13))
                     .foregroundStyle(DesignTokens.error)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity)
-                    .transition(.opacity)
             }
 
-            // Loading
             if auth.isLoading {
-                ProgressView()
-                    .frame(maxWidth: .infinity)
-                    .transition(.opacity)
+                ProgressView().frame(maxWidth: .infinity)
             }
 
             if auth.isGoogleOAuthInProgress {
@@ -123,116 +165,45 @@ struct AuthBottomSheet: View {
                         .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity)
-                .transition(.opacity)
             }
 
-            // Legal — compact
-            legalText
-                .frame(maxWidth: .infinity, alignment: .center)
-                .padding(.top, 4)
+            legalBloc
+                .frame(maxWidth: .infinity)
 
-            // Skip option
-            if let onSkip {
+            if let skipTrailing {
                 Button {
-                    dismiss()
-                    onSkip()
+                    Task { @MainActor in skipTrailing() }
                 } label: {
-                    Text("Continuer sans compte")
+                    Text(String(localized: "Continuer sans compte"))
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.vertical, 4)
+                        .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(.top, 12)
+        .padding(.top, isSheet ? 12 : 22)
         .padding(.horizontal, 24)
         .padding(.bottom, 14)
     }
 
-    // MARK: - Email sent confirmation
-
-    private var emailSentView: some View {
-        VStack(spacing: 0) {
-            handle
-
-            Spacer()
-
-            VStack(spacing: 16) {
-                ZStack {
-                    Circle()
-                        .fill(Color.accentColor.opacity(0.12))
-                        .frame(width: 80, height: 80)
-                    Image(systemName: "envelope.badge.fill")
-                        .font(.system(size: 36))
-                        .foregroundStyle(Color.accentColor)
-                }
-
-                Text("Vérifie ta boîte mail")
-                    .font(.system(size: 22, weight: .bold))
-
-                Text("On t'a envoyé un lien sécurisé.\nTape dessus pour te connecter instantanément.")
-                    .font(.system(size: 15))
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(2)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 24)
+    private var authButtonsGrid: some View {
+        VStack(spacing: 12) {
+            authStyledButton(title: String(localized: "Continuer avec Apple"), sf: "apple.logo", filled: true) {
+                Task { await auth.signInWithApple() }
             }
-
-            Spacer()
-
-            Button {
-                dismiss()
-            } label: {
-                Text("Fermer")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(Color.primary.opacity(0.06))
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            googleButton
+            authStyledButton(title: String(localized: "Continuer avec l'e-mail"), sf: "envelope.fill", filled: false) {
+                screen = .email
             }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 20)
-            .padding(.bottom, 32)
         }
-        .padding(.top, 6)
     }
 
-    // MARK: - Reusable subviews
-
-    private var handle: some View {
-        Capsule()
-            .fill(Color.primary.opacity(0.18))
-            .frame(width: 36, height: 4)
-            .padding(.bottom, 4)
-    }
-
-    private var closeButton: some View {
-        Button { dismiss() } label: {
-            ZStack {
-                Circle()
-                    .fill(.ultraThinMaterial)
-                    .overlay(Circle().stroke(Color.white.opacity(0.18), lineWidth: 1))
-                Image(systemName: "xmark")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(.primary)
-            }
-            .frame(width: 34, height: 34)
-        }
-        .buttonStyle(.plain)
-    }
-
-    private var googleAuthButton: some View {
+    private var googleButton: some View {
         Button {
             Task {
-                do {
-                    try await auth.signInWithGoogle()
-                } catch {
-                    auth.lastError = .googleSignInFailed(error)
-                }
+                do { try await auth.signInWithGoogle() }
+                catch { auth.lastError = .googleSignInFailed(error) }
             }
         } label: {
             ZStack {
@@ -240,93 +211,109 @@ struct AuthBottomSheet: View {
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(Color.black)
                     .frame(maxWidth: .infinity)
-
                 HStack {
-                    Image(systemName: "g.circle.fill")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(Color.red)
-                        .frame(width: 24)
+                    Image(systemName: "g.circle.fill").foregroundStyle(Color.red).frame(width: 24)
                     Spacer()
                 }
                 .padding(.horizontal, 22)
             }
             .frame(height: 64)
-            .background(Color.white)
-            .clipShape(Capsule())
+            .background(Color.white).clipShape(Capsule())
         }
         .buttonStyle(BouncyButtonStyle())
         .disabled(auth.isLoading || auth.isGoogleOAuthInProgress)
     }
 
-    private enum AuthButtonStyle { case filled, outlined }
-
-    private func authButton(
-        label:    String,
-        sfSymbol: String,
-        tint:     Color = .primary,
-        style:    AuthButtonStyle,
-        action:   @escaping () -> Void
-    ) -> some View {
+    private func authStyledButton(title: String, sf: String, filled: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             ZStack {
-                // Texte centré sur toute la largeur
-                Text(label)
+                Text(title)
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(style == .filled ? Color.black : .primary)
+                    .foregroundStyle(filled ? Color.black : .primary)
                     .frame(maxWidth: .infinity)
-
-                // Icône ancrée au bord leading
                 HStack {
-                    Image(systemName: sfSymbol)
+                    Image(systemName: sf)
                         .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(style == .filled ? Color.black : tint)
+                        .foregroundStyle(filled ? Color.black : Color.primary)
                         .frame(width: 24)
                     Spacer()
                 }
                 .padding(.horizontal, 22)
             }
             .frame(height: 64)
-            // Filled = blanc opaque (lisible dark ET light mode)
-            // Outlined = ultraThinMaterial avec bordure
-            .background(
-                style == .filled
-                    ? AnyShapeStyle(Color.white)
-                    : AnyShapeStyle(Material.ultraThin)
-            )
+            .background(filled ? AnyShapeStyle(Color.white) : AnyShapeStyle(Material.ultraThin))
             .clipShape(Capsule())
             .overlay(
-                style == .outlined
-                    ? AnyView(Capsule().stroke(Color.primary.opacity(0.15), lineWidth: 1))
-                    : AnyView(EmptyView())
+                Group {
+                    if !filled {
+                        Capsule().stroke(Color.primary.opacity(0.15), lineWidth: 1)
+                    }
+                }
             )
         }
         .buttonStyle(BouncyButtonStyle())
         .disabled(auth.isLoading || auth.isGoogleOAuthInProgress)
     }
 
-    private var legalText: some View {
+    private var legalBloc: some View {
         Group {
-            Text("En continuant, tu acceptes les ")
-                .foregroundStyle(.secondary)
-            + Text("Conditions d'utilisation")
-                .foregroundStyle(.secondary)
-                .underline()
-            + Text(" et la ")
-                .foregroundStyle(.secondary)
-            + Text("Politique de confidentialité")
-                .foregroundStyle(.secondary)
-                .underline()
-            + Text(".")
-                .foregroundStyle(.secondary)
+            Text("En continuant, tu acceptes les ").foregroundStyle(.secondary)
+                + Text("Conditions d'utilisation").foregroundStyle(.secondary).underline()
+                + Text(" et la ").foregroundStyle(.secondary)
+                + Text("Politique de confidentialité").foregroundStyle(.secondary).underline()
+                + Text(".").foregroundStyle(.secondary)
         }
         .font(.system(size: 12))
         .multilineTextAlignment(.center)
+        .padding(.top, 4)
+    }
+
+    private var authHandle: some View {
+        Capsule()
+            .fill(Color.primary.opacity(0.18))
+            .frame(width: 36, height: 4)
+            .padding(.bottom, 4)
+    }
+
+    // MARK: - Email envoyé
+
+    private var emailSentConfirmation: some View {
+        VStack(spacing: 0) {
+            if case .modalSheet = embed { authHandle }
+            Spacer()
+            VStack(spacing: 16) {
+                ZStack {
+                    Circle().fill(Color.accentColor.opacity(0.12)).frame(width: 80, height: 80)
+                    Image(systemName: "envelope.badge.fill")
+                        .font(.system(size: 36))
+                        .foregroundStyle(Color.accentColor)
+                }
+                Text("Vérifie ta boîte mail").font(.system(size: 22, weight: .bold))
+                Text("On t'a envoyé un lien sécurisé.\nTape dessus pour te connecter instantanément.")
+                    .font(.system(size: 15)).foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center).padding(.horizontal, 24)
+            }
+            Spacer()
+            Button {
+                Task { await MainActor.run { emailSentDismiss() }}
+            } label: {
+                Text(String(localized: "Fermer"))
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity).padding(.vertical, 14)
+                    .background(Color.primary.opacity(0.06))
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 20).padding(.bottom, 32)
+        }
+        .padding(.top, 6)
     }
 }
 
-// MARK: - EmailSignInView (intégré dans la bottom sheet)
+// MARK: - Email champ
 
-private struct EmailSignInView: View {
+struct AuthEmailMagicLinkView: View {
 
     var onBack: () -> Void
     var onSent: () -> Void
@@ -337,97 +324,64 @@ private struct EmailSignInView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Handle + back
             HStack {
                 Button(action: onBack) {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(.primary)
                         .padding(10)
-                        .background(Color.primary.opacity(0.06))
-                        .clipShape(Circle())
+                        .background(Color.primary.opacity(0.06)).clipShape(Circle())
                 }
                 Spacer()
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 14)
+            .padding(.horizontal, 20).padding(.top, 14)
 
-            // Content
             VStack(spacing: 20) {
                 VStack(spacing: 8) {
                     Image(systemName: "envelope.fill")
-                        .font(.system(size: 28))
-                        .foregroundStyle(Color.accentColor)
-                        .padding(.top, 8)
-
-                    Text("Connexion par e-mail")
-                        .font(.system(size: 22, weight: .bold))
-
+                        .font(.system(size: 28)).foregroundStyle(Color.accentColor).padding(.top, 8)
+                    Text("Connexion par e-mail").font(.system(size: 22, weight: .bold))
                     Text("On t'envoie un lien sécurisé pour\nte connecter en un tap.")
-                        .font(.system(size: 14))
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: 14)).foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
-                        .lineSpacing(2)
-                }
-                .padding(.horizontal, 24)
-                .padding(.top, 8)
+                }.padding(.top, 8)
 
-                // Email field
                 TextField("ton@email.com", text: $email)
                     .keyboardType(.emailAddress)
                     .textContentType(.emailAddress)
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)
-                    .font(.system(size: 16))
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 15)
+                    .padding(.horizontal, 16).padding(.vertical, 15)
                     .background(Color.primary.opacity(0.07))
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .stroke(focused ? Color.accentColor : Color.primary.opacity(0.12), lineWidth: 1)
-                    )
-                    .focused($focused)
-                    .padding(.horizontal, 20)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(focused ? Color.accentColor : Color.primary.opacity(0.12)))
+                    .focused($focused).padding(.horizontal, 20)
                     .onAppear { focused = true }
 
-                // Send button
                 Button {
                     Task {
-                        let sent = await auth.signInWithEmail(email)
-                        if sent { onSent() }
+                        if await auth.signInWithEmail(email) { onSent() }
                     }
                 } label: {
-                    HStack(spacing: 8) {
-                        if auth.isLoading {
-                            ProgressView()
-                                .progressViewStyle(.circular)
-                                .tint(.white)
-                                .scaleEffect(0.8)
-                        } else {
-                            Image(systemName: "paperplane.fill")
-                                .font(.system(size: 15, weight: .semibold))
-                            Text("Recevoir un lien de connexion")
-                                .font(.system(size: 16, weight: .semibold))
+                    Group {
+                        if auth.isLoading { ProgressView().tint(.white) }
+                        else {
+                            HStack(spacing: 8) {
+                                Image(systemName: "paperplane.fill").font(.system(size: 15, weight: .semibold))
+                                Text("Recevoir un lien de connexion").font(.system(size: 16, weight: .semibold))
+                            }
                         }
                     }
                     .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 54)
-                    .background(isValidEmail ? Color.accentColor : Color.accentColor.opacity(0.4))
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .frame(maxWidth: .infinity).frame(height: 54)
+                    .background(isOk ? Color.accentColor : Color.accentColor.opacity(0.4))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
                 .buttonStyle(BouncyButtonStyle())
-                .disabled(!isValidEmail || auth.isLoading || auth.isGoogleOAuthInProgress)
+                .disabled(!isOk || auth.isLoading || auth.isGoogleOAuthInProgress)
                 .padding(.horizontal, 20)
 
                 if let err = auth.lastError, let msg = err.errorDescription {
-                    Text(msg)
-                        .font(.system(size: 13))
-                        .foregroundStyle(DesignTokens.error)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 24)
-                        .transition(.opacity)
+                    Text(msg).foregroundStyle(DesignTokens.error).font(.system(size: 13)).padding(.horizontal)
                 }
             }
 
@@ -435,12 +389,8 @@ private struct EmailSignInView: View {
         }
     }
 
-    private var isValidEmail: Bool {
+    private var isOk: Bool {
         let e = email.trimmingCharacters(in: .whitespacesAndNewlines)
         return e.contains("@") && e.contains(".")
     }
 }
-
-// MARK: - BouncyButtonStyle (redéclaration guard)
-// Ce style est déjà défini dans OnboardingHeroView.swift — Swift le résout automatiquement
-// dans le même module. Pas besoin de le redéfinir ici.

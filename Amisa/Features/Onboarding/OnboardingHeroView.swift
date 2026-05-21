@@ -13,7 +13,6 @@ import SwiftUI
 struct OnboardingHeroView: View {
     @ObservedObject var model: OnboardingFlowModel
     @State private var appeared = false
-    @State private var showAuthSheet = false
 
     private let cards = OnboardingMockData.heroCards
 
@@ -50,15 +49,6 @@ struct OnboardingHeroView: View {
             withAnimation(.spring(response: 0.7, dampingFraction: 0.8).delay(0.15)) {
                 appeared = true
             }
-        }
-        .sheet(isPresented: $showAuthSheet) {
-            AuthBottomSheet(
-                onSignedIn: { model.advance() },
-                onSkip:     { model.advance() }
-            )
-            .presentationDetents([.height(560)])
-            .presentationCornerRadius(32)
-            .presentationBackground(.ultraThinMaterial)
         }
     }
 
@@ -160,7 +150,7 @@ struct OnboardingHeroView: View {
 
     private var ctaButton: some View {
         Button {
-            showAuthSheet = true
+            model.presentAuthSheet()
         } label: {
             HStack(spacing: 8) {
                 Text("Commencer")

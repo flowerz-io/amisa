@@ -19,15 +19,16 @@ struct OnboardingRootView: View {
     var body: some View {
         GeometryReader { geo in
             let safeTop = geo.safeAreaInsets.top
-            /// Du bord supérieur de l’écran : safe area + 16 pt → ligne de progression (sous Dynamic Island).
-            let progressTopPadding = safeTop + 16
-            let contentTopInset = progressVisible
-                ? progressTopPadding + Self.progressTrackHeight + Self.progressBottomMargin
+            let chromeBase = safeTop + 8
+            let backRowHeight: CGFloat = showsGlobalBackChrome ? 40 : 0
+            let progressBlockHeight: CGFloat = progressVisible
+                ? (Self.progressTrackHeight + Self.progressBottomMargin + 4)
                 : 0
+            let contentTopInset = chromeBase + backRowHeight + progressBlockHeight
 
             ZStack(alignment: .top) {
                 Group {
-                    switch model.step {
+                    switch model.currentStep {
                     case .hero:
                         OnboardingHeroView(model: model)
                             .transition(heroTransition)
@@ -40,8 +41,14 @@ struct OnboardingRootView: View {
                     case .notifications:
                         NotificationOnboardingStepView(model: model)
                             .transition(slideHorizontal)
-                    case .demo:
-                        OnboardingDemoView(model: model)
+                    case .look:
+                        OnboardingLookStepView(model: model)
+                            .transition(slideHorizontal)
+                    case .fakeAnalyzing:
+                        OnboardingFakeAnalyzingView(model: model)
+                            .transition(slideHorizontal)
+                    case .fakeResults:
+                        OnboardingFakeResultsView(model: model)
                             .transition(slideHorizontal)
                     case .paywall:
                         OnboardingPaywallView(model: model)
@@ -51,29 +58,86 @@ struct OnboardingRootView: View {
                 .padding(.top, contentTopInset)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
-                if progressVisible {
-                    OnboardingProgressView(
-                        currentStep: currentProgressStep,
-                        totalSteps: 5,
-                        onSelectSegment: { segment in
-                            model.jumpToProgressSegment(segment)
+                VStack(alignment: .leading, spacing: 8) {
+                    if showsGlobalBackChrome {
+                        HStack {
+                            Button {
+                                model.previous()
+                            } label: {
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 17, weight: .semibold))
+                                    .foregroundStyle(.primary)
+                                    .padding(10)
+                                    .background(Color(uiColor: .secondarySystemGroupedBackground).opacity(0.95))
+                                    .clipShape(Circle())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(Text(String(localized: "Retour")))
+
+                            Spacer(minLength: 0)
                         }
-                    )
-                    .padding(.horizontal, 32)
-                    .padding(.top, progressTopPadding)
-                    .zIndex(100)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
+                        .padding(.horizontal, 20)
+                    }
+
+                    if progressVisible {
+                        OnboardingProgressView(
+                            currentSegmentFilled: filledProgressSegment,
+                            totalSegments: OnboardingStep.progressSegmentsCount,
+                            onSelectSegment: { segment in
+                                model.goToProgressSegment(segment)
+                            }
+                        )
+                        .padding(.horizontal, 32)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
                 }
+                .padding(.top, chromeBase)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .zIndex(100)
+                .animation(.spring(response: 0.42, dampingFraction: 0.82), value: progressVisible)
             }
             .ignoresSafeArea(edges: .top)
             .ignoresSafeArea(edges: .bottom)
-            .animation(.spring(response: 0.52, dampingFraction: 0.84), value: model.step)
-            .animation(.spring(response: 0.45, dampingFraction: 0.82), value: currentProgressStep)
+            .animation(.spring(response: 0.52, dampingFraction: 0.84), value: model.currentStep)
+            .animation(.spring(response: 0.45, dampingFraction: 0.82), value: filledProgressSegment)
+            .sheet(isPresented: $model.isAuthSheetPresented) {
+                AuthBottomSheet(
+                    onSignedIn: {
+                        model.closeAuthSheetAndContinueToGender()
+                    },
+                    onSkip: {
+                        model.closeAuthSheetAndContinueToGender()
+                    }
+                )
+                .presentationDragIndicator(.visible)
+                .presentationDetents([.medium, .large])
+            }
         }
     }
 
+    private var filledProgressSegment: Int {
+        model.currentStep.progressSegmentFilled()
+    }
+
+    /// Barre hors hero / paywall / phase « fake analysing ».
+
     private var progressVisible: Bool {
-        model.step != .hero && model.step != .paywall
+        switch model.currentStep {
+        case .hero, .paywall, .fakeAnalyzing:
+            return false
+        default:
+            return true
+        }
+    }
+
+    /// Retour global (paywall : retour dans `OnboardingPaywallView`).
+    private var showsGlobalBackChrome: Bool {
+        switch model.currentStep {
+        case .hero, .paywall:
+            return false
+        default:
+            return true
+        }
     }
 
     // MARK: - Transitions
@@ -98,37 +162,25 @@ struct OnboardingRootView: View {
             removal:   .move(edge: .bottom).combined(with: .opacity)
         )
     }
-
-    // MARK: - Progress (5 segments : genre / zone / notifs / look-scan / résultats)
-
-    private var currentProgressStep: Int {
-        switch model.step {
-        case .hero:          return 0
-        case .gender:        return 1
-        case .country:       return 2
-        case .notifications: return 3
-        case .demo:          return model.isDemoInResultsPhase ? 5 : 4
-        case .paywall:       return 5
-        }
-    }
 }
 
 // MARK: - OnboardingProgressView
 //
-// `currentStep` est 1-based : segments 1…currentStep remplis.
-// Chaque segment est cliquable pour sauter à l’étape correspondante.
+// `currentSegmentFilled` : 1…5 segments remplis.
 
 struct OnboardingProgressView: View {
-    let currentStep: Int
-    var totalSteps: Int = 5
+    /// Segment actuellement « atteint » (1-based).
+    let currentSegmentFilled: Int
+    var totalSegments: Int = OnboardingStep.progressSegmentsCount
     var onSelectSegment: (Int) -> Void = { _ in }
 
-    /// Zone tactile minimale par segment ; la capsule reste alignée en haut (pas centrée verticalement).
     private static let segmentTouchHeight: CGFloat = 44
 
     var body: some View {
+        let filled = max(0, min(totalSegments, currentSegmentFilled))
+
         HStack(alignment: .top, spacing: 6) {
-            ForEach(1...max(1, totalSteps), id: \.self) { segment in
+            ForEach(1...max(1, totalSegments), id: \.self) { segment in
                 Button {
                     onSelectSegment(segment)
                 } label: {
@@ -137,24 +189,22 @@ struct OnboardingProgressView: View {
                             .frame(maxWidth: .infinity, minHeight: Self.segmentTouchHeight)
                             .contentShape(Rectangle())
                         Capsule()
-                            .fill(segment <= currentStep ? BrandColors.primary : Color.primary.opacity(0.15))
+                            .fill(segment <= filled ? BrandColors.primary : Color.primary.opacity(0.15))
                             .frame(height: 4)
                             .frame(maxWidth: .infinity)
                     }
                     .frame(maxWidth: .infinity, minHeight: Self.segmentTouchHeight, alignment: .top)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(Text("Étape \(segment) sur \(totalSteps)"))
-                .accessibilityAddTraits(segment == currentStep ? [.isSelected] : [])
+                .accessibilityLabel(Text("Étape \(segment) sur \(totalSegments)"))
+                .accessibilityAddTraits(segment == filled ? [.isSelected] : [])
             }
         }
-        .animation(.spring(response: 0.42, dampingFraction: 0.78), value: currentStep)
+        .animation(.spring(response: 0.42, dampingFraction: 0.78), value: filled)
     }
 }
 
 // MARK: - OnboardingStepHeader
-//
-// Composant commun à toutes les pages onboarding (sauf hero et paywall).
 
 struct OnboardingStepHeader: View {
     let currentStep: Int

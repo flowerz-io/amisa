@@ -65,6 +65,26 @@ struct OnboardingPaywallView: View {
             }
         }
         .ignoresSafeArea()
+        .safeAreaInset(edge: .top, spacing: 0) {
+            HStack {
+                Button {
+                    model.previous()
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.92))
+                        .padding(10)
+                        .background(Color.white.opacity(0.08))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text(String(localized: "Retour")))
+
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 6)
+        }
         .onAppear {
             withAnimation(.spring(response: 0.65, dampingFraction: 0.82).delay(0.1)) {
                 appeared = true
@@ -188,7 +208,7 @@ struct OnboardingPaywallView: View {
         VStack(spacing: 10) {
             // Primary CTA with shimmer — toujours visible
             Button {
-                model.complete()
+                model.finishPaywallContinue()
             } label: {
                 ZStack {
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -213,7 +233,7 @@ struct OnboardingPaywallView: View {
 
             // Secondary CTA
             Button {
-                model.complete()
+                model.finishPaywallContinue()
             } label: {
                 Text("Continuer avec la version gratuite")
                     .font(.system(size: 14, weight: .medium))

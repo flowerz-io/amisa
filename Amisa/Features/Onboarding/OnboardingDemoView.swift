@@ -2,25 +2,116 @@
 //  OnboardingDemoView.swift
 //  Balibu
 //
-//  Étapes 4+5 — sélection look + scan + résultats.
-//  Data : OnboardingMockData.lookOptions / fakeResults(for:)
+//  Flow « exemple » découpé : choix du look → fausse analyse → faux résultats.
 //
 
 import SwiftUI
 
-// MARK: - Demo phase
+// MARK: - 4. Choix du look
 
-private enum DemoPhase {
-    case picking
-    case scanning
-    case results
+struct OnboardingLookStepView: View {
+    @ObservedObject var model: OnboardingFlowModel
+    @State private var appeared = false
+
+    var body: some View {
+        ZStack {
+            Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                Spacer(minLength: 24)
+
+                OnboardingStepHeader(
+                    currentStep: 4,
+                    title: "Choisis un look\nà analyser",
+                    subtitle: "Amisa va retrouver les pièces similaires pour toi."
+                )
+                .opacity(appeared ? 1 : 0)
+                .offset(y: appeared ? 0 : 20)
+
+                Spacer(minLength: 28)
+
+                lookGrid
+                    .padding(.horizontal, 20)
+
+                Spacer()
+            }
+        }
+        .ignoresSafeArea()
+        .onAppear {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.1)) {
+                appeared = true
+            }
+        }
+    }
+
+    private var lookGrid: some View {
+        let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
+
+        return LazyVGrid(columns: columns, spacing: 12) {
+            ForEach(model.lookOptions) { item in
+                DemoLookCard(item: item) {
+                    model.userSelectedLook(item.id)
+                }
+                .opacity(appeared ? 1 : 0)
+                .offset(y: appeared ? 0 : 30)
+                .animation(
+                    .spring(response: 0.5, dampingFraction: 0.76)
+                        .delay(Double(model.lookOptions.firstIndex(where: { $0.id == item.id }) ?? 0) * 0.07 + 0.2),
+                    value: appeared
+                )
+            }
+        }
+    }
 }
 
-// MARK: - Main view
+// MARK: - 5. Fausse analyse
 
-struct OnboardingDemoView: View {
+struct OnboardingFakeAnalyzingView: View {
     @ObservedObject var model: OnboardingFlowModel
-    @State private var phase: DemoPhase = .picking
+
+    private var selectedLook: OnboardingLookOptionData? {
+        guard let id = model.selectedLookId else { return nil }
+        return OnboardingMockData.lookOptions.first { $0.id == id }
+    }
+
+    var body: some View {
+        ZStack {
+            Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                Spacer(minLength: 24)
+
+                if let look = selectedLook {
+                    ScanAnimationCard(item: look)
+                        .frame(width: 260, height: 300)
+                        .transition(.opacity)
+                } else {
+                    ProgressView()
+                        .padding(.top, 40)
+                }
+
+                VStack(spacing: 6) {
+                    Text("Analyse en cours…")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(.primary)
+
+                    Text("Identification de la pièce principale")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.top, 28)
+
+                Spacer()
+            }
+        }
+        .ignoresSafeArea()
+    }
+}
+
+// MARK: - 6. Faux résultats
+
+struct OnboardingFakeResultsView: View {
+    @ObservedObject var model: OnboardingFlowModel
     @State private var appeared = false
     @State private var showCTA = false
 
@@ -29,14 +120,13 @@ struct OnboardingDemoView: View {
         return OnboardingMockData.lookOptions.first { $0.id == id }
     }
 
-    /// Image du look analysé (étape scan) pour le header résultats.
     private var analyzedLookAssetName: String {
         if let look = selectedLook { return look.imageName }
         return OnboardingMockData.lookOptions.first?.imageName ?? ""
     }
 
     private var currentResults: [OnboardingFakeResultData] {
-        let lookId = model.selectedLookId ?? OnboardingMockData.lookOptions.first?.id ?? "leather"
+        let lookId = model.selectedLookId ?? OnboardingMockData.lookOptions.first?.id ?? ""
         return OnboardingMockData.fakeResults(for: lookId)
     }
 
@@ -44,141 +134,48 @@ struct OnboardingDemoView: View {
         ZStack {
             Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
 
-            switch phase {
-            case .picking:
-                pickerContent
-                    .transition(.opacity)
-            case .scanning:
-                scanContent
-                    .transition(.asymmetric(
-                        insertion: .scale(scale: 0.92).combined(with: .opacity),
-                        removal:   .opacity
-                    ))
-            case .results:
-                resultsContent
-                    .transition(.asymmetric(
-                        insertion: .move(edge: .bottom).combined(with: .opacity),
-                        removal:   .opacity
-                    ))
-            }
-        }
-        .ignoresSafeArea()
-        .animation(.spring(response: 0.52, dampingFraction: 0.84), value: phase)
-        .onChange(of: model.step) { _, newStep in
-            guard newStep == .demo else { return }
-            syncDemoPhaseWithModel()
-        }
-        .onChange(of: model.isDemoInResultsPhase) { _, _ in
-            guard model.step == .demo else { return }
-            syncDemoPhaseWithModel()
-        }
-        .onChange(of: model.progressTapStamp) { _, _ in
-            guard model.step == .demo else { return }
-            syncDemoPhaseWithModel()
+            resultsScrollContent
+
+            analyzeButtonSticky
+                .opacity(showCTA ? 1 : 0)
+                .offset(y: showCTA ? 0 : 20)
+                .animation(.spring(response: 0.45, dampingFraction: 0.82), value: showCTA)
+                .allowsHitTesting(showCTA)
         }
         .onAppear {
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.1)) {
+            showCTA = true
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.82).delay(0.06)) {
                 appeared = true
             }
         }
-    }
-
-    private func syncDemoPhaseWithModel() {
-        if model.isDemoInResultsPhase {
-            if model.selectedLookId == nil {
-                model.selectedLookId = OnboardingMockData.lookOptions.first?.id
-            }
-            showCTA = false
-            withAnimation(.spring(response: 0.52, dampingFraction: 0.84)) {
-                phase = .results
-            }
-        } else {
-            withAnimation(.spring(response: 0.52, dampingFraction: 0.84)) {
-                phase = .picking
-                showCTA = false
-            }
+        .onChange(of: model.currentStep) { _, newStep in
+            guard newStep == .fakeResults else { return }
+            showCTA = true
         }
     }
 
-    private func updateResultsCTAProximity(distanceFromBottom: CGFloat) {
-        guard phase == .results else { return }
-        let threshold: CGFloat = 120
-        let nearBottom = distanceFromBottom <= threshold
-        guard nearBottom != showCTA else { return }
-        withAnimation(.easeOut(duration: 0.28)) {
-            showCTA = nearBottom
-        }
-    }
+    private var resultsScrollContent: some View {
+        let columns = [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
 
-    // MARK: - Phase 1: Picking
+        return ScrollView(.vertical, showsIndicators: true) {
+            VStack(spacing: 10) {
+                demoResultsLightHeader
+                    .padding(.top, 6)
 
-    private var pickerContent: some View {
-        VStack(spacing: 0) {
-            Spacer(minLength: 24)
-
-            OnboardingStepHeader(
-                currentStep: 3,
-                title: "Choisis un look\nà analyser",
-                subtitle: "Amisa va retrouver les pièces similaires pour toi."
-            )
-            .opacity(appeared ? 1 : 0)
-            .offset(y: appeared ? 0 : 20)
-
-            Spacer(minLength: 28)
-
-            lookGrid
-                .padding(.horizontal, 20)
-
-            Spacer()
-        }
-    }
-
-    private var lookGrid: some View {
-        let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
-
-        return LazyVGrid(columns: columns, spacing: 12) {
-            ForEach(model.demoItems) { item in
-                DemoLookCard(item: item) {
-                    selectItem(item)
+                LazyVGrid(columns: columns, spacing: 10) {
+                    ForEach(currentResults) { result in
+                        ResultCard(result: result)
+                    }
                 }
-                .opacity(appeared ? 1 : 0)
-                .offset(y: appeared ? 0 : 30)
-                .animation(
-                    .spring(response: 0.5, dampingFraction: 0.76)
-                        .delay(Double(model.demoItems.firstIndex(where: { $0.id == item.id }) ?? 0) * 0.07 + 0.2),
-                    value: appeared
-                )
+
+                Color.clear.frame(height: 112)
             }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 8)
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 12)
         }
     }
-
-    // MARK: - Phase 2: Scanning
-
-    private var scanContent: some View {
-        VStack(spacing: 0) {
-            Spacer(minLength: 24)
-
-            if let look = selectedLook {
-                ScanAnimationCard(item: look)
-                    .frame(width: 260, height: 300)
-            }
-
-            VStack(spacing: 6) {
-                Text("Analyse en cours…")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(.primary)
-
-                Text("Identification de la pièce principale")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.top, 28)
-
-            Spacer()
-        }
-    }
-
-    // MARK: - Phase 3: Résultats (header clair + scroll ; CTA près du bas)
 
     private var demoResultsLightHeader: some View {
         HStack(alignment: .center, spacing: 14) {
@@ -211,61 +208,23 @@ struct OnboardingDemoView: View {
         }
     }
 
-    private var resultsContent: some View {
-        let columns = [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
-
-        return VStack(spacing: 0) {
-            demoResultsLightHeader
-                .padding(.horizontal, 16)
-                .padding(.top, 6)
-                .padding(.bottom, 10)
-
-            NoBounceScrollView(
-                bounces: true,
-                onDistanceFromContentBottom: updateResultsCTAProximity
-            ) {
-                LazyVGrid(columns: columns, spacing: 10) {
-                    ForEach(currentResults) { result in
-                        ResultCard(result: result)
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.bottom, showCTA ? 118 : 28)
-            }
-        }
-        .overlay(alignment: .bottom) {
-            if showCTA {
-                ctaOverlay
-                    .transition(
-                        .asymmetric(
-                            insertion: .move(edge: .bottom).combined(with: .opacity),
-                            removal: .move(edge: .bottom).combined(with: .opacity)
-                        )
-                    )
-            }
-        }
-    }
-
-    // MARK: - CTA overlay (apparaît après scroll)
-
-    private var ctaOverlay: some View {
+    /// CTA toujours en bas d’écran (scroll indépendant).
+    private var analyzeButtonSticky: some View {
         VStack(spacing: 0) {
-            // Gradient fondu transparent → fond
+            Spacer(minLength: 0)
             LinearGradient(
                 colors: [
                     Color(uiColor: .systemGroupedBackground).opacity(0),
-                    Color(uiColor: .systemGroupedBackground).opacity(0.96)
+                    Color(uiColor: .systemGroupedBackground).opacity(0.97),
                 ],
                 startPoint: .top,
                 endPoint: .bottom
             )
-            .frame(height: 72)
-            .allowsHitTesting(false)
+            .frame(height: 48)
 
-            // Bouton sur fond mat
             analyzeButton
                 .padding(.horizontal, 24)
-                .padding(.top, 8)
+                .padding(.top, 4)
                 .padding(.bottom, 36)
                 .background(Color(uiColor: .systemGroupedBackground))
         }
@@ -273,7 +232,7 @@ struct OnboardingDemoView: View {
 
     private var analyzeButton: some View {
         Button {
-            model.advance(to: .paywall)
+            model.userRequestedPaywallFromFakeResults()
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "camera.fill")
@@ -290,27 +249,9 @@ struct OnboardingDemoView: View {
         }
         .buttonStyle(BouncyButtonStyle())
     }
-
-    // MARK: - Actions
-
-    private func selectItem(_ item: OnboardingLookOptionData) {
-        showCTA = false                    // reset CTA pour la prochaine session résultats
-        model.isDemoInResultsPhase = false
-        model.selectedLookId = item.id
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.84)) {
-            phase = .scanning
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.6) {
-            showCTA = false
-            withAnimation(.spring(response: 0.52, dampingFraction: 0.84)) {
-                phase = .results
-                model.isDemoInResultsPhase = true
-            }
-        }
-    }
 }
 
-// MARK: - Demo look card
+// MARK: - Carte look
 
 private struct DemoLookCard: View {
     let item: OnboardingLookOptionData
@@ -358,8 +299,7 @@ private struct DemoLookCard: View {
     }
 }
 
-// MARK: - Scan animation card
-// Utilise item.scanLabel (champ indépendant de subtitle)
+// MARK: - Scan animation
 
 private struct ScanAnimationCard: View {
     let item: OnboardingLookOptionData
@@ -400,7 +340,6 @@ private struct ScanAnimationCard: View {
             VStack {
                 Spacer()
                 if focusVisible {
-                    // Pastille avec scanLabel (pas subtitle)
                     HStack(spacing: 5) {
                         Image(systemName: "viewfinder")
                             .font(.system(size: 11, weight: .semibold))
@@ -435,8 +374,6 @@ private struct ScanAnimationCard: View {
         }
     }
 }
-
-// MARK: - Scan corners
 
 private struct ScanCorners: View {
     let visible: Bool
@@ -488,12 +425,12 @@ private struct ScanCorners: View {
     }
 }
 
-// MARK: - Result card (non cliquable)
+// MARK: - Carte résultat
 
 private struct ResultCard: View {
     let result: OnboardingFakeResultData
 
-    private let resultProviderLogoSize: CGFloat = 18  // 12 × 1.5
+    private let resultProviderLogoSize: CGFloat = 18
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {

@@ -122,10 +122,7 @@ struct OnboardingGenderView: View {
 
     private func selectGender(_ gender: OnboardingGender) {
         withAnimation(.spring(response: 0.38, dampingFraction: 0.72)) {
-            model.gender = gender
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
-            model.advance()
+            model.userSelectedGender(gender)
         }
     }
 }

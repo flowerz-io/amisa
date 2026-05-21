@@ -102,7 +102,7 @@ struct OnboardingCountryView: View {
 
     private var skipButton: some View {
         Button {
-            model.advance()
+            model.userSkippedCountryStep()
         } label: {
             Text("Passer cette étape")
                 .font(.system(size: 15, weight: .medium))
@@ -113,9 +113,6 @@ struct OnboardingCountryView: View {
     // MARK: - Action
 
     private func confirmSelection() {
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.70)) {
-            model.country = pickerSelection
-        }
-        model.advance()
+        model.userCommittedCountry(pickerSelection)
     }
 }
