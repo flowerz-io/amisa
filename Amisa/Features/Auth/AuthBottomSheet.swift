@@ -81,7 +81,6 @@ struct AuthCoordinatorCore: View {
         .animation(.spring(response: 0.36, dampingFraction: 0.82), value: screen)
         .onChange(of: auth.isAuthenticated) { _, ok in
             guard ok else { return }
-            print("[Onboarding] auth success")
             Task { await MainActor.run {
                 closeModalOnly()
                 onAuthenticated()

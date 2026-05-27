@@ -2,13 +2,17 @@
 //  OnboardingFlowModel.swift
 //  Balibu
 //
-//  Source unique de vérité — flux strict : hero → (sheet auth) → gender → … → paywall.
+//  Moteur onboarding : une seule source de vérité (`currentStep`), transitions contrôlées.
 //
 
 import Combine
 import SwiftUI
 
-// MARK: - Étapes (ordre strict, linéaire)
+// MARK: - Modèle look (alias demandé « DemoLook »)
+
+typealias DemoLook = OnboardingLookOptionData
+
+// MARK: - Étapes
 
 enum OnboardingStep: Int, CaseIterable {
     case hero = 0
@@ -19,21 +23,31 @@ enum OnboardingStep: Int, CaseIterable {
     case fakeAnalyzing
     case fakeResults
     case paywall
+    case completed
 
-    /// Barre de progression : gender…fakeResults — 5 segments (sans hero / paywall / phase analyse).
-    static let progressSegmentsCount: Int = 5
-
-    /// Segment rempli 1…5 ; 0 si pas de barre.
-    func progressSegmentFilled() -> Int {
+    /// Segments progress (1…5). `0` = pas de segment affiché pour cette étape.
+    var progressSegmentFilled: Int {
         switch self {
-        case .hero, .paywall: return 0
         case .gender: return 1
         case .country: return 2
         case .notifications: return 3
-        case .look, .fakeAnalyzing: return 4
+        case .look: return 4
         case .fakeResults: return 5
+        default: return 0
         }
     }
+
+    /// Barre visible uniquement sur ces étapes (pas hero, paywall, completed, fakeAnalyzing).
+    var showsProgressBar: Bool {
+        switch self {
+        case .gender, .country, .notifications, .look, .fakeResults:
+            return true
+        default:
+            return false
+        }
+    }
+
+    static let progressSegmentsCount: Int = 5
 }
 
 enum OnboardingGender: String {
@@ -89,218 +103,339 @@ enum OnboardingCountry: String, CaseIterable, Identifiable {
     }
 }
 
-// MARK: - Flow model
+// MARK: - Origine d’une transition (évite doubles chemins fantômes)
+
+private enum TransitionOrigin {
+    /// `goTo(_:)` public depuis une action utilisateur générique (très restreint).
+    case userGoTo
+    /// Actions dédiées du flow (genre, pays, notifications, look, résultats…).
+    case flowAction
+    case userBack
+    case userProgressTap
+    /// Après OAuth / lien mail — hero → genre uniquement.
+    case authSuccess
+    /// Fin du délai d’analyse — fakeAnalyzing → fakeResults uniquement.
+    case analyzeTimer
+    /// Fin onboarding — paywall → completed uniquement.
+    case completePipeline
+    /// Réparation : selectedLook nil en fin de timer.
+    case recoverInvalidState
+}
 
 @MainActor
 final class OnboardingFlowModel: ObservableObject {
+    /// Source unique de vérité.
     @Published private(set) var currentStep: OnboardingStep = .hero
 
-    /// Sheet auth sur l’écran hero uniquement.
     @Published var isAuthSheetPresented: Bool = false
 
     @Published var gender: OnboardingGender?
     @Published var country: OnboardingCountry?
 
-    @Published private(set) var selectedLookId: String?
+    /// Look choisi pour la séquence analyse / résultats (obligatoire pour fakeResults).
+    @Published private(set) var selectedLook: DemoLook?
 
-    private var fakeAnalysisTask: Task<Void, Never>?
+    private var analyzeTask: Task<Void, Never>?
 
     let onComplete: () -> Void
 
     init(onComplete: @escaping () -> Void) {
         self.onComplete = onComplete
-        logStep()
+        logCurrentStep()
     }
 
-    var lookOptions: [OnboardingLookOptionData] {
+    var demoLooks: [DemoLook] {
         OnboardingMockData.lookOptions
     }
 
-    // MARK: - Auth (sheet)
+    // MARK: - API publique (aucune mutation de `currentStep` hors fichier)
+
+    /// Point d’entrée unique « aller à » depuis l’UI (transitions très encadrées).
+    func goTo(_ step: OnboardingStep, animated: Bool = true) {
+        applyTransition(to: step, origin: .userGoTo, animated: animated)
+    }
+
+    func next(animated: Bool = true) {
+        switch currentStep {
+        case .fakeResults:
+            applyTransition(to: .paywall, origin: .flowAction, animated: animated)
+        default:
+            print("[FLOW] next() ignored at step", currentStep)
+        }
+    }
+
+    func previous(animated: Bool = true) {
+        guard let target = backTarget(from: currentStep) else {
+            print("[FLOW] previous() ignored at step", currentStep)
+            return
+        }
+        applyTransition(to: target, origin: .userBack, animated: animated)
+    }
+
+    func completeOnboarding(animated: Bool = false) {
+        applyTransition(to: .completed, origin: .completePipeline, animated: animated)
+    }
+
+    // MARK: - Auth (pas une étape)
 
     func presentAuthSheet() {
-        print("[Onboarding] auth sheet opened")
         guard currentStep == .hero else { return }
         isAuthSheetPresented = true
     }
 
-    func closeAuthSheetAndContinueToGender() {
+    func dismissAuthSheet() {
         isAuthSheetPresented = false
-        guard currentStep == .hero else {
-            print("[Onboarding] closeAuthSheet ignored step=\(currentStep)")
-            return
-        }
-        goTo(.gender, animated: true, context: "auth sheet → gender")
     }
 
-    // MARK: - Étapes explicites (pas de navigation locale dans les vues)
+    /// Succès auth ou « continuer sans compte » : fermer la sheet puis hero → gender.
+    func notifyAuthSuccessAndGoToGender(animated: Bool = true) {
+        print("[FLOW] auth success")
+        dismissAuthSheet()
+        applyTransition(to: .gender, origin: .authSuccess, animated: animated)
+    }
 
-    func userSelectedGender(_ value: OnboardingGender) {
-        gender = value
-        print("[Onboarding] selectedGender=\(value.rawValue)")
+    // MARK: - Saisies (appellent `applyTransition`, jamais `currentStep` directement)
+
+    func submitGenderAndContinue(_ value: OnboardingGender, animated: Bool = true) {
         guard currentStep == .gender else { return }
-        goTo(.country, animated: true, context: "gender selected")
+        gender = value
+        print("[FLOW] gender = \(value.rawValue)")
+        applyTransition(to: .country, origin: .flowAction, animated: animated)
     }
 
-    func userCommittedCountry(_ value: OnboardingCountry) {
+    func submitCountryAndContinue(_ value: OnboardingCountry, animated: Bool = true) {
+        guard currentStep == .country else { return }
         country = value
-        print("[Onboarding] selectedCountry=\(value.rawValue)")
-        guard currentStep == .country else { return }
-        goTo(.notifications, animated: true, context: "country committed")
+        print("[FLOW] country = \(value.rawValue)")
+        applyTransition(to: .notifications, origin: .flowAction, animated: animated)
     }
 
-    func userSkippedCountryStep() {
-        print("[Onboarding] selectedCountry=skipped")
+    func skipCountry(animated: Bool = true) {
         guard currentStep == .country else { return }
-        goTo(.notifications, animated: true, context: "country skipped")
+        applyTransition(to: .notifications, origin: .flowAction, animated: animated)
     }
 
-    func notificationChoiceCompleted(userChoseActivateFlow: Bool) {
-        let label = userChoseActivateFlow ? "activate" : "later"
-        print("[Onboarding] notification choice=\(label)")
+    func completeNotificationsStep(activateFlow: Bool, animated: Bool = true) {
         guard currentStep == .notifications else { return }
-        selectedLookId = nil
-        cancelFakeAnalysisTask()
-        goTo(.look, animated: true, context: "notifications → look")
+        print("[FLOW] notification choice = \(activateFlow ? "activate" : "later")")
+        selectedLook = nil
+        print("[FLOW] selectedLook = \(selectedLook?.id ?? "nil")")
+        applyTransition(to: .look, origin: .flowAction, animated: animated)
     }
 
-    func userSelectedLook(_ lookId: String) {
-        guard currentStep == .look else { return }
-        selectedLookId = lookId
-        print("[Onboarding] selectedLook=\(lookId)")
-        goTo(.fakeAnalyzing, animated: true, context: "look → fake analyzing", preservePendingAnalysis: true)
-        startFakeAnalysisSequence()
+    func selectLook(_ look: DemoLook, animated: Bool = true) {
+        guard currentStep == .look else {
+            print("[FLOW] selectLook ignored at step", currentStep)
+            return
+        }
+
+        print("[FLOW] TAP LOOK =", look.id, "from step =", currentStep)
+        selectedLook = look
+        print("[FLOW] selectedLook =", look.id)
+
+        applyTransition(to: .fakeAnalyzing, origin: .flowAction, animated: animated)
     }
 
-    func userRequestedPaywallFromFakeResults() {
-        guard currentStep == .fakeResults else { return }
-        goTo(.paywall, animated: true, context: "fake results → paywall")
-    }
+    // MARK: - Barre de progression
 
-    func finishPaywallContinue() {
-        print("[Onboarding] completed")
-        cancelFakeAnalysisTask()
-        onComplete()
-    }
-
-    // MARK: - Progress bar (tap)
-
-    func goToProgressSegment(_ segment: Int) {
+    func tapProgressSegment(_ segment: Int) {
         guard segment >= 1, segment <= OnboardingStep.progressSegmentsCount else { return }
-        print("[Onboarding] progress tap segment=\(segment)")
-        cancelFakeAnalysisTask()
+        guard currentStep.showsProgressBar else { return }
 
+        if currentStep == .look || currentStep == .fakeAnalyzing {
+            print("[FLOW] progress tap ignored during look/analyzing")
+            return
+        }
+
+        let target: OnboardingStep
         switch segment {
-        case 1:
-            goTo(.gender, animated: true, context: "progress→gender")
-        case 2:
-            goTo(.country, animated: true, context: "progress→country")
-        case 3:
-            goTo(.notifications, animated: true, context: "progress→notifications")
-        case 4:
-            selectedLookId = nil
-            goTo(.look, animated: true, context: "progress→look")
-        case 5:
-            if let id = selectedLookId, !id.isEmpty {
-                goTo(.fakeResults, animated: true, context: "progress→fakeResults")
-            } else {
-                goTo(.look, animated: true, context: "progress→look (no look)")
-            }
-        default:
-            break
+        case 1: target = .gender
+        case 2: target = .country
+        case 3: target = .notifications
+        case 4: target = .look
+        case 5: target = (selectedLook != nil) ? .fakeResults : .look
+        default: return
         }
+
+        applyTransition(to: target, origin: .userProgressTap, animated: true)
     }
 
-    // MARK: - Retour linéaire
+    // MARK: - Moteur
 
-    func previous() {
-        cancelFakeAnalysisTask()
+    private func applyTransition(to dest: OnboardingStep, origin: TransitionOrigin, animated: Bool) {
         let from = currentStep
-        print("[Onboarding] previous from=\(from)")
 
-        switch currentStep {
-        case .hero:
-            return
-        case .gender:
-            goTo(.hero, animated: true, context: "back→hero")
-        case .country:
-            goTo(.gender, animated: true, context: "back→gender")
-        case .notifications:
-            goTo(.country, animated: true, context: "back→country")
-        case .look:
-            goTo(.notifications, animated: true, context: "back→notifications")
-        case .fakeAnalyzing:
-            goTo(.look, animated: true, context: "back→look from analyzing")
-        case .fakeResults:
-            cancelFakeAnalysisTask()
-            goTo(.look, animated: true, context: "back→look from results")
-        case .paywall:
-            goTo(.fakeResults, animated: true, context: "back→fakeResults")
-        }
-    }
-
-    // MARK: - Navigation interne
-
-    private func goTo(
-        _ step: OnboardingStep,
-        animated: Bool,
-        context: String,
-        preservePendingAnalysis: Bool = false
-    ) {
-        let from = currentStep
-        if step == currentStep {
-            print("[Onboarding] goTo noop already at \(step) (\(context))")
+        guard from != dest else {
+            print("[FLOW] transition noop", from, "→", dest)
             return
         }
 
-        if !(from == .look && step == .fakeAnalyzing && preservePendingAnalysis) {
-            cancelFakeAnalysisTask()
+        guard isAllowedTransition(from: from, to: dest, origin: origin) else {
+            print("[FLOW] transition REJECTED", from, "→", dest)
+            return
         }
 
-        print("[Onboarding] next from=\(from) to=\(step) (\(context))")
+        sideEffectsLeaving(from: from, to: dest, origin: origin)
+        cancelAnalyzeTaskIfLeavingAnalyzing(from: from, to: dest)
+
+        print("[FLOW] transition", from, "→", dest)
 
         if animated {
             withAnimation(.spring(response: 0.52, dampingFraction: 0.84)) {
-                currentStep = step
+                currentStep = dest
             }
         } else {
-            currentStep = step
+            currentStep = dest
         }
 
-        switch step {
-        case .paywall:
-            print("[Onboarding] paywall shown")
+        logCurrentStep()
+
+        if origin == .analyzeTimer {
+            cancelAnalyzeTask()
+        }
+
+        if dest == .fakeAnalyzing {
+            startFakeAnalyzingSequence()
+        }
+
+        if dest == .completed {
+            finalizeCompleted()
+        }
+
+        sideEffectsEntering(dest: dest, origin: origin)
+    }
+
+    private func finalizeCompleted() {
+        cancelAnalyzeTask()
+        dismissAuthSheet()
+        print("[FLOW] completed")
+        onComplete()
+    }
+
+    private func logCurrentStep() {
+        print("[FLOW] currentStep = \(currentStep)")
+        print("[FLOW] selectedLook = \(selectedLook?.id ?? "nil")")
+    }
+
+    // MARK: - Règles de validité
+
+    private func isAllowedTransition(from: OnboardingStep, to: OnboardingStep, origin: TransitionOrigin) -> Bool {
+        switch origin {
+        case .authSuccess:
+            return from == .hero && to == .gender
+
+        case .analyzeTimer:
+            return from == .fakeAnalyzing && to == .fakeResults && selectedLook != nil
+
+        case .completePipeline:
+            return from == .paywall && to == .completed
+
+        case .recoverInvalidState:
+            return from == .fakeAnalyzing && to == .look
+
+        case .userBack:
+            return backTarget(from: from) == to
+
+        case .flowAction:
+            switch (from, to) {
+            case (.gender, .country): return true
+            case (.country, .notifications): return true
+            case (.notifications, .look): return true
+            case (.look, .fakeAnalyzing): return selectedLook != nil
+            case (.fakeAnalyzing, .fakeResults): return false /// uniquement via timer
+            case (.fakeResults, .paywall): return selectedLook != nil
+            default: return false
+            }
+
+        case .userGoTo:
+            /// Très peu de sauts directs autorisés ; `look → fakeAnalyzing` uniquement via `selectLook` (flowAction).
+            switch (from, to) {
+            case (.fakeResults, .paywall): return selectedLook != nil
+            default: return false
+            }
+
+        case .userProgressTap:
+            guard from.showsProgressBar else { return false }
+            switch to {
+            case .gender, .country, .notifications, .look: return true
+            case .fakeResults: return selectedLook != nil && from.rawValue >= OnboardingStep.look.rawValue
+            default: return false
+            }
+        }
+    }
+
+    private func backTarget(from: OnboardingStep) -> OnboardingStep? {
+        switch from {
+        case .gender: return .hero
+        case .country: return .gender
+        case .notifications: return .country
+        case .look: return .notifications
+        case .fakeAnalyzing: return .look
+        case .fakeResults: return .look
+        case .paywall: return .fakeResults
+        default:
+            return nil
+        }
+    }
+
+    private func sideEffectsLeaving(from: OnboardingStep, to: OnboardingStep, origin: TransitionOrigin) {
+        switch (from, to) {
+        case (.fakeResults, .look), (.fakeAnalyzing, .look):
+            if origin == .userBack || origin == .recoverInvalidState {
+                selectedLook = nil
+                print("[FLOW] selectedLook =", selectedLook?.id ?? "nil")
+            }
+        case (.notifications, .look):
+            if origin != .userBack {
+                selectedLook = nil
+                print("[FLOW] selectedLook =", selectedLook?.id ?? "nil")
+            }
         default:
             break
         }
-
-        logStep()
     }
 
-    private func logStep() {
-        print("[Onboarding] step=\(currentStep)")
+    private func sideEffectsEntering(dest: OnboardingStep, origin: TransitionOrigin) {
+        _ = dest
+        _ = origin
     }
 
-    // MARK: - Fake analyse
+    // MARK: - Analyse fictive
 
-    private func cancelFakeAnalysisTask() {
-        fakeAnalysisTask?.cancel()
-        fakeAnalysisTask = nil
+    private func cancelAnalyzeTaskIfLeavingAnalyzing(from: OnboardingStep, to: OnboardingStep) {
+        if from == .fakeAnalyzing && to != .fakeResults {
+            cancelAnalyzeTask()
+        }
     }
 
-    private func startFakeAnalysisSequence() {
-        cancelFakeAnalysisTask()
+    private func cancelAnalyzeTask() {
+        analyzeTask?.cancel()
+        analyzeTask = nil
+    }
+
+    private func startFakeAnalyzingSequence() {
+        cancelAnalyzeTask()
         guard currentStep == .fakeAnalyzing else { return }
-        print("[Onboarding] fake analysis started")
+        guard selectedLook != nil else {
+            applyTransition(to: .look, origin: .recoverInvalidState, animated: true)
+            return
+        }
 
-        fakeAnalysisTask = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: 2_600_000_000)
+        print("[FLOW] fake analyzing start")
+
+        analyzeTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(1.6))
             await MainActor.run {
                 guard let self else { return }
                 guard !Task.isCancelled else { return }
                 guard self.currentStep == .fakeAnalyzing else { return }
-                print("[Onboarding] fake analysis completed")
-                self.goTo(.fakeResults, animated: true, context: "analysis done → fake results")
+                if self.selectedLook == nil {
+                    print("[FLOW] fake analyzing end → abort (nil look)")
+                    self.applyTransition(to: .look, origin: .recoverInvalidState, animated: true)
+                    return
+                }
+                print("[FLOW] fake analyzing end")
+                self.applyTransition(to: .fakeResults, origin: .analyzeTimer, animated: true)
             }
         }
     }
@@ -309,7 +444,6 @@ final class OnboardingFlowModel: ObservableObject {
 // MARK: - Image asset helper
 
 /// Charge une image depuis Assets.xcassets.
-/// Si l'asset est absent, affiche un placeholder propre (sans crash).
 struct OnboardingAssetImageView: View {
     let imageName: String
     var contentMode: ContentMode = .fill

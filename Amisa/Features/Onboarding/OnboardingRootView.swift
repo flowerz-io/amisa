@@ -42,7 +42,7 @@ struct OnboardingRootView: View {
                         NotificationOnboardingStepView(model: model)
                             .transition(slideHorizontal)
                     case .look:
-                        OnboardingLookStepView(model: model)
+                        OnboardingLookView(model: model)
                             .transition(slideHorizontal)
                     case .fakeAnalyzing:
                         OnboardingFakeAnalyzingView(model: model)
@@ -53,6 +53,9 @@ struct OnboardingRootView: View {
                     case .paywall:
                         OnboardingPaywallView(model: model)
                             .transition(paywallTransition)
+                    case .completed:
+                        Color.clear
+                            .transition(.opacity)
                     }
                 }
                 .padding(.top, contentTopInset)
@@ -84,7 +87,7 @@ struct OnboardingRootView: View {
                             currentSegmentFilled: filledProgressSegment,
                             totalSegments: OnboardingStep.progressSegmentsCount,
                             onSelectSegment: { segment in
-                                model.goToProgressSegment(segment)
+                                model.tapProgressSegment(segment)
                             }
                         )
                         .padding(.horizontal, 32)
@@ -103,10 +106,10 @@ struct OnboardingRootView: View {
             .sheet(isPresented: $model.isAuthSheetPresented) {
                 AuthBottomSheet(
                     onSignedIn: {
-                        model.closeAuthSheetAndContinueToGender()
+                        model.notifyAuthSuccessAndGoToGender()
                     },
                     onSkip: {
-                        model.closeAuthSheetAndContinueToGender()
+                        model.notifyAuthSuccessAndGoToGender()
                     }
                 )
                 .presentationDragIndicator(.visible)
@@ -116,24 +119,20 @@ struct OnboardingRootView: View {
     }
 
     private var filledProgressSegment: Int {
-        model.currentStep.progressSegmentFilled()
+        model.currentStep.progressSegmentFilled
     }
 
-    /// Barre hors hero / paywall / phase « fake analysing ».
+    /// Barre : gender … fakeResults uniquement.
 
     private var progressVisible: Bool {
-        switch model.currentStep {
-        case .hero, .paywall, .fakeAnalyzing:
-            return false
-        default:
-            return true
-        }
+        model.currentStep.showsProgressBar
     }
 
-    /// Retour global (paywall : retour dans `OnboardingPaywallView`).
+    /// Retour global (hero / paywall / completed exclus ; paywall a aussi un retour interne).
+
     private var showsGlobalBackChrome: Bool {
         switch model.currentStep {
-        case .hero, .paywall:
+        case .hero, .paywall, .completed:
             return false
         default:
             return true

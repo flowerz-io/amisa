@@ -53,7 +53,7 @@ struct OnboardingHeroCardData {
 
 /// Un look sélectionnable sur la page démo.
 struct OnboardingLookOptionData: Identifiable {
-    let id: String              // Clé stable — ex: "leather", "sneaker"
+    let id: String              // Clé stable — ex: leather, sneakerhead, urbanCool, smartCasual
     let title: String
     let subtitle: String        // Sous-titre de la carte look
     let imageName: String       // Asset name — ex: "onboarding_look_leather"
@@ -108,10 +108,10 @@ enum OnboardingMockData {
     // MARK: Look options (4 styles à sélectionner)
 
     static let lookOptions: [OnboardingLookOptionData] = [
-        OnboardingLookOptionData(id: "leather", title: "Look Cuir",    subtitle: "Veste en cuir",  imageName: "onboarding_look_leather", scanLabel: "option 1"),
-        OnboardingLookOptionData(id: "sneaker", title: "Sneakerhead",  subtitle: "Sneakers",        imageName: "onboarding_look_sneaker", scanLabel: "option 2"),
-        OnboardingLookOptionData(id: "cap",     title: "Urban Cool",   subtitle: "Casquette",       imageName: "onboarding_look_cap",     scanLabel: "option 3"),
-        OnboardingLookOptionData(id: "shirt",   title: "Smart Casual", subtitle: "Chemise oxford",  imageName: "onboarding_look_shirt",   scanLabel: "option 4"),
+        OnboardingLookOptionData(id: "leather", title: "Look Cuir", subtitle: "Veste en cuir", imageName: "onboarding_look_leather", scanLabel: "option 1"),
+        OnboardingLookOptionData(id: "sneakerhead", title: "Sneakerhead", subtitle: "Sneakers", imageName: "onboarding_look_sneaker", scanLabel: "option 2"),
+        OnboardingLookOptionData(id: "urbanCool", title: "Urban Cool", subtitle: "Casquette", imageName: "onboarding_look_cap", scanLabel: "option 3"),
+        OnboardingLookOptionData(id: "smartCasual", title: "Smart Casual", subtitle: "Chemise oxford", imageName: "onboarding_look_shirt", scanLabel: "option 4"),
     ]
 
     // MARK: Fake results — filtrage par lookId
@@ -125,9 +125,9 @@ enum OnboardingMockData {
     // Les imageName cyclent sur 6 stubs : onboarding_result_{look}_01 … _06
 
     private static let allFakeResults: [OnboardingFakeResultData] = leatherResults
-        + sneakerResults
-        + capResults
-        + shirtResults
+        + sneakerheadResults
+        + urbanCoolResults
+        + smartCasualResults
 
     // MARK: Leather results
 
@@ -160,8 +160,8 @@ enum OnboardingMockData {
 
     // MARK: Sneaker results
 
-    private static let sneakerResults: [OnboardingFakeResultData] = makeResults(
-        lookId: "sneaker",
+    private static let sneakerheadResults: [OnboardingFakeResultData] = makeResults(
+        lookId: "sneakerhead",
         prefix: "onboarding_result_sneaker",
         items: [
             ("Nike",        "Air Force 1 '07",         "89 €", "42",  "provider_vinted"),
@@ -189,8 +189,8 @@ enum OnboardingMockData {
 
     // MARK: Cap results
 
-    private static let capResults: [OnboardingFakeResultData] = makeResults(
-        lookId: "cap",
+    private static let urbanCoolResults: [OnboardingFakeResultData] = makeResults(
+        lookId: "urbanCool",
         prefix: "onboarding_result_cap",
         items: [
             ("Supreme",         "Casquette 6-panel",      "65 €", nil, "provider_vinted"),
@@ -218,8 +218,8 @@ enum OnboardingMockData {
 
     // MARK: Shirt results
 
-    private static let shirtResults: [OnboardingFakeResultData] = makeResults(
-        lookId: "shirt",
+    private static let smartCasualResults: [OnboardingFakeResultData] = makeResults(
+        lookId: "smartCasual",
         prefix: "onboarding_result_shirt",
         items: [
             ("UNIQLO",         "Oxford shirt blanc",      "29 €", "M",  "provider_vinted"),

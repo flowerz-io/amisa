@@ -2,76 +2,17 @@
 //  OnboardingDemoView.swift
 //  Balibu
 //
-//  Flow « exemple » découpé : choix du look → fausse analyse → faux résultats.
-//
+//  look → faux analyse → faux résultats. Aucune navigation : tout passe par le modèle.
 
 import SwiftUI
 
-// MARK: - 4. Choix du look
-
-struct OnboardingLookStepView: View {
-    @ObservedObject var model: OnboardingFlowModel
-    @State private var appeared = false
-
-    var body: some View {
-        ZStack {
-            Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
-
-            VStack(spacing: 0) {
-                Spacer(minLength: 24)
-
-                OnboardingStepHeader(
-                    currentStep: 4,
-                    title: "Choisis un look\nà analyser",
-                    subtitle: "Amisa va retrouver les pièces similaires pour toi."
-                )
-                .opacity(appeared ? 1 : 0)
-                .offset(y: appeared ? 0 : 20)
-
-                Spacer(minLength: 28)
-
-                lookGrid
-                    .padding(.horizontal, 20)
-
-                Spacer()
-            }
-        }
-        .ignoresSafeArea()
-        .onAppear {
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.1)) {
-                appeared = true
-            }
-        }
-    }
-
-    private var lookGrid: some View {
-        let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
-
-        return LazyVGrid(columns: columns, spacing: 12) {
-            ForEach(model.lookOptions) { item in
-                DemoLookCard(item: item) {
-                    model.userSelectedLook(item.id)
-                }
-                .opacity(appeared ? 1 : 0)
-                .offset(y: appeared ? 0 : 30)
-                .animation(
-                    .spring(response: 0.5, dampingFraction: 0.76)
-                        .delay(Double(model.lookOptions.firstIndex(where: { $0.id == item.id }) ?? 0) * 0.07 + 0.2),
-                    value: appeared
-                )
-            }
-        }
-    }
-}
-
-// MARK: - 5. Fausse analyse
+// MARK: - Fausse analyse
 
 struct OnboardingFakeAnalyzingView: View {
     @ObservedObject var model: OnboardingFlowModel
 
-    private var selectedLook: OnboardingLookOptionData? {
-        guard let id = model.selectedLookId else { return nil }
-        return OnboardingMockData.lookOptions.first { $0.id == id }
+    private var selectedLook: DemoLook? {
+        model.selectedLook
     }
 
     var body: some View {
@@ -108,49 +49,56 @@ struct OnboardingFakeAnalyzingView: View {
     }
 }
 
-// MARK: - 6. Faux résultats
+// MARK: - Faux résultats
 
 struct OnboardingFakeResultsView: View {
     @ObservedObject var model: OnboardingFlowModel
     @State private var appeared = false
     @State private var showCTA = false
 
-    private var selectedLook: OnboardingLookOptionData? {
-        guard let id = model.selectedLookId else { return nil }
-        return OnboardingMockData.lookOptions.first { $0.id == id }
+    private var selectedLook: DemoLook? {
+        model.selectedLook
     }
 
     private var analyzedLookAssetName: String {
-        if let look = selectedLook { return look.imageName }
-        return OnboardingMockData.lookOptions.first?.imageName ?? ""
+        selectedLook?.imageName ?? ""
     }
 
     private var currentResults: [OnboardingFakeResultData] {
-        let lookId = model.selectedLookId ?? OnboardingMockData.lookOptions.first?.id ?? ""
-        return OnboardingMockData.fakeResults(for: lookId)
+        guard let look = selectedLook else { return [] }
+        return OnboardingMockData.fakeResults(for: look.id)
     }
 
     var body: some View {
         ZStack {
             Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
 
-            resultsScrollContent
-
-            analyzeButtonSticky
-                .opacity(showCTA ? 1 : 0)
-                .offset(y: showCTA ? 0 : 20)
-                .animation(.spring(response: 0.45, dampingFraction: 0.82), value: showCTA)
-                .allowsHitTesting(showCTA)
-        }
-        .onAppear {
-            showCTA = true
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.82).delay(0.06)) {
-                appeared = true
+            if selectedLook == nil {
+                VStack(spacing: 16) {
+                    ProgressView()
+                    Text(String(localized: "Choix du look manquant"))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                ZStack {
+                    resultsScrollContent
+                    analyzeButtonSticky
+                        .opacity(showCTA ? 1 : 0)
+                        .offset(y: showCTA ? 0 : 20)
+                        .animation(.spring(response: 0.45, dampingFraction: 0.82), value: showCTA)
+                        .allowsHitTesting(showCTA)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .onChange(of: model.currentStep) { _, newStep in
-            guard newStep == .fakeResults else { return }
-            showCTA = true
+        .onAppear {
+            showCTA = selectedLook != nil
+            if selectedLook != nil {
+                withAnimation(.spring(response: 0.6, dampingFraction: 0.82).delay(0.06)) {
+                    appeared = true
+                }
+            }
         }
     }
 
@@ -208,7 +156,6 @@ struct OnboardingFakeResultsView: View {
         }
     }
 
-    /// CTA toujours en bas d’écran (scroll indépendant).
     private var analyzeButtonSticky: some View {
         VStack(spacing: 0) {
             Spacer(minLength: 0)
@@ -232,7 +179,7 @@ struct OnboardingFakeResultsView: View {
 
     private var analyzeButton: some View {
         Button {
-            model.userRequestedPaywallFromFakeResults()
+            model.next()
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "camera.fill")
@@ -251,58 +198,10 @@ struct OnboardingFakeResultsView: View {
     }
 }
 
-// MARK: - Carte look
-
-private struct DemoLookCard: View {
-    let item: OnboardingLookOptionData
-    let action: () -> Void
-    @State private var isPressed = false
-
-    var body: some View {
-        Button(action: action) {
-            ZStack(alignment: .bottomLeading) {
-                OnboardingAssetImageView(imageName: item.imageName)
-                    .frame(height: 170)
-                    .clipped()
-
-                LinearGradient(
-                    colors: [.clear, .black.opacity(0.65)],
-                    startPoint: .center,
-                    endPoint: .bottom
-                )
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(item.title)
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(.white)
-                    Text(item.subtitle)
-                        .font(.system(size: 11))
-                        .foregroundStyle(.white.opacity(0.65))
-                }
-                .padding(10)
-            }
-            .frame(height: 170)
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(.white.opacity(0.08), lineWidth: 1)
-            }
-            .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 4)
-            .scaleEffect(isPressed ? 0.93 : 1.0)
-            .animation(.spring(response: 0.28, dampingFraction: 0.6), value: isPressed)
-        }
-        .buttonStyle(.plain)
-        .simultaneousGesture(DragGesture(minimumDistance: 0)
-            .onChanged { _ in isPressed = true }
-            .onEnded   { _ in isPressed = false }
-        )
-    }
-}
-
 // MARK: - Scan animation
 
 private struct ScanAnimationCard: View {
-    let item: OnboardingLookOptionData
+    let item: DemoLook
 
     @State private var scanX: CGFloat = -130
     @State private var cornersAppeared = false

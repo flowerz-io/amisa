@@ -178,12 +178,12 @@ struct NotificationOnboardingStepView: View {
         _ = await NotificationManager.shared.requestAuthorization()
         await NotificationManager.shared.refreshAuthorizationStatus()
         notificationEducationCompleted = true
-        model.notificationChoiceCompleted(userChoseActivateFlow: true)
+        model.completeNotificationsStep(activateFlow: true)
     }
 
     private func skipNotifications() {
         notificationEducationCompleted = true
-        model.notificationChoiceCompleted(userChoseActivateFlow: false)
+        model.completeNotificationsStep(activateFlow: false)
     }
 }
 

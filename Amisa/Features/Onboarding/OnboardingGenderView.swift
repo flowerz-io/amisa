@@ -121,8 +121,6 @@ struct OnboardingGenderView: View {
     // MARK: - Action
 
     private func selectGender(_ gender: OnboardingGender) {
-        withAnimation(.spring(response: 0.38, dampingFraction: 0.72)) {
-            model.userSelectedGender(gender)
-        }
+        model.submitGenderAndContinue(gender)
     }
 }

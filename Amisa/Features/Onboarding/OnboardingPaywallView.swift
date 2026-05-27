@@ -208,7 +208,7 @@ struct OnboardingPaywallView: View {
         VStack(spacing: 10) {
             // Primary CTA with shimmer — toujours visible
             Button {
-                model.finishPaywallContinue()
+                model.completeOnboarding()
             } label: {
                 ZStack {
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -233,7 +233,7 @@ struct OnboardingPaywallView: View {
 
             // Secondary CTA
             Button {
-                model.finishPaywallContinue()
+                model.completeOnboarding()
             } label: {
                 Text("Continuer avec la version gratuite")
                     .font(.system(size: 14, weight: .medium))
