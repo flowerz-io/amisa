@@ -1,8 +1,7 @@
 //
 //  OnboardingLookView.swift
-//  Balibu
+//  Amisa
 //
-//  Grille des looks : une action unique par carte (`model.selectLook`).
 
 import SwiftUI
 
@@ -15,17 +14,17 @@ struct OnboardingLookView: View {
             Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
 
             VStack(spacing: 0) {
-                Spacer(minLength: 24)
+                Spacer(minLength: 16)
 
                 OnboardingStepHeader(
-                    currentStep: 4,
+                    segment: 4,
                     title: "Choisis un look\nà analyser",
                     subtitle: "Amisa va retrouver les pièces similaires pour toi."
                 )
                 .opacity(appeared ? 1 : 0)
-                .offset(y: appeared ? 0 : 20)
+                .offset(y: appeared ? 0 : 16)
 
-                Spacer(minLength: 28)
+                Spacer(minLength: 24)
 
                 lookGrid
                     .padding(.horizontal, 20)
@@ -33,9 +32,8 @@ struct OnboardingLookView: View {
                 Spacer()
             }
         }
-        .ignoresSafeArea()
         .onAppear {
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.1)) {
+            withAnimation(.spring(response: 0.55, dampingFraction: 0.82).delay(0.08)) {
                 appeared = true
             }
         }
@@ -45,7 +43,7 @@ struct OnboardingLookView: View {
         let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
 
         return LazyVGrid(columns: columns, spacing: 12) {
-            ForEach(model.demoLooks, id: \.id) { look in
+            ForEach(model.demoLooks) { look in
                 Button {
                     model.selectLook(look)
                 } label: {
@@ -55,12 +53,10 @@ struct OnboardingLookView: View {
             }
         }
         .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 24)
-        .animation(.spring(response: 0.55, dampingFraction: 0.78).delay(0.15), value: appeared)
+        .animation(.spring(response: 0.5, dampingFraction: 0.8), value: appeared)
     }
 }
 
-/// Affichage visuel d’une carte look (sans logique de navigation).
 struct LookCardView: View {
     let look: DemoLook
 
@@ -86,12 +82,14 @@ struct LookCardView: View {
             }
             .padding(10)
         }
+        .frame(maxWidth: .infinity)
         .frame(height: 170)
+        .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .stroke(.white.opacity(0.08), lineWidth: 1)
         }
-        .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 4)
+        .shadow(color: .black.opacity(0.12), radius: 8, x: 0, y: 4)
     }
 }

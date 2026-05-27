@@ -14,8 +14,10 @@ import {
   type ProviderTaskResult,
 } from '../lib/parallel-providers.js';
 import { putSearchSession } from '../lib/search-session-store.js';
-import { analyzeFashionVision } from './vision-openai.js';
+import { visionProviderName } from '../config.js';
 import { buildPrimaryQueries } from '../lib/query-from-vision.js';
+import { generateVintedQueries } from './search/generate-vinted-queries.js';
+import { analyzeFashionVision } from './vision/analyze-fashion-vision.js';
 import { searchVintedListingsWithMeta } from './marketplace-search.js';
 import { ProviderScrapeError } from '../lib/provider-scrape-error.js';
 import { PlaywrightChromiumMissingError } from '../lib/playwright-browser.js';
@@ -89,15 +91,26 @@ export async function runAnalyzePipeline(
   const vision = await analyzeFashionVision(body.imageBase64, body.textQuery);
 
   const qGenStart = performance.now();
-  const queries =
-    body.textQuery && body.textQuery.trim().length > 0
-      ? [body.textQuery.trim()].slice(0, 2)
-      : buildPrimaryQueries(vision);
+  let queries: string[];
+  if (body.textQuery && body.textQuery.trim().length > 0) {
+    queries = [body.textQuery.trim()];
+  } else if (visionProviderName === 'gemini') {
+    const brand = (vision.probableBrand ?? '').trim();
+    const model = (vision.exactModel ?? vision.inferredModel ?? '').trim();
+    const dominantColor = (vision.color ?? '').trim();
+    const generated = generateVintedQueries({ brand, model, dominantColor });
+    queries =
+      generated.queries.length > 0
+        ? generated.queries
+        : buildPrimaryQueries(vision);
+    console.log(`[VINTED_QUERIES] ${JSON.stringify(queries)}`);
+  } else {
+    queries = buildPrimaryQueries(vision);
+    console.log(`[VINTED_QUERIES] ${JSON.stringify(queries)}`);
+  }
 
   const qGenMs = Math.round(performance.now() - qGenStart);
-  console.log(
-    `[PERF] query_generation=${qGenMs}ms queries=${JSON.stringify(queries)}`
-  );
+  console.log(`[PERF] query_generation=${qGenMs}ms`);
 
   const enabled = vintedOnlyEnabled(body);
   const gate = gateVintedServer();
@@ -130,7 +143,7 @@ export async function runAnalyzePipeline(
           try {
             const r = await searchVintedListingsWithMeta(queries, {
               maxMergedListings: 25,
-              maxQueries: 2,
+              maxQueries: 3,
             });
             metaHolder.primaryHasMore = r.primaryHasMore;
             console.log('[RESULTS_BATCH]', {

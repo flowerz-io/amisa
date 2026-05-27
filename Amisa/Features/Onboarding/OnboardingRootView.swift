@@ -1,6 +1,6 @@
 //
 //  OnboardingRootView.swift
-//  Balibu
+//  Amisa
 //
 
 import SwiftUI
@@ -8,9 +8,8 @@ import SwiftUI
 struct OnboardingRootView: View {
     @StateObject private var model: OnboardingFlowModel
 
-    /// Hauteur réservée sous la barre : zone tactile min 44 pt + marge avant le contenu.
-    private static let progressTrackHeight: CGFloat = 44
-    private static let progressBottomMargin: CGFloat = 8
+    private static let progressTrackHeight: CGFloat = 6
+    private static let chromeTopPadding: CGFloat = 8
 
     init(onComplete: @escaping () -> Void) {
         _model = StateObject(wrappedValue: OnboardingFlowModel(onComplete: onComplete))
@@ -19,210 +18,145 @@ struct OnboardingRootView: View {
     var body: some View {
         GeometryReader { geo in
             let safeTop = geo.safeAreaInsets.top
-            let chromeBase = safeTop + 8
-            let backRowHeight: CGFloat = showsGlobalBackChrome ? 40 : 0
-            let progressBlockHeight: CGFloat = progressVisible
-                ? (Self.progressTrackHeight + Self.progressBottomMargin + 4)
+            let backRowHeight: CGFloat = showsBackButton ? 44 : 0
+            let progressHeight: CGFloat = model.step.showsProgressBar
+                ? (Self.progressTrackHeight + 16)
                 : 0
-            let contentTopInset = chromeBase + backRowHeight + progressBlockHeight
+            let topInset = safeTop + Self.chromeTopPadding + backRowHeight + progressHeight
 
             ZStack(alignment: .top) {
-                Group {
-                    switch model.currentStep {
-                    case .hero:
-                        OnboardingHeroView(model: model)
-                            .transition(heroTransition)
-                    case .gender:
-                        OnboardingGenderView(model: model)
-                            .transition(slideHorizontal)
-                    case .country:
-                        OnboardingCountryView(model: model)
-                            .transition(slideHorizontal)
-                    case .notifications:
-                        NotificationOnboardingStepView(model: model)
-                            .transition(slideHorizontal)
-                    case .look:
-                        OnboardingLookView(model: model)
-                            .transition(slideHorizontal)
-                    case .fakeAnalyzing:
-                        OnboardingFakeAnalyzingView(model: model)
-                            .transition(slideHorizontal)
-                    case .fakeResults:
-                        OnboardingFakeResultsView(model: model)
-                            .transition(slideHorizontal)
-                    case .paywall:
-                        OnboardingPaywallView(model: model)
-                            .transition(paywallTransition)
-                    case .completed:
-                        Color.clear
-                            .transition(.opacity)
-                    }
-                }
-                .padding(.top, contentTopInset)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                stepContent
+                    .padding(.top, topInset)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
-                VStack(alignment: .leading, spacing: 8) {
-                    if showsGlobalBackChrome {
-                        HStack {
-                            Button {
-                                model.previous()
-                            } label: {
-                                Image(systemName: "chevron.left")
-                                    .font(.system(size: 17, weight: .semibold))
-                                    .foregroundStyle(.primary)
-                                    .padding(10)
-                                    .background(Color(uiColor: .secondarySystemGroupedBackground).opacity(0.95))
-                                    .clipShape(Circle())
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel(Text(String(localized: "Retour")))
-
-                            Spacer(minLength: 0)
-                        }
-                        .padding(.horizontal, 20)
-                    }
-
-                    if progressVisible {
-                        OnboardingProgressView(
-                            currentSegmentFilled: filledProgressSegment,
-                            totalSegments: OnboardingStep.progressSegmentsCount,
-                            onSelectSegment: { segment in
-                                model.tapProgressSegment(segment)
-                            }
-                        )
-                        .padding(.horizontal, 32)
-                        .transition(.opacity.combined(with: .move(edge: .top)))
-                    }
-                }
-                .padding(.top, chromeBase)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .zIndex(100)
-                .animation(.spring(response: 0.42, dampingFraction: 0.82), value: progressVisible)
+                chrome(safeTop: safeTop)
             }
-            .ignoresSafeArea(edges: .top)
-            .ignoresSafeArea(edges: .bottom)
-            .animation(.spring(response: 0.52, dampingFraction: 0.84), value: model.currentStep)
-            .animation(.spring(response: 0.45, dampingFraction: 0.82), value: filledProgressSegment)
-            .sheet(isPresented: $model.isAuthSheetPresented) {
-                AuthBottomSheet(
-                    onSignedIn: {
-                        model.notifyAuthSuccessAndGoToGender()
-                    },
-                    onSkip: {
-                        model.notifyAuthSuccessAndGoToGender()
-                    }
-                )
-                .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $model.isAuthSheetPresented) {
+            OnboardingAuthSheetView(model: model)
                 .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
+    }
+
+    @ViewBuilder
+    private var stepContent: some View {
+        Group {
+            switch model.step {
+            case .hero:
+                OnboardingHeroView(model: model)
+            case .gender:
+                OnboardingGenderView(model: model)
+            case .country:
+                OnboardingCountryView(model: model)
+            case .notifications:
+                NotificationOnboardingStepView(model: model)
+            case .look:
+                OnboardingLookView(model: model)
+            case .fakeAnalysis:
+                OnboardingFakeAnalysisView(model: model)
+            case .fakeResults:
+                OnboardingFakeResultsView(model: model)
+            case .paywall:
+                OnboardingPaywallView(model: model)
             }
         }
+        .animation(.spring(response: 0.52, dampingFraction: 0.84), value: model.step)
     }
 
-    private var filledProgressSegment: Int {
-        model.currentStep.progressSegmentFilled
+    private var showsBackButton: Bool {
+        model.step != .hero
     }
 
-    /// Barre : gender … fakeResults uniquement.
+    @ViewBuilder
+    private func chrome(safeTop: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if showsBackButton {
+                HStack {
+                    Button {
+                        model.back()
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(backButtonForeground)
+                            .padding(10)
+                            .background(backButtonBackground)
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Text(String(localized: "Retour")))
 
-    private var progressVisible: Bool {
-        model.currentStep.showsProgressBar
-    }
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, 20)
+            }
 
-    /// Retour global (hero / paywall / completed exclus ; paywall a aussi un retour interne).
-
-    private var showsGlobalBackChrome: Bool {
-        switch model.currentStep {
-        case .hero, .paywall, .completed:
-            return false
-        default:
-            return true
+            if model.step.showsProgressBar {
+                OnboardingProgressBar(
+                    filledSegments: model.step.progressSegment,
+                    totalSegments: OnboardingFlowModel.progressSegmentCount
+                )
+                .padding(.horizontal, 24)
+            }
         }
+        .padding(.top, safeTop + Self.chromeTopPadding)
     }
 
-    // MARK: - Transitions
-
-    private var heroTransition: AnyTransition {
-        .asymmetric(
-            insertion: .opacity,
-            removal:   .move(edge: .leading).combined(with: .opacity)
-        )
+    private var backButtonForeground: Color {
+        model.step == .paywall ? .white.opacity(0.92) : .primary
     }
 
-    private var slideHorizontal: AnyTransition {
-        .asymmetric(
-            insertion: .move(edge: .trailing).combined(with: .opacity),
-            removal:   .move(edge: .leading).combined(with: .opacity)
-        )
-    }
-
-    private var paywallTransition: AnyTransition {
-        .asymmetric(
-            insertion: .move(edge: .bottom).combined(with: .opacity),
-            removal:   .move(edge: .bottom).combined(with: .opacity)
-        )
+    private var backButtonBackground: Color {
+        model.step == .paywall
+            ? Color.white.opacity(0.08)
+            : Color(uiColor: .secondarySystemGroupedBackground).opacity(0.95)
     }
 }
 
-// MARK: - OnboardingProgressView
-//
-// `currentSegmentFilled` : 1…5 segments remplis.
+// MARK: - Progress bar (non cliquable)
 
-struct OnboardingProgressView: View {
-    /// Segment actuellement « atteint » (1-based).
-    let currentSegmentFilled: Int
-    var totalSegments: Int = OnboardingStep.progressSegmentsCount
-    var onSelectSegment: (Int) -> Void = { _ in }
-
-    private static let segmentTouchHeight: CGFloat = 44
+struct OnboardingProgressBar: View {
+    let filledSegments: Int
+    let totalSegments: Int
 
     var body: some View {
-        let filled = max(0, min(totalSegments, currentSegmentFilled))
-
-        HStack(alignment: .top, spacing: 6) {
-            ForEach(1...max(1, totalSegments), id: \.self) { segment in
-                Button {
-                    onSelectSegment(segment)
-                } label: {
-                    ZStack(alignment: .top) {
-                        Color.clear
-                            .frame(maxWidth: .infinity, minHeight: Self.segmentTouchHeight)
-                            .contentShape(Rectangle())
-                        Capsule()
-                            .fill(segment <= filled ? BrandColors.primary : Color.primary.opacity(0.15))
-                            .frame(height: 4)
-                            .frame(maxWidth: .infinity)
-                    }
-                    .frame(maxWidth: .infinity, minHeight: Self.segmentTouchHeight, alignment: .top)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(Text("Étape \(segment) sur \(totalSegments)"))
-                .accessibilityAddTraits(segment == filled ? [.isSelected] : [])
+        HStack(spacing: 6) {
+            ForEach(1...totalSegments, id: \.self) { segment in
+                Capsule()
+                    .fill(segment <= filledSegments ? BrandColors.primary : Color(uiColor: .tertiarySystemFill))
+                    .frame(height: 6)
             }
         }
-        .animation(.spring(response: 0.42, dampingFraction: 0.78), value: filled)
+        .allowsHitTesting(false)
     }
 }
 
-// MARK: - OnboardingStepHeader
+// MARK: - En-tête d’étape
 
 struct OnboardingStepHeader: View {
-    let currentStep: Int
+    let segment: Int
     let title: String
     let subtitle: String
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Étape \(segment) sur \(OnboardingFlowModel.progressSegmentCount)")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.secondary)
+
             Text(title)
                 .font(.system(size: 28, weight: .bold))
                 .foregroundStyle(.primary)
-                .multilineTextAlignment(.center)
+                .multilineTextAlignment(.leading)
                 .lineSpacing(2)
 
             Text(subtitle)
-                .font(.system(size: 15, weight: .regular))
+                .font(.system(size: 15))
                 .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+                .multilineTextAlignment(.leading)
+                .lineSpacing(2)
         }
-        .padding(.horizontal, 28)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 24)
     }
 }

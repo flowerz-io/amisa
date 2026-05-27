@@ -1,70 +1,13 @@
 //
 //  OnboardingMockData.swift
-//  Balibu
+//  Amisa
 //
-//  SOURCE UNIQUE de toute la data fake de l'onboarding.
-//  Aucune image n'est hardcodée dans les vues — tout passe par ces structs.
-//
-//  ┌──────────────────────────────────────────────────────────────────────┐
-//  │  ASSETS À CRÉER / REMPLACER DANS XCODE                              │
-//  │  Chemin : Assets.xcassets > Onboarding >                            │
-//  ├──────────────────────────────────────────────────────────────────────┤
-//  │  HERO CARDS (HeroCards/)                                             │
-//  │    onboarding_hero_card_01   ← carte principale (foreground)         │
-//  │    onboarding_hero_card_02   ← carte droite (blurred back)           │
-//  │    onboarding_hero_card_03   ← carte gauche (blurred back)           │
-//  ├──────────────────────────────────────────────────────────────────────┤
-//  │  LOOK OPTIONS (Looks/)                                               │
-//  │    onboarding_look_leather   ← look cuir                             │
-//  │    onboarding_look_sneaker   ← look sneakers                         │
-//  │    onboarding_look_cap       ← look casquette / streetwear           │
-//  │    onboarding_look_shirt     ← look smart casual / chemise           │
-//  ├──────────────────────────────────────────────────────────────────────┤
-//  │  FAKE RESULTS (Results/) — 6 visuels par look (cycle sur 20 cartes) │
-//  │                                                                      │
-//  │  Cuir    : onboarding_result_leather_01 … onboarding_result_leather_06 │
-//  │  Sneaker : onboarding_result_sneaker_01 … onboarding_result_sneaker_06 │
-//  │  Cap     : onboarding_result_cap_01    … onboarding_result_cap_06    │
-//  │  Chemise : onboarding_result_shirt_01  … onboarding_result_shirt_06  │
-//  │                                                                      │
-//  │  💡 Astuce : 6 vraies photos suffisent — elles sont réutilisées     │
-//  │     sur les 20 cartes résultats. Ajouter plus pour plus de variété.  │
-//  ├──────────────────────────────────────────────────────────────────────┤
-//  │  PROVIDER LOGOS (Assets.xcassets root, déjà présents)               │
-//  │    provider_vinted                                                   │
-//  │    provider_vinted                                                  │
-//  │    provider_vinted                                                     │
-//  │    provider_vinted                                                    │
-//  └──────────────────────────────────────────────────────────────────────┘
 
 import SwiftUI
 
-// MARK: - Models
-
-/// Une carte produit sur l'écran hero.
-struct OnboardingHeroCardData {
-    let imageName: String       // Asset name — ex: "onboarding_hero_card_01"
-    let brand: String
-    let title: String
-    let price: String
-    let size: String?
-    let providerLogoName: String // Asset name — ex: "provider_vinted"
-}
-
-/// Un look sélectionnable sur la page démo.
-struct OnboardingLookOptionData: Identifiable {
-    let id: String              // Clé stable — ex: leather, sneakerhead, urbanCool, smartCasual
-    let title: String
-    let subtitle: String        // Sous-titre de la carte look
-    let imageName: String       // Asset name — ex: "onboarding_look_leather"
-    let scanLabel: String       // Label affiché dans la pastille de scan (indépendant du subtitle)
-}
-
-/// Un résultat fake dans la grille de résultats démo.
-struct OnboardingFakeResultData: Identifiable {
-    let id: String              // Unique — ex: "leather_001"
-    let lookId: String          // ID du look parent — ex: "leather"
-    let imageName: String       // Asset name — ex: "onboarding_result_leather_01"
+struct DemoListing: Identifiable, Equatable {
+    let id: String
+    let imageName: String
     let brand: String
     let title: String
     let price: String
@@ -72,13 +15,27 @@ struct OnboardingFakeResultData: Identifiable {
     let providerLogoName: String
 }
 
-// MARK: - Data source
+struct DemoLook: Identifiable, Equatable {
+    let id: String
+    let title: String
+    let subtitle: String
+    let imageName: String
+    let results: [DemoListing]
+}
+
+struct OnboardingHeroCardData {
+    let imageName: String
+    let brand: String
+    let title: String
+    let price: String
+    let size: String?
+    let providerLogoName: String
+}
 
 enum OnboardingMockData {
 
-    // MARK: Hero cards (3 cartes flottantes)
-
     static let heroCards: [OnboardingHeroCardData] = [
+
         OnboardingHeroCardData(
             imageName:       "onboarding_hero_card_01",
             brand:           "Schott NYC",
@@ -103,38 +60,10 @@ enum OnboardingMockData {
             size:            "S",
             providerLogoName: "provider_vinted"
         ),
+    
     ]
 
-    // MARK: Look options (4 styles à sélectionner)
-
-    static let lookOptions: [OnboardingLookOptionData] = [
-        OnboardingLookOptionData(id: "leather", title: "Look Cuir", subtitle: "Veste en cuir", imageName: "onboarding_look_leather", scanLabel: "option 1"),
-        OnboardingLookOptionData(id: "sneakerhead", title: "Sneakerhead", subtitle: "Sneakers", imageName: "onboarding_look_sneaker", scanLabel: "option 2"),
-        OnboardingLookOptionData(id: "urbanCool", title: "Urban Cool", subtitle: "Casquette", imageName: "onboarding_look_cap", scanLabel: "option 3"),
-        OnboardingLookOptionData(id: "smartCasual", title: "Smart Casual", subtitle: "Chemise oxford", imageName: "onboarding_look_shirt", scanLabel: "option 4"),
-    ]
-
-    // MARK: Fake results — filtrage par lookId
-
-    /// Retourne 20 résultats fake pour le look donné.
-    static func fakeResults(for lookId: String) -> [OnboardingFakeResultData] {
-        allFakeResults.filter { $0.lookId == lookId }
-    }
-
-    // MARK: Pool complet (20 entrées × 4 looks = 80 résultats)
-    // Les imageName cyclent sur 6 stubs : onboarding_result_{look}_01 … _06
-
-    private static let allFakeResults: [OnboardingFakeResultData] = leatherResults
-        + sneakerheadResults
-        + urbanCoolResults
-        + smartCasualResults
-
-    // MARK: Leather results
-
-    private static let leatherResults: [OnboardingFakeResultData] = makeResults(
-        lookId: "leather",
-        prefix: "onboarding_result_leather",
-        items: [
+    private static let leatherItems: [(String, String, String, String?, String)] = [
             ("Schott NYC",    "Veste biker cuir",      "149 €", "M",   "provider_vinted"),
             ("Lewis Leathers","Perfecto cuir vintage",  "285 €", "L",   "provider_vinted"),
             ("Acne Studios",  "Veste cuir oversize",    "320 €", "S",   "provider_vinted"),
@@ -156,14 +85,8 @@ enum OnboardingMockData {
             ("Topshop",       "Faux leather jacket",     "35 €", "10",  "provider_vinted"),
             ("Levi's",        "Trucker cuir synthétique","55 €", "M",   "provider_vinted"),
         ]
-    )
 
-    // MARK: Sneaker results
-
-    private static let sneakerheadResults: [OnboardingFakeResultData] = makeResults(
-        lookId: "sneakerhead",
-        prefix: "onboarding_result_sneaker",
-        items: [
+    private static let sneakerheadItems: [(String, String, String, String?, String)] = [
             ("Nike",        "Air Force 1 '07",         "89 €", "42",  "provider_vinted"),
             ("Converse",    "Chuck Taylor All Star",    "55 €", "41",  "provider_vinted"),
             ("Nike",        "Dunk Low Retro",          "130 €", "43",  "provider_vinted"),
@@ -185,14 +108,8 @@ enum OnboardingMockData {
             ("Adidas",      "Forum Low",                "80 €", "42",  "provider_vinted"),
             ("New Balance",  "530 Silver",              "89 €", "40",  "provider_vinted"),
         ]
-    )
 
-    // MARK: Cap results
-
-    private static let urbanCoolResults: [OnboardingFakeResultData] = makeResults(
-        lookId: "urbanCool",
-        prefix: "onboarding_result_cap",
-        items: [
+    private static let urbanCoolItems: [(String, String, String, String?, String)] = [
             ("Supreme",         "Casquette 6-panel",      "65 €", nil, "provider_vinted"),
             ("Carhartt WIP",    "Dad hat kaki",            "45 €", nil, "provider_vinted"),
             ("New Era",         "59Fifty Fitted",          "35 €", nil, "provider_vinted"),
@@ -214,14 +131,8 @@ enum OnboardingMockData {
             ("Adidas",          "Trefoil cap",             "35 €", nil, "provider_vinted"),
             ("Nike",            "Club Cap unstructured",   "30 €", nil, "provider_vinted"),
         ]
-    )
 
-    // MARK: Shirt results
-
-    private static let smartCasualResults: [OnboardingFakeResultData] = makeResults(
-        lookId: "smartCasual",
-        prefix: "onboarding_result_shirt",
-        items: [
+    private static let smartCasualItems: [(String, String, String, String?, String)] = [
             ("UNIQLO",         "Oxford shirt blanc",      "29 €", "M",  "provider_vinted"),
             ("Sandro",         "Chemise lin écru",        "95 €", "L",  "provider_vinted"),
             ("Ralph Lauren",   "OCBD button-down",        "85 €", "M",  "provider_vinted"),
@@ -243,29 +154,50 @@ enum OnboardingMockData {
             ("Filippa K",      "Chemise popeline GOTS",  "130 €", "M",  "provider_vinted"),
             ("Selected Homme", "Chemise slim",            "45 €", "L",  "provider_vinted"),
         ]
-    )
 
-    // MARK: Factory
+    static let demoLooks: [DemoLook] = [
+        DemoLook(id: "leather", title: "Look Cuir", subtitle: "Veste en cuir", imageName: "onboarding_look_leather", results: makeListings(lookId: "leather", prefix: "onboarding_result_leather", items: leatherItems)),
+        DemoLook(id: "sneakerhead", title: "Sneakerhead", subtitle: "Sneakers", imageName: "onboarding_look_sneaker", results: makeListings(lookId: "sneakerhead", prefix: "onboarding_result_sneaker", items: sneakerheadItems)),
+        DemoLook(id: "urbanCool", title: "Urban Cool", subtitle: "Casquette", imageName: "onboarding_look_cap", results: makeListings(lookId: "urbanCool", prefix: "onboarding_result_cap", items: urbanCoolItems)),
+        DemoLook(id: "smartCasual", title: "Smart Casual", subtitle: "Chemise oxford", imageName: "onboarding_look_shirt", results: makeListings(lookId: "smartCasual", prefix: "onboarding_result_shirt", items: smartCasualItems)),
+    ]
 
-    private static func makeResults(
+    private static func makeListings(
         lookId: String,
         prefix: String,
         items: [(String, String, String, String?, String)]
-    ) -> [OnboardingFakeResultData] {
+    ) -> [DemoListing] {
         items.enumerated().map { idx, item in
-            // Cycle les 6 visuels disponibles (01…06)
             let imageIndex = (idx % 6) + 1
-            let imageIndexStr = String(format: "%02d", imageIndex)
-            return OnboardingFakeResultData(
-                id:              "\(lookId)_\(String(format: "%03d", idx + 1))",
-                lookId:          lookId,
-                imageName:       "\(prefix)_\(imageIndexStr)",
-                brand:           item.0,
-                title:           item.1,
-                price:           item.2,
-                size:            item.3,
+            return DemoListing(
+                id: "\(lookId)_\(String(format: "%03d", idx + 1))",
+                imageName: "\(prefix)_\(String(format: "%02d", imageIndex))",
+                brand: item.0,
+                title: item.1,
+                price: item.2,
+                size: item.3,
                 providerLogoName: item.4
             )
+        }
+    }
+}
+
+struct OnboardingAssetImageView: View {
+    let imageName: String
+    var contentMode: ContentMode = .fill
+
+    var body: some View {
+        if UIImage(named: imageName) != nil {
+            Image(imageName)
+                .resizable()
+                .aspectRatio(contentMode: contentMode)
+        } else {
+            ZStack {
+                Color(uiColor: .tertiarySystemFill)
+                Image(systemName: "photo")
+                    .font(.system(size: 22, weight: .light))
+                    .foregroundStyle(Color(uiColor: .tertiaryLabel))
+            }
         }
     }
 }

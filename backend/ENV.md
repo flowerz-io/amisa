@@ -15,9 +15,11 @@ Selon `VISION_PROVIDER` dans `config` :
 
 | Variable | Description |
 |----------|-------------|
-| `VISION_PROVIDER` | Fournisseur d’analyse image (voir `src/config.ts`). |
-| `OPENAI_API_KEY` | Si vision ou requêtes passent par OpenAI. |
-| `GEMINI_API_KEY` | Si vision utilise Gemini. |
+| `VISION_PROVIDER` | `gemini` (recommandé) ou autre → OpenAI si clé présente, sinon mock. |
+| `GEMINI_API_KEY` | Obligatoire si `VISION_PROVIDER=gemini`. |
+| `GEMINI_VISION_MODEL` | Optionnel — défaut `gemini-2.0-flash`. |
+| `OPENAI_API_KEY` | Fallback vision si Gemini échoue, ou provider principal si `VISION_PROVIDER` ≠ `gemini`. |
+| `OPENAI_VISION_MODEL` | Optionnel — défaut `gpt-4o-mini`. |
 
 ## Vinted — accès catalogue
 

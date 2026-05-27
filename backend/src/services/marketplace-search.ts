@@ -77,11 +77,16 @@ export async function searchVintedListingsWithMeta(
     const merged: MarketplaceListingDTO[] = [];
     const seen = new Set<string>();
     let primaryHasMore = false;
+    let totalFetched = 0;
     outer: for (let i = 0; i < qs.length; i++) {
       const q = qs[i]!;
       const page = await fetchVintedCatalogPage(q, 1);
+      console.log(
+        `[VINTED_RESULTS] query=${JSON.stringify(q)} count=${page.listings.length}`
+      );
       if (i === 0) primaryHasMore = page.hasMore;
       for (const L of page.listings) {
+        totalFetched += 1;
         if (cap !== undefined && merged.length >= cap) break outer;
         const k = marketplaceListingDedupeKey(L);
         if (seen.has(k)) continue;
@@ -92,6 +97,9 @@ export async function searchVintedListingsWithMeta(
     }
     const ms = Math.round(performance.now() - t0);
     logSuccess('vinted', merged.length, ms);
+    console.log(
+      `[VINTED_MERGE] total=${totalFetched} deduped=${merged.length}`
+    );
     console.log('[RESULTS_BATCH]', {
       merged: merged.length,
       queriesUsed: qs.length,
