@@ -97,8 +97,16 @@ export async function runAnalyzePipeline(
   } else if (visionProviderName === 'gemini') {
     const brand = (vision.probableBrand ?? '').trim();
     const model = (vision.exactModel ?? vision.inferredModel ?? '').trim();
+    const exactColorway = (vision.colorway ?? vision.dominantColorPrecise ?? '').trim();
     const dominantColor = (vision.color ?? '').trim();
-    const generated = generateVintedQueries({ brand, model, dominantColor });
+    const secondaryColor = (vision.styleKeywords?.[0] ?? '').trim();
+    const generated = generateVintedQueries({
+      brand,
+      model,
+      exactColorway,
+      dominantColor,
+      secondaryColor,
+    });
     queries =
       generated.queries.length > 0
         ? generated.queries

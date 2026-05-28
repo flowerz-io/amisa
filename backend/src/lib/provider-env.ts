@@ -53,5 +53,8 @@ export function logProviderEnvironmentDiagnostics(): void {
   console.log(
     `  GEMINI_API_KEY=${gemini && gemini.length > 0 ? `set(len=${gemini.length})` : '<unset>'}`
   );
+  console.log(
+    `  ALLOW_OPENAI_VISION_FALLBACK=${process.env.ALLOW_OPENAI_VISION_FALLBACK ?? '<unset>'}`
+  );
   console.log(`  DEBUG_PROVIDER_ROUTE=${process.env.DEBUG_PROVIDER_ROUTE ?? '<unset>'} (mettre 0 pour désactiver /debug-vinted)`);
 }

@@ -1,5 +1,7 @@
 import type { FashionVisionResult } from '../../types.js';
 import { visionProviderName } from '../../config.js';
+import { isOpenAIVisionFallbackAllowed } from '../../lib/vision-fallback-env.js';
+import { GeminiVisionError } from './gemini-errors.js';
 import { analyzeGeminiVision } from './gemini-provider.js';
 import {
   analyzeOpenAIFashionVision,
@@ -21,19 +23,37 @@ function textOnlyVisionResult(textQuery: string): FashionVisionResult {
   };
 }
 
-async function analyzeImageWithFallback(
-  imageBase64: string
-): Promise<FashionVisionResult> {
+async function tryOpenAIFallback(
+  imageBase64: string,
+  reason: string
+): Promise<FashionVisionResult | null> {
+  if (!isOpenAIVisionFallbackAllowed()) {
+    console.log('[OPENAI_FALLBACK_DISABLED]');
+    return null;
+  }
+  if (!process.env.OPENAI_API_KEY?.trim()) {
+    console.log('[OPENAI_FALLBACK_DISABLED] reason=no_openai_key');
+    return null;
+  }
+  console.log(`[OPENAI_FALLBACK_USED] reason=${reason}`);
+  return analyzeOpenAIFashionVision(imageBase64);
+}
+
+async function analyzeImageVision(imageBase64: string): Promise<FashionVisionResult> {
   if (visionProviderName === 'gemini') {
     try {
       return await analyzeGeminiVision(imageBase64);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      console.error(`[GEMINI_VISION] error=${msg} — fallback OpenAI`);
-      if (process.env.OPENAI_API_KEY?.trim()) {
-        return analyzeOpenAIFashionVision(imageBase64);
+      if (e instanceof GeminiVisionError) {
+        const fallback = await tryOpenAIFallback(imageBase64, e.code);
+        if (fallback) return fallback;
+        throw e;
       }
-      return MOCK_OPENAI_VISION;
+      const msg = e instanceof Error ? e.message : String(e);
+      console.log(`[GEMINI_VISION_ERROR] code=unknown message=${msg}`);
+      const fallback = await tryOpenAIFallback(imageBase64, 'unknown');
+      if (fallback) return fallback;
+      throw new GeminiVisionError('gemini_vision_failed', msg);
     }
   }
 
@@ -62,8 +82,10 @@ export async function analyzeFashionVision(
     return MOCK_OPENAI_VISION;
   }
 
-  const result = await analyzeImageWithFallback(imageBase64);
+  const result = await analyzeImageVision(imageBase64);
   const ms = Math.round(performance.now() - t0);
   console.log(`[PERF] vision=${ms}ms provider=${visionProviderName}`);
   return result;
 }
+
+export { GeminiVisionError } from './gemini-errors.js';

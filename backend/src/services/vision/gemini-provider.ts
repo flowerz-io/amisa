@@ -1,4 +1,5 @@
 import type { FashionVisionResult } from '../../types.js';
+import { GeminiVisionError, geminiErrorFromHttp } from './gemini-errors.js';
 
 export interface GeminiVisionResult {
   identification: string;
@@ -11,30 +12,16 @@ export interface GeminiVisionResult {
   confidence: number;
 }
 
-const GEMINI_VISION_PROMPT = `Tu es un expert mondial en identification de vêtements, sneakers, accessoires et pièces de mode vintage ou modernes.
+const GEMINI_VISION_PROMPT = `Tu es un expert mondial en reconnaissance de vêtements, sneakers, accessoires et chaussures.
 
-Tu possèdes une connaissance extrêmement avancée :
-- archives sneakers,
-- colorways,
-- références produit,
-- collaborations,
-- silhouettes,
-- branding,
-- collections.
+Tu as une culture très avancée des modèles exacts, collaborations, colorways, éditions limitées, archives sneakers et mode vintage.
 
-Analyse cette image et identifie l'article EXACT.
-
-IMPORTANT :
-- Priorité absolue au vrai modèle exact.
-- Évite les approximations.
-- Si tu reconnais précisément le modèle, indique-le.
-- Si tu n'es pas certain, indique la version la plus probable.
-- Ignore le décor et concentre-toi uniquement sur l'article principal.
+Analyse l'image et identifie l'article principal avec le maximum de précision.
 
 Réponds STRICTEMENT en JSON valide :
 
 {
-  "identification": "Marque + modèle exact + coloris principal simplifié",
+  "identification": "Marque modèle exact coloris exact simplifié",
   "brand": "",
   "model": "",
   "exactColorway": "",
@@ -45,12 +32,28 @@ Réponds STRICTEMENT en JSON valide :
 }
 
 Règles :
-- "identification" doit être optimisé pour une marketplace comme Vinted.
-- Ne PAS inclure le SKU dans "identification".
-- Ne PAS inclure les nuances complexes dans "identification".
-- "dominantColor" doit être une couleur simple : Blue, Black, White, Brown, Grey, Green, Red, Yellow, Beige, Pink, Purple, Orange.
-- "exactColorway" peut contenir le vrai colorway détaillé.
-- confidence = entier de 0 à 100.`;
+
+* Priorité absolue au modèle exact.
+* Si c'est une collaboration, l'inclure dans le modèle.
+* Si un colorway exact est reconnaissable, le mettre dans exactColorway.
+* identification doit rester utilisable pour Vinted.
+* Ne pas inclure le SKU dans identification.
+* Ne pas inclure de slash dans identification.
+* Ne pas répéter la marque deux fois.
+* Confidence entre 0 et 100.
+
+Exemple attendu :
+Image Adidas Wales Bonner :
+{
+  "identification": "Adidas Samba Nylon Wales Bonner Wonder Clay Royal",
+  "brand": "Adidas",
+  "model": "Samba Nylon Wales Bonner",
+  "exactColorway": "Wonder Clay Royal",
+  "dominantColor": "Beige",
+  "secondaryColor": "Blue",
+  "category": "chaussures · sneakers",
+  "confidence": 95
+}`;
 
 function extractJsonObject(raw: string): string | null {
   const t = raw.replace(/```(?:json)?\s*|\s*```/gi, '').trim();
@@ -97,7 +100,8 @@ export function parseGeminiVisionJson(raw: string): GeminiVisionResult {
 export function mapGeminiToFashionVision(g: GeminiVisionResult): FashionVisionResult {
   const brand = g.brand;
   const model = g.model;
-  const identification = g.identification || [brand, model, g.dominantColor].filter(Boolean).join(' ');
+  const identification =
+    g.identification || [brand, model, g.exactColorway].filter(Boolean).join(' ');
   const confidence = g.confidence / 100;
 
   return {
@@ -121,50 +125,57 @@ export function mapGeminiToFashionVision(g: GeminiVisionResult): FashionVisionRe
   };
 }
 
-function logGeminiVision(g: GeminiVisionResult): void {
-  console.log(`[GEMINI_VISION] identification=${g.identification}`);
-  console.log(
-    `[GEMINI_VISION] brand=${g.brand} model=${g.model} color=${g.dominantColor} confidence=${g.confidence}`
-  );
-}
-
 export async function analyzeGeminiVision(imageBase64: string): Promise<FashionVisionResult> {
   const key = process.env.GEMINI_API_KEY?.trim();
   if (!key) {
-    throw new Error('GEMINI_API_KEY missing');
+    throw new GeminiVisionError(
+      'gemini_not_configured',
+      'GEMINI_API_KEY is missing while VISION_PROVIDER=gemini.'
+    );
   }
+
+  console.log('[GEMINI_VISION_START]');
 
   const model = process.env.GEMINI_VISION_MODEL?.trim() || 'gemini-2.0-flash';
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`;
 
   const t0 = performance.now();
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [
-        {
-          parts: [
-            { text: GEMINI_VISION_PROMPT },
-            {
-              inline_data: {
-                mime_type: 'image/jpeg',
-                data: imageBase64,
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              { text: GEMINI_VISION_PROMPT },
+              {
+                inline_data: {
+                  mime_type: 'image/jpeg',
+                  data: imageBase64,
+                },
               },
-            },
-          ],
+            ],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.2,
+          responseMimeType: 'application/json',
         },
-      ],
-      generationConfig: {
-        temperature: 0.2,
-        responseMimeType: 'application/json',
-      },
-    }),
-  });
+      }),
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.log(`[GEMINI_VISION_ERROR] code=network message=${msg}`);
+    throw new GeminiVisionError('gemini_network_error', msg);
+  }
 
   if (!res.ok) {
     const errBody = await res.text().catch(() => '');
-    throw new Error(`Gemini HTTP ${res.status}: ${errBody.slice(0, 400)}`);
+    const err = geminiErrorFromHttp(res.status, errBody);
+    console.log(`[GEMINI_VISION_ERROR] code=${err.code} http=${res.status}`);
+    throw err;
   }
 
   const payload = (await res.json()) as {
@@ -176,11 +187,23 @@ export async function analyzeGeminiVision(imageBase64: string): Promise<FashionV
   const raw =
     payload.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? '';
   if (!raw.trim()) {
-    throw new Error('Gemini empty response');
+    console.log('[GEMINI_VISION_ERROR] code=empty_response');
+    throw new GeminiVisionError('gemini_empty_response', 'Gemini returned an empty vision response.');
   }
 
-  const parsed = parseGeminiVisionJson(raw);
-  logGeminiVision(parsed);
+  let parsed: GeminiVisionResult;
+  try {
+    parsed = parseGeminiVisionJson(raw);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.log(`[GEMINI_VISION_ERROR] code=invalid_json message=${msg}`);
+    throw new GeminiVisionError('gemini_invalid_json', `Gemini JSON parse failed: ${msg}`);
+  }
+
+  console.log(`[GEMINI_VISION_SUCCESS] identification=${parsed.identification}`);
+  console.log(
+    `[GEMINI_VISION_SUCCESS] brand=${parsed.brand} model=${parsed.model} colorway=${parsed.exactColorway} confidence=${parsed.confidence}`
+  );
 
   const ms = Math.round(performance.now() - t0);
   console.log(`[PERF] gemini_vision=${ms}ms`);

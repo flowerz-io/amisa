@@ -20,6 +20,7 @@ Selon `VISION_PROVIDER` dans `config` :
 | `GEMINI_VISION_MODEL` | Optionnel — défaut `gemini-2.0-flash`. |
 | `OPENAI_API_KEY` | Fallback vision si Gemini échoue, ou provider principal si `VISION_PROVIDER` ≠ `gemini`. |
 | `OPENAI_VISION_MODEL` | Optionnel — défaut `gpt-4o-mini`. |
+| `ALLOW_OPENAI_VISION_FALLBACK` | Si `true` uniquement : en cas d’échec Gemini, tente OpenAI. Sinon erreur explicite (ex. quota 429). |
 
 ## Vinted — accès catalogue
 
