@@ -12,6 +12,8 @@ export interface GeminiVisionResult {
   confidence: number;
 }
 
+const ALLOWED_GEMINI_MODELS = new Set(['gemini-1.5-flash', 'gemini-1.5-pro']);
+
 const GEMINI_VISION_PROMPT = `Tu es un expert mondial en reconnaissance de vêtements, sneakers, accessoires et chaussures.
 
 Tu as une culture très avancée des modèles exacts, collaborations, colorways, éditions limitées, archives sneakers et mode vintage.
@@ -54,6 +56,49 @@ Image Adidas Wales Bonner :
   "category": "chaussures · sneakers",
   "confidence": 95
 }`;
+
+/** Modèles supportés : flash par défaut ; pro uniquement si configuré explicitement. */
+export function resolveGeminiModel(): string {
+  const raw =
+    process.env.GEMINI_MODEL?.trim() ||
+    process.env.GEMINI_VISION_MODEL?.trim() ||
+    'gemini-1.5-flash';
+
+  if (ALLOWED_GEMINI_MODELS.has(raw)) {
+    return raw;
+  }
+
+  console.warn(
+    `[GEMINI_MODEL] unsupported model "${raw}", falling back to gemini-1.5-flash`
+  );
+  return 'gemini-1.5-flash';
+}
+
+/** Retire le préfixe data URL et détecte le mime type. */
+export function normalizeImageBase64(input: string): {
+  data: string;
+  mimeType: string;
+} {
+  const trimmed = input.trim();
+  const dataUrl = trimmed.match(
+    /^data:image\/(jpeg|jpg|png|webp);base64,(.+)$/i
+  );
+  if (dataUrl) {
+    const ext = dataUrl[1]!.toLowerCase();
+    const mimeType =
+      ext === 'png'
+        ? 'image/png'
+        : ext === 'webp'
+          ? 'image/webp'
+          : 'image/jpeg';
+    return { data: dataUrl[2]!.trim(), mimeType };
+  }
+  return { data: trimmed, mimeType: 'image/jpeg' };
+}
+
+function buildGeminiEndpoint(model: string, apiKey: string): string {
+  return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+}
 
 function extractJsonObject(raw: string): string | null {
   const t = raw.replace(/```(?:json)?\s*|\s*```/gi, '').trim();
@@ -134,48 +179,62 @@ export async function analyzeGeminiVision(imageBase64: string): Promise<FashionV
     );
   }
 
+  const model = resolveGeminiModel();
+  const endpoint = buildGeminiEndpoint(model, key);
+  const { data: imageData, mimeType } = normalizeImageBase64(imageBase64);
+
+  console.log(`[GEMINI_MODEL] ${model}`);
   console.log('[GEMINI_VISION_START]');
 
-  const model = process.env.GEMINI_VISION_MODEL?.trim() || 'gemini-2.0-flash';
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`;
+  const requestBody = {
+    contents: [
+      {
+        role: 'user',
+        parts: [
+          { text: GEMINI_VISION_PROMPT },
+          {
+            inlineData: {
+              mimeType,
+              data: imageData,
+            },
+          },
+        ],
+      },
+    ],
+    generationConfig: {
+      temperature: 0.1,
+      responseMimeType: 'application/json',
+    },
+  };
 
   const t0 = performance.now();
   let res: Response;
   try {
-    res = await fetch(url, {
+    res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              { text: GEMINI_VISION_PROMPT },
-              {
-                inline_data: {
-                  mime_type: 'image/jpeg',
-                  data: imageBase64,
-                },
-              },
-            ],
-          },
-        ],
-        generationConfig: {
-          temperature: 0.2,
-          responseMimeType: 'application/json',
-        },
-      }),
+      body: JSON.stringify(requestBody),
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    console.log(`[GEMINI_VISION_ERROR] code=network message=${msg}`);
+    console.error('[GEMINI_VISION_ERROR]', {
+      http: 0,
+      model,
+      endpointWithoutKey: endpoint.split('?key=')[0],
+      body: msg,
+    });
     throw new GeminiVisionError('gemini_network_error', msg);
   }
 
   if (!res.ok) {
     const errBody = await res.text().catch(() => '');
-    const err = geminiErrorFromHttp(res.status, errBody);
-    console.log(`[GEMINI_VISION_ERROR] code=${err.code} http=${res.status}`);
-    throw err;
+    console.error('[GEMINI_VISION_ERROR]', {
+      http: res.status,
+      model,
+      endpointWithoutKey: endpoint.split('?key=')[0],
+      body: errBody.slice(0, 2000),
+    });
+    throw geminiErrorFromHttp(res.status, errBody);
   }
 
   const payload = (await res.json()) as {
@@ -187,8 +246,16 @@ export async function analyzeGeminiVision(imageBase64: string): Promise<FashionV
   const raw =
     payload.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? '';
   if (!raw.trim()) {
-    console.log('[GEMINI_VISION_ERROR] code=empty_response');
-    throw new GeminiVisionError('gemini_empty_response', 'Gemini returned an empty vision response.');
+    console.error('[GEMINI_VISION_ERROR]', {
+      http: res.status,
+      model,
+      endpointWithoutKey: endpoint.split('?key=')[0],
+      body: 'empty candidates response',
+    });
+    throw new GeminiVisionError(
+      'gemini_empty_response',
+      'Gemini returned an empty vision response.'
+    );
   }
 
   let parsed: GeminiVisionResult;
@@ -196,13 +263,18 @@ export async function analyzeGeminiVision(imageBase64: string): Promise<FashionV
     parsed = parseGeminiVisionJson(raw);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    console.log(`[GEMINI_VISION_ERROR] code=invalid_json message=${msg}`);
+    console.error('[GEMINI_VISION_ERROR]', {
+      http: res.status,
+      model,
+      endpointWithoutKey: endpoint.split('?key=')[0],
+      body: `invalid_json: ${msg}`,
+    });
     throw new GeminiVisionError('gemini_invalid_json', `Gemini JSON parse failed: ${msg}`);
   }
 
   console.log(`[GEMINI_VISION_SUCCESS] identification=${parsed.identification}`);
   console.log(
-    `[GEMINI_VISION_SUCCESS] brand=${parsed.brand} model=${parsed.model} colorway=${parsed.exactColorway} confidence=${parsed.confidence}`
+    `[GEMINI_VISION_SUCCESS] brand=${parsed.brand} model=${parsed.model} exactColorway=${parsed.exactColorway} dominantColor=${parsed.dominantColor} secondaryColor=${parsed.secondaryColor} category=${parsed.category} confidence=${parsed.confidence}`
   );
 
   const ms = Math.round(performance.now() - t0);

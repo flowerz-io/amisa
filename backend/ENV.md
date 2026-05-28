@@ -17,7 +17,8 @@ Selon `VISION_PROVIDER` dans `config` :
 |----------|-------------|
 | `VISION_PROVIDER` | `gemini` (recommandé) ou autre → OpenAI si clé présente, sinon mock. |
 | `GEMINI_API_KEY` | Obligatoire si `VISION_PROVIDER=gemini`. |
-| `GEMINI_VISION_MODEL` | Optionnel — défaut `gemini-2.0-flash`. |
+| `GEMINI_MODEL` | Optionnel — défaut `gemini-1.5-flash`. Valeurs : `gemini-1.5-flash`, `gemini-1.5-pro`. |
+| `GEMINI_VISION_MODEL` | Alias legacy de `GEMINI_MODEL` (ignoré si `GEMINI_MODEL` est défini). |
 | `OPENAI_API_KEY` | Fallback vision si Gemini échoue, ou provider principal si `VISION_PROVIDER` ≠ `gemini`. |
 | `OPENAI_VISION_MODEL` | Optionnel — défaut `gpt-4o-mini`. |
 | `ALLOW_OPENAI_VISION_FALLBACK` | Si `true` uniquement : en cas d’échec Gemini, tente OpenAI. Sinon erreur explicite (ex. quota 429). |

@@ -53,6 +53,7 @@ export function logProviderEnvironmentDiagnostics(): void {
   console.log(
     `  GEMINI_API_KEY=${gemini && gemini.length > 0 ? `set(len=${gemini.length})` : '<unset>'}`
   );
+  console.log(`  GEMINI_MODEL=${process.env.GEMINI_MODEL ?? process.env.GEMINI_VISION_MODEL ?? '<default gemini-1.5-flash>'}`);
   console.log(
     `  ALLOW_OPENAI_VISION_FALLBACK=${process.env.ALLOW_OPENAI_VISION_FALLBACK ?? '<unset>'}`
   );

@@ -22,6 +22,13 @@ export function isGeminiQuotaError(status: number, body: string): boolean {
 }
 
 export function geminiErrorFromHttp(status: number, body: string): GeminiVisionError {
+  if (status === 404) {
+    return new GeminiVisionError(
+      'gemini_model_or_endpoint_not_found',
+      'Gemini endpoint/model not found. Check GEMINI_MODEL and API endpoint.',
+      404
+    );
+  }
   if (isGeminiQuotaError(status, body)) {
     return new GeminiVisionError(
       'gemini_quota_exceeded',
