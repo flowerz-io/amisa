@@ -156,17 +156,20 @@ final class Router: ObservableObject {
         navigateToShareImportProcessing(payload: payload)
     }
 
-    /// Tap sur notification « résultats prêts » : préfère `sessionId` si fourni.
+    /// Tap sur notification « résultats prêts » : ouvre directement la session (sans relancer l’analyse).
     func handleShareResultsNotificationResponse(userInfo: [AnyHashable: Any]) {
+        let type = userInfo[AmisaNotificationIdentifiers.typeUserInfoKey] as? String
         if let sid = userInfo[AmisaNotificationIdentifiers.sessionIdUserInfoKey] as? String,
            !sid.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            print("[SHARE_NOTIFICATION] opened sessionId =", sid)
             selectedTab = .search
             path = NavigationPath()
             Task {
                 await SharedSearchLaunchCoordinator.openSessionFromNotification(
                     sessionId: sid,
                     router: self,
-                    apiClient: APIConfig.apiClient
+                    apiClient: APIConfig.apiClient,
+                    notificationType: type
                 )
             }
             return

@@ -1,6 +1,6 @@
 //
 //  NotificationManager.swift
-//  Balibu
+//  Amisa
 //
 //  Notifications locales : autorisation, programmation, paramètres.
 //
@@ -22,26 +22,22 @@ final class NotificationManager: ObservableObject {
         UNUserNotificationCenter.current()
     }
 
-    /// Met à jour le statut publié (à appeler après demande ou au lancement).
     func refreshAuthorizationStatus() async {
         let settings = await center.notificationSettings()
         authorizationStatus = settings.authorizationStatus
     }
 
-    /// Statut courant.
     func currentAuthorizationStatus() async -> UNAuthorizationStatus {
         await center.notificationSettings().authorizationStatus
     }
 
-    /// Paramètres complets (alertes, son, badge, etc.).
     func notificationSettings() async -> UNNotificationSettings {
         await center.notificationSettings()
     }
 
-    /// Demande d’autorisation (alertes, son, badge).
     func requestAuthorization() async -> Bool {
         do {
-            let granted = try await center.requestAuthorization(options: [.alert, .badge, .sound])
+            let granted = try await center.requestAuthorization(options: [.alert, .sound, .badge])
             await refreshAuthorizationStatus()
             return granted
         } catch {
@@ -50,25 +46,63 @@ final class NotificationManager: ObservableObject {
         }
     }
 
-    /// Programmation côté app (même contenu que l’extension) — ex. relance ou tests.
-    func scheduleShareResultsReadyNotification(importId: UUID) async throws {
-        let content = UNMutableNotificationContent()
-        content.title = String(localized: "Amisa")
-        content.body = String(localized: "Touchez pour voir les résultats")
-        content.sound = .default
-        content.categoryIdentifier = AmisaNotificationIdentifiers.shareResultsReadyCategory
-        content.userInfo = [AmisaNotificationIdentifiers.importIdUserInfoKey: importId.uuidString]
+    /// Notification « Résultats prêts » — session Railway terminée avec annonces.
+    func notifySearchResultsReady(
+        sessionId: String,
+        listingsCount: Int,
+        previewImageData: Data? = nil
+    ) async throws {
+        guard listingsCount > 0 else {
+            print("[SHARE_NOTIFICATION] skipped reason = zero_listings")
+            return
+        }
 
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        let content = UNMutableNotificationContent()
+        content.title = String(localized: "Résultats prêts")
+        content.body = String(
+            format: String(localized: "%lld annonces Vinted trouvées"),
+            Int64(listingsCount)
+        )
+        content.sound = .default
+        content.badge = 1
+        content.categoryIdentifier = AmisaNotificationIdentifiers.shareResultsReadyCategory
+        if #available(iOS 15.0, *) {
+            content.interruptionLevel = .active
+        }
+        content.userInfo = [
+            AmisaNotificationIdentifiers.typeUserInfoKey: AmisaNotificationIdentifiers.searchResultsReadyType,
+            AmisaNotificationIdentifiers.sessionIdUserInfoKey: sessionId,
+        ]
+
+        if let previewImageData {
+            let dir = FileManager.default.temporaryDirectory
+            let file = dir.appendingPathComponent("share-preview-\(sessionId).jpg")
+            try previewImageData.write(to: file, options: .atomic)
+            if let attachment = try? UNNotificationAttachment(
+                identifier: "preview",
+                url: file,
+                options: nil
+            ) {
+                content.attachments = [attachment]
+            }
+        }
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 0.5, repeats: false)
         let request = UNNotificationRequest(
-            identifier: AmisaNotificationIdentifiers.shareResultsRequestIdentifier(importId: importId),
+            identifier: AmisaNotificationIdentifiers.shareResultsRequestIdentifier(sessionId: sessionId),
             content: content,
             trigger: trigger
         )
         try await center.add(request)
+        print("[SHARE_NOTIFICATION] scheduled sessionId =", sessionId)
     }
 
-    /// Annule la notification programmée / livrée pour cet import.
+    func cancelShareResultsNotification(sessionId: String) {
+        let id = AmisaNotificationIdentifiers.shareResultsRequestIdentifier(sessionId: sessionId)
+        center.removePendingNotificationRequests(withIdentifiers: [id])
+        center.removeDeliveredNotifications(withIdentifiers: [id])
+    }
+
     func cancelShareResultsNotification(importId: UUID) {
         let id = AmisaNotificationIdentifiers.shareResultsRequestIdentifier(importId: importId)
         center.removePendingNotificationRequests(withIdentifiers: [id])
@@ -80,7 +114,6 @@ final class NotificationManager: ObservableObject {
         UIApplication.shared.open(url)
     }
 
-    /// Libellé lisible pour debug / UI secondaire.
     static func localizedDescription(for status: UNAuthorizationStatus) -> String {
         switch status {
         case .notDetermined:

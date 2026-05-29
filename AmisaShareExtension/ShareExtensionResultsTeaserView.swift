@@ -245,20 +245,19 @@ struct ShareExtensionResultsTeaserView: View {
 
     @ViewBuilder
     private var notificationCopy: some View {
-        switch model.notificationScheduleOutcome {
-        case .scheduled:
+        if model.shouldShowPendingNotificationHint {
             Text(String(localized: "Tu recevras une notification quand tout sera prêt."))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
-        case .denied:
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+        } else if case .denied = model.notificationScheduleOutcome {
             Text(String(localized: "Notifications désactivées : ouvre Amisa depuis l’accueil pour suivre ta recherche."))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
-        case .failed(let message):
-            Text(String(localized: "Alerte non planifiée (\(message))."))
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-        case .none:
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+        } else {
             EmptyView()
         }
     }

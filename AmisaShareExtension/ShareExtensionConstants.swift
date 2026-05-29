@@ -16,6 +16,7 @@ enum ShareExtensionConstants {
 
     enum Notifications {
         static let shareResultsReadyCategory = "amisa.category.shareResultsReady"
+        static let typeUserInfoKey = "type"
         static let importIdUserInfoKey = "importId"
         static let sessionIdUserInfoKey = "sessionId"
         static func shareResultsRequestIdentifier(importId: UUID) -> String {

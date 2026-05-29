@@ -55,6 +55,10 @@ final class ShareFlowModel: ObservableObject {
     /// Session Railway active pendant l’écran résultats teaser (pour deep link).
     private(set) var activeSessionId: String?
 
+    private var hasScheduledResultsNotification = false
+    private var pendingNotificationOnDismiss = false
+    private(set) var remoteSessionStatus: String?
+
     var loadingPreviewImage: UIImage? {
         if case .loading(let img) = state { return img }
         return nil
@@ -64,6 +68,9 @@ final class ShareFlowModel: ObservableObject {
         state = .resolving
         teaserListingsFromAPI = []
         activeSessionId = nil
+        remoteSessionStatus = nil
+        hasScheduledResultsNotification = false
+        pendingNotificationOnDismiss = false
         extensionGridPhase = .listingGrid
         Task { await resolveInitialInput() }
     }
@@ -86,8 +93,12 @@ final class ShareFlowModel: ObservableObject {
 
         isStartingRemoteSession = true
         notificationScheduleOutcome = nil
+        hasScheduledResultsNotification = false
+        pendingNotificationOnDismiss = false
+        remoteSessionStatus = nil
         sessionPollingTask?.cancel()
         teaserListingsFromAPI = []
+        print("[SHARE_NOTIFICATION] immediate notification disabled")
 
         Task {
             do {
@@ -121,11 +132,6 @@ final class ShareFlowModel: ObservableObject {
                             extensionGridPhase = .listingGrid
                         }
                     }
-                }
-
-                let outcome = await ShareExtensionNotificationScheduler.scheduleResultsReady(sessionId: start.sessionId)
-                await MainActor.run {
-                    notificationScheduleOutcome = outcome
                 }
 
                 sessionPollingTask = Task { [weak self] in
@@ -238,12 +244,16 @@ final class ShareFlowModel: ObservableObject {
                 let listings = ShareExtensionTeaserListingParser.listings(from: data)
 
                 await MainActor.run {
+                    remoteSessionStatus = status
                     SharedSearchSessionStore.shared.updateStatus(status, searchQuery: query)
                     if !listings.isEmpty {
                         teaserListingsFromAPI = listings
                     }
                     persistContinuitySnapshot(sessionId: sessionId, status: status, query: query, listings: teaserListingsFromAPI)
                 }
+
+                print("[SHARE_NOTIFICATION] search status =", status)
+                print("[SHARE_NOTIFICATION] results ready listings =", listings.count)
 
                 if status == "completed" {
                     let fileName = try ShareExtensionStorage.saveSessionResultJSON(data, sessionId: sessionId)
@@ -252,9 +262,16 @@ final class ShareFlowModel: ObservableObject {
                         SharedSearchSessionStore.shared.updateStatus("completed", searchQuery: query)
                         persistContinuitySnapshot(sessionId: sessionId, status: "completed", query: query, listings: teaserListingsFromAPI)
                     }
+                    let listingsCount = await MainActor.run { teaserListingsFromAPI.count }
+                    await scheduleResultsNotificationIfNeeded(
+                        sessionId: sessionId,
+                        status: "completed",
+                        listingsCount: listingsCount
+                    )
                     return
                 }
                 if status == "failed" {
+                    print("[SHARE_NOTIFICATION] skipped reason = search_failed")
                     await MainActor.run {
                         SharedSearchSessionStore.shared.updateStatus("failed", searchQuery: query)
                         persistContinuitySnapshot(sessionId: sessionId, status: "failed", query: query, listings: teaserListingsFromAPI)
@@ -292,12 +309,90 @@ final class ShareFlowModel: ObservableObject {
         (try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any])?["searchQuery"] as? String
     }
 
+    /// Indique si l’utilisateur voit déjà des résultats dans l’extension (évite une notification inutile).
+    var isUserViewingResultsInExtension: Bool {
+        guard case .loading = state else { return false }
+        return !teaserListingsFromAPI.isEmpty
+    }
+
+    /// Texte d’aide sous la grille pendant la recherche (avant résultats affichés).
+    var shouldShowPendingNotificationHint: Bool {
+        guard case .loading = state else { return false }
+        return teaserListingsFromAPI.isEmpty && remoteSessionStatus != "completed"
+    }
+
+    private func previewImageDataForNotification() -> Data? {
+        guard let img = loadingPreviewImage else { return nil }
+        return try? ImageUploadPreprocessor.prepareForUpload(img)
+    }
+
+    private func scheduleResultsNotificationIfNeeded(
+        sessionId: String,
+        status: String,
+        listingsCount: Int
+    ) async {
+        guard status == "completed" else {
+            print("[SHARE_NOTIFICATION] skipped reason = status_not_completed")
+            return
+        }
+        guard listingsCount > 0 else {
+            print("[SHARE_NOTIFICATION] skipped reason = zero_results")
+            return
+        }
+        guard !hasScheduledResultsNotification else {
+            print("[SHARE_NOTIFICATION] skipped reason = already_scheduled")
+            return
+        }
+
+        let viewingInExtension = await MainActor.run { isUserViewingResultsInExtension }
+        if viewingInExtension {
+            await MainActor.run { pendingNotificationOnDismiss = true }
+            print("[SHARE_NOTIFICATION] skipped reason = user_viewing_results_in_extension")
+            return
+        }
+
+        await performScheduleResultsNotification(sessionId: sessionId, listingsCount: listingsCount)
+    }
+
+    private func performScheduleResultsNotification(sessionId: String, listingsCount: Int) async {
+        let previewData = await MainActor.run { previewImageDataForNotification() }
+        let outcome = await ShareExtensionNotificationScheduler.notifySearchResultsReady(
+            sessionId: sessionId,
+            listingsCount: listingsCount,
+            previewImageData: previewData
+        )
+        await MainActor.run {
+            notificationScheduleOutcome = outcome
+            if case .scheduled = outcome {
+                hasScheduledResultsNotification = true
+                pendingNotificationOnDismiss = false
+            }
+        }
+    }
+
+    private func scheduleNotificationOnDismissIfNeeded() async {
+        guard pendingNotificationOnDismiss, !hasScheduledResultsNotification else { return }
+        guard let sessionId = activeSessionId else { return }
+        let count = await MainActor.run { teaserListingsFromAPI.count }
+        guard count > 0, remoteSessionStatus == "completed" else {
+            print("[SHARE_NOTIFICATION] skipped reason = dismiss_before_ready")
+            return
+        }
+        await performScheduleResultsNotification(sessionId: sessionId, listingsCount: count)
+    }
+
     func finishAndDismissExtension() {
-        extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
+        Task {
+            await scheduleNotificationOnDismissIfNeeded()
+            await MainActor.run {
+                extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
+            }
+        }
     }
 
     func cancelExtension() {
         sessionPollingTask?.cancel()
+        print("[SHARE_NOTIFICATION] skipped reason = user_cancelled")
         extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
     }
 }
