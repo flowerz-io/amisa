@@ -5,91 +5,111 @@
 
 import SwiftUI
 
+/// Portrait éditorial mode : largeur:hauteur = 3:5.
+private let lookCardWidthToHeight: CGFloat = 3 / 5
+private let immersiveLookSpacing: CGFloat = 14
+private let immersiveLookHorizontalPadding: CGFloat = 12
+
 struct OnboardingLookView: View {
     @ObservedObject var model: OnboardingFlowModel
     @State private var appeared = false
 
     var body: some View {
-        ZStack {
-            Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
+        VStack(spacing: 0) {
+            OnboardingStepHeader(
+                segment: 4,
+                title: "Choisis un look\nà analyser",
+                subtitle: "Amisa va retrouver les pièces similaires pour toi."
+            )
+            .padding(.top, 8)
+            .onboardingStepEntrance(appeared)
 
-            VStack(spacing: 0) {
-                Spacer(minLength: 16)
+            Spacer()
 
-                OnboardingStepHeader(
-                    segment: 4,
-                    title: "Choisis un look\nà analyser",
-                    subtitle: "Amisa va retrouver les pièces similaires pour toi."
-                )
-                .opacity(appeared ? 1 : 0)
-                .offset(y: appeared ? 0 : 16)
-
-                Spacer(minLength: 24)
-
-                lookGrid
-                    .padding(.horizontal, 20)
-
-                Spacer()
+            GeometryReader { geo in
+                let cardSize = lookCardSize(in: geo.size)
+                HStack(alignment: .center, spacing: immersiveLookSpacing) {
+                    ForEach(Array(model.demoLooks.enumerated()), id: \.element.id) { index, look in
+                        Button {
+                            model.selectLook(look)
+                        } label: {
+                            ImmersiveLookCard(look: look)
+                                .frame(width: cardSize.width, height: cardSize.height)
+                        }
+                        .buttonStyle(OnboardingSelectablePressStyle())
+                        .onboardingStaggeredEntrance(appeared, index: index, baseDelay: 0.08)
+                    }
+                }
+                .frame(width: geo.size.width, height: geo.size.height, alignment: .center)
             }
+            .padding(.horizontal, immersiveLookHorizontalPadding)
+
+            Spacer()
         }
+        .onboardingScreen()
         .onAppear {
-            withAnimation(.spring(response: 0.55, dampingFraction: 0.82).delay(0.08)) {
+            withAnimation(OnboardingMotion.springPremium.delay(0.06)) {
                 appeared = true
             }
         }
     }
 
-    private var lookGrid: some View {
-        let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
-
-        return LazyVGrid(columns: columns, spacing: 12) {
-            ForEach(model.demoLooks) { look in
-                Button {
-                    model.selectLook(look)
-                } label: {
-                    LookCardView(look: look)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .opacity(appeared ? 1 : 0)
-        .animation(.spring(response: 0.5, dampingFraction: 0.8), value: appeared)
+    /// Dimensions identiques pour les deux cards, ratio 3:5, maximisées (le padding horizontal est déjà appliqué au conteneur).
+    private func lookCardSize(in size: CGSize) -> CGSize {
+        let maxCardWidth = (size.width - immersiveLookSpacing) / 2
+        let width = min(maxCardWidth, size.height * lookCardWidthToHeight)
+        let height = width / lookCardWidthToHeight
+        return CGSize(width: width, height: height)
     }
 }
 
-struct LookCardView: View {
+private struct ImmersiveLookCard: View {
     let look: DemoLook
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            OnboardingAssetImageView(imageName: look.imageName)
-                .frame(height: 170)
+            OnboardingAssetImageView(imageName: look.imageName, focusRect: look.focusRect)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .clipped()
 
             LinearGradient(
-                colors: [.clear, .black.opacity(0.65)],
-                startPoint: .center,
+                colors: [
+                    .clear,
+                    Color.black.opacity(0.1),
+                    Color.black.opacity(0.72),
+                ],
+                startPoint: .top,
                 endPoint: .bottom
             )
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(look.title)
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(.white)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(OnboardingTheme.offWhite)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.9)
                 Text(look.subtitle)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.white.opacity(0.65))
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(OnboardingTheme.offWhite.opacity(0.75))
+                    .lineLimit(1)
             }
-            .padding(10)
+            .padding(12)
         }
-        .frame(maxWidth: .infinity)
-        .frame(height: 170)
-        .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(.white.opacity(0.08), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.22), Color.white.opacity(0.06)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
         }
-        .shadow(color: .black.opacity(0.12), radius: 8, x: 0, y: 4)
+        .shadow(color: .black.opacity(0.45), radius: 22, x: 0, y: 12)
+        .shadow(color: OnboardingTheme.accentRed.opacity(0.06), radius: 16, x: 0, y: 4)
     }
 }

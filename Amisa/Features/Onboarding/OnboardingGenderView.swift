@@ -8,88 +8,108 @@ import SwiftUI
 struct OnboardingGenderView: View {
     @ObservedObject var model: OnboardingFlowModel
     @State private var appeared = false
+    @State private var highlightedId: String?
 
-    private let options: [(id: String, label: String, icon: String, colors: [Color])] = [
-        ("Femme", "Femme", "figure.stand.dress", [
-            Color(red: 0.95, green: 0.78, blue: 0.82),
-            Color(red: 0.86, green: 0.42, blue: 0.55),
-        ]),
-        ("Homme", "Homme", "figure.stand", [
-            Color(red: 0.26, green: 0.17, blue: 0.14),
-            Color(red: 0.50, green: 0.30, blue: 0.20),
-        ]),
+    private let options: [(id: String, label: String, editorialIcon: String)] = [
+        ("Femme", "Femme", "figure.stand.dress"),
+        ("Homme", "Homme", "figure.stand"),
     ]
 
     var body: some View {
-        ZStack {
-            Color(uiColor: .systemBackground).ignoresSafeArea()
+        VStack(spacing: 0) {
+            OnboardingStepHeader(
+                segment: 1,
+                title: "Tu recherches\nprincipalement pour :",
+                subtitle: "On adapte les résultats, les tailles et les suggestions."
+            )
+            .padding(.top, 8)
+            .onboardingStepEntrance(appeared)
 
-            VStack(spacing: 0) {
-                Spacer(minLength: 16)
+            Spacer(minLength: 24)
 
-                OnboardingStepHeader(
-                    segment: 1,
-                    title: "Tu recherches\nprincipalement pour :",
-                    subtitle: "On adapte les résultats, les tailles et les suggestions."
-                )
-                .opacity(appeared ? 1 : 0)
-
-                Spacer(minLength: 28)
-
-                HStack(spacing: 12) {
-                    ForEach(options, id: \.id) { option in
-                        genderCard(option)
-                    }
+            HStack(spacing: 14) {
+                ForEach(Array(options.enumerated()), id: \.element.id) { index, option in
+                    genderCard(option)
+                        .onboardingStaggeredEntrance(appeared, index: index + 1, baseDelay: 0.08)
                 }
-                .padding(.horizontal, 20)
-                .opacity(appeared ? 1 : 0)
-
-                Spacer()
             }
+            .padding(.horizontal, 20)
+
+            Spacer()
         }
+        .onboardingScreen()
         .onAppear {
-            withAnimation(.spring(response: 0.55, dampingFraction: 0.82).delay(0.06)) {
+            withAnimation(OnboardingMotion.springPremium.delay(0.04)) {
                 appeared = true
             }
         }
     }
 
-    private func genderCard(_ option: (id: String, label: String, icon: String, colors: [Color])) -> some View {
-        let isSelected = model.selectedGender == option.id
+    private func genderCard(_ option: (id: String, label: String, editorialIcon: String)) -> some View {
+        let isHighlighted = highlightedId == option.id
 
         return Button {
-            model.selectGender(option.id)
+            highlightedId = option.id
+            withAnimation(OnboardingMotion.springSnappy) {}
+            Task {
+                try? await Task.sleep(for: .milliseconds(220))
+                model.selectGender(option.id)
+            }
         } label: {
             ZStack {
-                LinearGradient(
-                    colors: isSelected ? option.colors : [
-                        Color(uiColor: .secondarySystemGroupedBackground),
-                        Color(uiColor: .secondarySystemGroupedBackground),
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(OnboardingTheme.cardFill)
+                    .overlay {
+                        if isHighlighted {
+                            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [
+                                            OnboardingTheme.accentRed.opacity(0.22),
+                                            OnboardingTheme.accentRed.opacity(0.06),
+                                            Color.clear,
+                                        ],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                        }
+                    }
 
-                VStack(spacing: 14) {
+                VStack(spacing: 0) {
                     Spacer()
-                    Image(systemName: option.icon)
-                        .font(.system(size: 52, weight: .light))
-                        .foregroundStyle(isSelected ? .white : .primary.opacity(0.65))
+                    Image(systemName: option.editorialIcon)
+                        .font(.system(size: 64, weight: .ultraLight))
+                        .foregroundStyle(OnboardingTheme.offWhite.opacity(0.78))
+                        .symbolRenderingMode(.hierarchical)
+                        .padding(.bottom, 8)
                     Text(option.label)
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundStyle(isSelected ? .white : .primary)
-                    Spacer(minLength: 36)
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(OnboardingTheme.offWhite)
+                    Spacer(minLength: 32)
                 }
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 250)
-            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .frame(height: 280)
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
             .overlay {
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(isSelected ? Color.white.opacity(0.5) : Color(uiColor: .separator), lineWidth: isSelected ? 2 : 1)
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .stroke(
+                        isHighlighted
+                            ? OnboardingTheme.accentRed.opacity(0.55)
+                            : OnboardingTheme.cardStroke,
+                        lineWidth: isHighlighted ? 1.5 : 1
+                    )
             }
+            .shadow(
+                color: .black.opacity(isHighlighted ? 0.42 : 0.32),
+                radius: isHighlighted ? 20 : 14,
+                x: 0,
+                y: isHighlighted ? 12 : 8
+            )
+            .onboardingSelectionGlow(isSelected: isHighlighted)
         }
-        .buttonStyle(.plain)
-        .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .buttonStyle(OnboardingSelectablePressStyle(isSelected: isHighlighted))
+        .animation(OnboardingMotion.springSnappy, value: isHighlighted)
     }
 }

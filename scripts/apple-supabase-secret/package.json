@@ -1,0 +1,11 @@
+{
+  "name": "apple-supabase-secret",
+  "private": true,
+  "description": "Génère le client secret JWT Apple (ES256) pour Supabase Auth",
+  "scripts": {
+    "generate": "node generate.js"
+  },
+  "dependencies": {
+    "jsonwebtoken": "^9.0.2"
+  }
+}

@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		DD2E04742F61863100B107F0 /* AmisaShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = DD2E046A2F61863000B107F0 /* AmisaShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		DD59C15F2FCF04860097F674 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DD59C15E2FCF04850097F674 /* StoreKit.framework */; };
 		EEAA10002F630DC7006BF7BF /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = EEAA10012F630DC7006BF7BF /* Supabase */; };
 /* End PBXBuildFile section */
 
@@ -52,6 +53,7 @@
 		DD2E04492F6184F000B107F0 /* AmisaTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AmisaTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		DD2E04532F6184F000B107F0 /* AmisaUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AmisaUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		DD2E046A2F61863000B107F0 /* AmisaShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AmisaShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		DD59C15E2FCF04850097F674 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -105,6 +107,7 @@
 			isa = PBXFrameworksBuildPhase;
 			files = (
 				EEAA10002F630DC7006BF7BF /* Supabase in Frameworks */,
+				DD59C15F2FCF04860097F674 /* StoreKit.framework in Frameworks */,
 			);
 		};
 		DD2E04462F6184F000B107F0 /* Frameworks */ = {
@@ -132,6 +135,7 @@
 				DD2E044C2F6184F000B107F0 /* AmisaTests */,
 				DD2E04562F6184F000B107F0 /* AmisaUITests */,
 				DD2E046B2F61863000B107F0 /* AmisaShareExtension */,
+				DD59C15D2FCF04850097F674 /* Frameworks */,
 				DD2E043D2F6184ED00B107F0 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -145,6 +149,14 @@
 				DD2E046A2F61863000B107F0 /* AmisaShareExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		DD59C15D2FCF04850097F674 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				DD59C15E2FCF04850097F674 /* StoreKit.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -396,7 +408,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = 7VRLJJU8Q7;
+				DEVELOPMENT_TEAM = V27382NYDY;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -460,7 +472,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = 7VRLJJU8Q7;
+				DEVELOPMENT_TEAM = V27382NYDY;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -490,7 +502,7 @@
 				CODE_SIGN_ENTITLEMENTS = Amisa/Amisa.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 7VRLJJU8Q7;
+				DEVELOPMENT_TEAM = V27382NYDY;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Amisa/Info.plist;
@@ -508,7 +520,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = flowerz.io.Amisa.app;
+				PRODUCT_BUNDLE_IDENTIFIER = io.flowerz.Amisa.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -528,7 +540,7 @@
 				CODE_SIGN_ENTITLEMENTS = Amisa/Amisa.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 7VRLJJU8Q7;
+				DEVELOPMENT_TEAM = V27382NYDY;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Amisa/Info.plist;
@@ -546,7 +558,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = flowerz.io.Amisa.app;
+				PRODUCT_BUNDLE_IDENTIFIER = io.flowerz.Amisa.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -564,7 +576,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 7VRLJJU8Q7;
+				DEVELOPMENT_TEAM = V27382NYDY;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
@@ -586,7 +598,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 7VRLJJU8Q7;
+				DEVELOPMENT_TEAM = V27382NYDY;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
@@ -607,7 +619,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 7VRLJJU8Q7;
+				DEVELOPMENT_TEAM = V27382NYDY;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = flowerz.io.AmisaUITests;
@@ -627,7 +639,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 7VRLJJU8Q7;
+				DEVELOPMENT_TEAM = V27382NYDY;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = flowerz.io.AmisaUITests;
@@ -648,7 +660,7 @@
 				CODE_SIGN_ENTITLEMENTS = AmisaShareExtension/AmisaShareExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 7VRLJJU8Q7;
+				DEVELOPMENT_TEAM = V27382NYDY;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = AmisaShareExtension/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Amisa;
@@ -659,7 +671,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = flowerz.io.Amisa.app.ShareExtension;
+				PRODUCT_BUNDLE_IDENTIFIER = io.flowerz.Amisa.app.ShareExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -677,7 +689,7 @@
 				CODE_SIGN_ENTITLEMENTS = AmisaShareExtension/AmisaShareExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 7VRLJJU8Q7;
+				DEVELOPMENT_TEAM = V27382NYDY;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = AmisaShareExtension/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Amisa;
@@ -688,7 +700,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = flowerz.io.Amisa.app.ShareExtension;
+				PRODUCT_BUNDLE_IDENTIFIER = io.flowerz.Amisa.app.ShareExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;

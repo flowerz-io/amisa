@@ -121,15 +121,18 @@ struct EditProfileView: View {
             }
         }
         .onAppear {
-            firstName = store.firstName
-            lastName = store.lastName
+            if auth.isAuthenticated, let p = profileManager.profile {
+                firstName = p.firstName ?? store.firstName
+                lastName = p.lastName ?? store.lastName
+                if let bd = p.birthDate { birthDate = bd }
+            } else {
+                firstName = store.firstName
+                lastName = store.lastName
+            }
             pickedProfileImage = store.avatarImage()
             pickedBannerImage = store.bannerImage()
             profilePhotoChanged = false
             bannerPhotoChanged = false
-            if let bd = profileManager.profile?.birthDate {
-                birthDate = bd
-            }
         }
         .onChange(of: profilePickerItem) { _, new in
             guard let new else { return }
@@ -255,16 +258,19 @@ struct EditProfileView: View {
         let trimmedFirst = firstName.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedLast = lastName.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        let row = UserProfile(
+        var row = UserProfile(
             id: userId,
             firstName: trimmedFirst,
             lastName: trimmedLast,
             birthDate: birthDate,
+            gender: profileManager.profile?.gender,
+            country: profileManager.profile?.country,
             avatarURL: avatarURL,
             bannerURL: bannerURL,
             createdAt: profileManager.profile?.createdAt,
             updatedAt: Date()
         )
+        row.applyComputedDisplayName()
 
         store.save(
             firstName: trimmedFirst,

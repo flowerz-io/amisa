@@ -2,10 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>SUPABASE_ANON_KEY</key>
-	<string>sb_publishable_a4dwXpouWHeSGSDg47qq5w_mviE4tu3</string>
-	<key>SUPABASE_URL</key>
-	<string>https://istsqscnkkfbyygkgozt.supabase.co</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -29,5 +25,9 @@
 			</array>
 		</dict>
 	</array>
+	<key>SUPABASE_ANON_KEY</key>
+	<string>sb_publishable_a4dwXpouWHeSGSDg47qq5w_mviE4tu3</string>
+	<key>SUPABASE_URL</key>
+	<string>https://istsqscnkkfbyygkgozt.supabase.co</string>
 </dict>
 </plist>

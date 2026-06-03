@@ -1,0 +1,2 @@
+-- ⚠️ Intégré dans `supabase/profiles.sql` (colonnes gender, country, display_name + contraintes).
+-- Exécuter uniquement `profiles.sql` pour une installation à jour.

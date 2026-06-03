@@ -139,12 +139,14 @@ final class OnboardingFlowModel: ObservableObject {
     func selectGender(_ gender: String) {
         guard step == .gender else { return }
         selectedGender = gender
+        Task { await ProfileManager.shared.persistOnboardingGender(gender) }
         goTo(.country)
     }
 
     func selectCountry(_ country: String) {
         guard step == .country else { return }
         selectedCountry = country.isEmpty ? nil : country
+        Task { await ProfileManager.shared.persistOnboardingCountry(selectedCountry) }
         goTo(.notifications)
     }
 

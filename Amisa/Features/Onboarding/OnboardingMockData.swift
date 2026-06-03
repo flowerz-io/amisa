@@ -20,6 +20,12 @@ struct DemoLook: Identifiable, Equatable {
     let title: String
     let subtitle: String
     let imageName: String
+    /// Libellé de la pièce simulée par l’IA (focus analyse → résultats).
+    let detectedPiece: String
+    /// Libellé court affiché à la confirmation (« Sac détecté », etc.).
+    let detectionConfirmLabel: String
+    /// Zone de focus normalisée (0…1) pour la détection sur la photo.
+    let focusRect: CGRect
     let results: [DemoListing]
 }
 
@@ -156,11 +162,87 @@ enum OnboardingMockData {
         ]
 
     static let demoLooks: [DemoLook] = [
-        DemoLook(id: "leather", title: "Look Cuir", subtitle: "Veste en cuir", imageName: "onboarding_look_leather", results: makeListings(lookId: "leather", prefix: "onboarding_result_leather", items: leatherItems)),
-        DemoLook(id: "sneakerhead", title: "Sneakerhead", subtitle: "Sneakers", imageName: "onboarding_look_sneaker", results: makeListings(lookId: "sneakerhead", prefix: "onboarding_result_sneaker", items: sneakerheadItems)),
-        DemoLook(id: "urbanCool", title: "Urban Cool", subtitle: "Casquette", imageName: "onboarding_look_cap", results: makeListings(lookId: "urbanCool", prefix: "onboarding_result_cap", items: urbanCoolItems)),
-        DemoLook(id: "smartCasual", title: "Smart Casual", subtitle: "Chemise oxford", imageName: "onboarding_look_shirt", results: makeListings(lookId: "smartCasual", prefix: "onboarding_result_shirt", items: smartCasualItems)),
+        DemoLook(
+            id: "feminine",
+            title: "Look féminin",
+            subtitle: "Style lifestyle",
+            imageName: "onboarding_look_shirt",
+            detectedPiece: "Chemise oxford",
+            detectionConfirmLabel: "Sac détecté",
+            focusRect: OnboardingAnalysisFocusPresets.female.normalizedRect,
+            results: makeFeminineSneakerListings()
+        ),
+        DemoLook(
+            id: "masculine",
+            title: "Look masculin",
+            subtitle: "Style lifestyle",
+            imageName: "onboarding_look_leather",
+            detectedPiece: "Veste en cuir",
+            detectionConfirmLabel: "Jean détecté",
+            focusRect: OnboardingAnalysisFocusPresets.male.normalizedRect,
+            results: makeMasculineCapListings()
+        ),
     ]
+
+    private static let onitsukaSneakerTitles = [
+        "Mexico 66 jaune",
+        "Mexico",
+        "Mexico 66",
+        "66 jaune",
+        "Mexico jaune",
+    ]
+
+    /// Tailles fixes pseudo-aléatoires (37…45), ordre naturel non croissant.
+    private static let feminineSneakerSizes = [
+        "42", "39", "44", "38", "41", "37", "43", "40", "45", "39", "42", "38",
+    ]
+
+    private static let masculineCapBrands = [
+        "New Era", "New Era", "47 Brand", "New Era", "NY Yankees", "New Era", "Nike", "New Era", "47 Brand", "New Era",
+        "New Era", "47 Brand", "New Era", "NY Yankees", "New Era", "Nike", "New Era", "47 Brand", "New Era", "New Era",
+    ]
+
+    private static let masculineCapTitles = [
+        "NY Yankees", "New York Yankees", "Yankees", "New York", "NY", "NY Yankees", "New York", "Yankees",
+        "NY Yankees", "New York Yankees", "NY", "New York", "Yankees", "NY Yankees", "New York Yankees", "New York",
+        "NY", "Yankees", "NY Yankees", "New York",
+    ]
+
+    /// Prix casquettes (5€–30€), ordre fixe pseudo-aléatoire.
+    private static let masculineCapPrices = [
+        "12 €", "18 €", "9 €", "24 €", "15 €", "7 €", "29 €", "14 €", "22 €", "11 €",
+        "19 €", "8 €", "26 €", "13 €", "21 €", "16 €", "6 €", "28 €", "10 €", "17 €",
+    ]
+
+    private static func makeMasculineCapListings() -> [DemoListing] {
+        urbanCoolItems.enumerated().map { idx, item in
+            let imageIndex = (idx % 6) + 1
+            return DemoListing(
+                id: "masculine_\(String(format: "%03d", idx + 1))",
+                imageName: "onboarding_result_cap_\(String(format: "%02d", imageIndex))",
+                brand: masculineCapBrands[idx % masculineCapBrands.count],
+                title: masculineCapTitles[idx % masculineCapTitles.count],
+                price: masculineCapPrices[idx % masculineCapPrices.count],
+                size: "OS",
+                providerLogoName: item.4
+            )
+        }
+    }
+
+    private static func makeFeminineSneakerListings() -> [DemoListing] {
+        sneakerheadItems.enumerated().map { idx, item in
+            let imageIndex = (idx % 6) + 1
+            return DemoListing(
+                id: "feminine_\(String(format: "%03d", idx + 1))",
+                imageName: "onboarding_result_sneaker_\(String(format: "%02d", imageIndex))",
+                brand: "Onitsuka Tiger",
+                title: onitsukaSneakerTitles[idx % onitsukaSneakerTitles.count],
+                price: item.2,
+                size: feminineSneakerSizes[idx % feminineSneakerSizes.count],
+                providerLogoName: item.4
+            )
+        }
+    }
 
     private static func makeListings(
         lookId: String,
@@ -185,19 +267,75 @@ enum OnboardingMockData {
 struct OnboardingAssetImageView: View {
     let imageName: String
     var contentMode: ContentMode = .fill
+    /// Zone de focus normalisée (0…1) pour un crop centré sur le sujet ; `nil` = centré.
+    var focusRect: CGRect? = nil
+
+    @State private var isVisible = false
+
+    private var hasAsset: Bool { UIImage(named: imageName) != nil }
 
     var body: some View {
-        if UIImage(named: imageName) != nil {
-            Image(imageName)
-                .resizable()
-                .aspectRatio(contentMode: contentMode)
-        } else {
-            ZStack {
-                Color(uiColor: .tertiarySystemFill)
-                Image(systemName: "photo")
-                    .font(.system(size: 22, weight: .light))
-                    .foregroundStyle(Color(uiColor: .tertiaryLabel))
+        ZStack {
+            if hasAsset {
+                OnboardingImageSkeleton()
+            } else {
+                OnboardingImageFallback()
+            }
+
+            if hasAsset {
+                Group {
+                    if let focusRect {
+                        OnboardingSubjectFillImage(imageName: imageName, focusRect: focusRect)
+                    } else {
+                        Image(imageName)
+                            .resizable()
+                            .aspectRatio(contentMode: contentMode)
+                    }
+                }
+                .opacity(isVisible ? 1 : 0)
+            }
+        }
+        .onAppear {
+            guard hasAsset else { return }
+            withAnimation(.easeOut(duration: 0.32)) {
+                isVisible = true
+            }
+        }
+        .onChange(of: imageName) { _, _ in
+            isVisible = false
+            guard hasAsset else { return }
+            withAnimation(.easeOut(duration: 0.32)) {
+                isVisible = true
             }
         }
     }
+
+}
+
+// MARK: - Crop centré sujet (onboarding looks)
+
+private struct OnboardingSubjectFillImage: View {
+    let imageName: String
+    let focusRect: CGRect
+
+    var body: some View {
+        GeometryReader { geo in
+            let size = geo.size
+            if let uiImage = UIImage(named: imageName) {
+                let offset = FocusImageCrop.offset(
+                    container: size,
+                    imageSize: uiImage.size,
+                    focusRect: focusRect
+                )
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: size.width, height: size.height)
+                    .offset(offset)
+                    .frame(width: size.width, height: size.height)
+                    .clipped()
+            }
+        }
+    }
+
 }

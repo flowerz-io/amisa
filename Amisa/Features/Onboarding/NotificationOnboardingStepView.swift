@@ -11,69 +11,131 @@ struct NotificationOnboardingStepView: View {
 
     @State private var appeared = false
     @State private var requestInFlight = false
+    @State private var notificationPulse = false
 
     var body: some View {
-        ZStack {
-            Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
+        VStack(spacing: 0) {
+            OnboardingStepHeader(
+                segment: 3,
+                title: "Ne rate plus les\nmeilleures trouvailles",
+                subtitle: "Amisa t’alerte quand de nouvelles annonces correspondent à tes recherches."
+            )
+            .padding(.top, 4)
+            .onboardingStepEntrance(appeared)
 
-            VStack(spacing: 0) {
-                Spacer(minLength: 8)
+            Spacer(minLength: 20)
 
-                Image(systemName: "bell.badge.fill")
-                    .symbolRenderingMode(.palette)
-                    .foregroundStyle(.primary, BrandColors.primary)
-                    .font(.system(size: 48))
-                    .padding(.bottom, 16)
+            notificationMockup
+                .padding(.horizontal, 28)
+                .onboardingStaggeredEntrance(appeared, index: 1, baseDelay: 0.1)
 
-                OnboardingStepHeader(
-                    segment: 3,
-                    title: "Ne rate plus les\nmeilleures trouvailles",
-                    subtitle: "Amisa t’alerte quand de nouvelles annonces correspondent à tes recherches."
-                )
+            Spacer(minLength: 24)
 
-                Spacer(minLength: 24)
-
-                VStack(spacing: 10) {
-                    Button {
-                        Task { await activateNotifications() }
-                    } label: {
-                        Group {
-                            if requestInFlight {
-                                ProgressView().tint(.white)
-                            } else {
-                                Text("Activer les notifications")
-                                    .font(.system(size: 16, weight: .semibold))
-                            }
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .foregroundStyle(.white)
-                        .background(BrandColors.primary)
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    }
-                    .buttonStyle(BouncyButtonStyle())
-                    .disabled(requestInFlight)
-
-                    Button {
-                        finishStep()
-                    } label: {
-                        Text("Plus tard")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 10)
-                    }
-                    .buttonStyle(.plain)
+            VStack(spacing: 10) {
+                OnboardingPrimaryButton(
+                    title: requestInFlight
+                        ? String(localized: "Activation…")
+                        : String(localized: "Activer les notifications"),
+                    icon: requestInFlight ? nil : "bell.badge.fill"
+                ) {
+                    Task { await activateNotifications() }
                 }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 32)
+                .disabled(requestInFlight)
+                .opacity(requestInFlight ? 0.85 : 1)
+
+                OnboardingSecondaryTextButton(title: String(localized: "Plus tard")) {
+                    finishStep()
+                }
             }
-            .opacity(appeared ? 1 : 0)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 32)
+            .onboardingStepEntrance(appeared, delay: 0.16)
         }
+        .onboardingScreen()
         .onAppear {
-            withAnimation(.spring(response: 0.55, dampingFraction: 0.82).delay(0.06)) {
+            withAnimation(OnboardingMotion.springPremium.delay(0.04)) {
                 appeared = true
             }
+            withAnimation(.easeInOut(duration: 2.4).repeatForever(autoreverses: true)) {
+                notificationPulse = true
+            }
+        }
+    }
+
+    private var notificationMockup: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(Color.black.opacity(0.35))
+                .frame(height: 320)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .stroke(OnboardingTheme.cardStroke, lineWidth: 1)
+                }
+                .shadow(color: .black.opacity(0.35), radius: 20, x: 0, y: 10)
+
+            VStack(spacing: 14) {
+                mockNotificationCard(
+                    title: "Amisa",
+                    body: "Nouveau maillot France 2002 trouvé à 39 €",
+                    time: "À l’instant",
+                    highlighted: true
+                )
+                .scaleEffect(notificationPulse ? 1.01 : 1)
+
+                mockNotificationCard(
+                    title: "Ta recherche",
+                    body: "Une annonce correspondant à ta recherche vient d’apparaître",
+                    time: "Il y a 2 min",
+                    highlighted: false
+                )
+                .opacity(0.72)
+                .scaleEffect(0.96)
+                .onboardingStaggeredEntrance(appeared, index: 2, baseDelay: 0.14)
+            }
+            .padding(20)
+        }
+    }
+
+    private func mockNotificationCard(
+        title: String,
+        body: String,
+        time: String,
+        highlighted: Bool
+    ) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(OnboardingTheme.accentRed.opacity(0.2))
+                .frame(width: 40, height: 40)
+                .overlay {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(OnboardingTheme.accentRed)
+                }
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(title)
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(OnboardingTheme.offWhite)
+                    Spacer()
+                    Text(time)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(OnboardingTheme.warmGrayMuted)
+                }
+                Text(body)
+                    .font(.system(size: 13))
+                    .foregroundStyle(OnboardingTheme.warmGray)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(14)
+        .background {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(highlighted ? OnboardingTheme.cardFillElevated : OnboardingTheme.cardFill)
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(highlighted ? OnboardingTheme.accentRed.opacity(0.35) : OnboardingTheme.cardStroke, lineWidth: 1)
         }
     }
 

@@ -14,6 +14,9 @@ final class ProfileManager: ObservableObject {
 
     static let shared = ProfileManager()
 
+    private static let pendingGenderKey = "amisa.pending.gender"
+    private static let pendingCountryKey = "amisa.pending.country"
+
     @Published private(set) var profile: UserProfile?
     /// Plein écran obligatoire après auth si le profil DB est incomplet.
     @Published private(set) var needsMandatoryProfileCompletion = false
@@ -27,6 +30,7 @@ final class ProfileManager: ObservableObject {
     /// Après connexion (magic link, Apple, etc.).
     func syncAfterSignIn(user: AppUser) async {
         await refreshProfileFromServer(userId: user.id)
+        await flushPendingOnboardingFields(userId: user.id)
     }
 
     func refreshProfileFromServer(userId: String) async {
@@ -36,8 +40,12 @@ final class ProfileManager: ObservableObject {
             return
         }
 
-        let row = await SupabaseManager.shared.fetchProfile(userId: userId)
         let authUser = await SupabaseManager.shared.fetchAuthUser()
+        var row = await SupabaseManager.shared.fetchProfile(userId: userId)
+
+        if row == nil, let authUser {
+            row = await ensureProfileRow(userId: userId, authUser: authUser)
+        }
 
         if let row {
             profile = row
@@ -57,15 +65,44 @@ final class ProfileManager: ObservableObject {
     }
 
     func updateProfile(_ updated: UserProfile) async {
+        var row = updated
+        row.applyComputedDisplayName()
+        row.updatedAt = Date()
+
         do {
-            try await SupabaseManager.shared.upsertProfile(updated)
-            profile = updated
+            try await SupabaseManager.shared.upsertProfile(row)
+            profile = row
             let authUser = await SupabaseManager.shared.fetchAuthUser()
-            pushToProfileStore(updated, oauthFallbackUser: authUser)
+            pushToProfileStore(row, oauthFallbackUser: authUser)
         } catch {
             #if DEBUG
             print("[Profile] upsert failed:", error)
             #endif
+        }
+    }
+
+    /// Sélection onboarding genre — persistance locale + Supabase si connecté.
+    func persistOnboardingGender(_ gender: String) async {
+        guard let stored = Self.normalizedGenderForStorage(gender) else { return }
+        UserDefaults.standard.set(stored, forKey: Self.pendingGenderKey)
+
+        guard let userId = AuthManager.shared.currentUser?.id else { return }
+        await mergeProfile(userId: userId) { row in
+            row.gender = stored
+        }
+    }
+
+    /// Sélection onboarding pays — persistance locale + Supabase si connecté.
+    func persistOnboardingCountry(_ country: String?) async {
+        if let country, !country.isEmpty {
+            UserDefaults.standard.set(country, forKey: Self.pendingCountryKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: Self.pendingCountryKey)
+        }
+
+        guard let userId = AuthManager.shared.currentUser?.id else { return }
+        await mergeProfile(userId: userId) { row in
+            row.country = country?.isEmpty == true ? nil : country
         }
     }
 
@@ -100,16 +137,19 @@ final class ProfileManager: ObservableObject {
             }
         }
 
-        let row = UserProfile(
+        var row = UserProfile(
             id: userId,
             firstName: trimmedFirst,
             lastName: trimmedLast,
             birthDate: birthDate,
+            gender: profile?.gender ?? pendingGender(),
+            country: profile?.country ?? pendingCountry(),
             avatarURL: avatarURL,
             bannerURL: bannerURL,
             createdAt: profile?.createdAt,
             updatedAt: Date()
         )
+        row.applyComputedDisplayName()
 
         try await SupabaseManager.shared.upsertProfile(row)
         profile = row
@@ -117,6 +157,7 @@ final class ProfileManager: ObservableObject {
         pushToProfileStore(row, oauthFallbackUser: authUser)
         needsMandatoryProfileCompletion = false
         mandatoryProfilePrefill = nil
+        clearPendingOnboardingFields()
     }
 
     /// Efface le profil en mémoire (déconnexion).
@@ -162,6 +203,102 @@ final class ProfileManager: ObservableObject {
         ProfileStore.shared.mergeAvatarRemoteURLIfAbsent(raw)
     }
 
+    // MARK: - Profile row lifecycle
+
+    private func ensureProfileRow(userId: String, authUser: User) async -> UserProfile? {
+        let hints = SupabaseManager.shared.oauthHintsFromAuthUser(authUser)
+        var row = UserProfile(
+            id: userId,
+            firstName: hints.firstName,
+            lastName: hints.lastName,
+            gender: pendingGender(),
+            country: pendingCountry(),
+            avatarURL: hints.avatarURL,
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+        row.applyComputedDisplayName()
+
+        do {
+            try await SupabaseManager.shared.upsertProfile(row)
+            #if DEBUG
+            print("[Profile] created initial row for userId=", userId)
+            #endif
+            return row
+        } catch {
+            #if DEBUG
+            print("[Profile] create initial row failed:", error)
+            #endif
+            return nil
+        }
+    }
+
+    private func mergeProfile(userId: String, mutate: (inout UserProfile) -> Void) async {
+        var base = profile?.id == userId ? profile : nil
+        if base == nil {
+            base = await SupabaseManager.shared.fetchProfile(userId: userId)
+        }
+
+        var row: UserProfile
+        if var existing = base {
+            mutate(&existing)
+            row = existing
+        } else if let authUser = await SupabaseManager.shared.fetchAuthUser() {
+            guard let created = await ensureProfileRow(userId: userId, authUser: authUser) else { return }
+            var patched = created
+            mutate(&patched)
+            row = patched
+        } else {
+            row = UserProfile(
+                id: userId,
+                gender: pendingGender(),
+                country: pendingCountry(),
+                createdAt: Date(),
+                updatedAt: Date()
+            )
+            mutate(&row)
+        }
+
+        row.updatedAt = Date()
+        row.applyComputedDisplayName()
+        await updateProfile(row)
+    }
+
+    private func flushPendingOnboardingFields(userId: String) async {
+        let gender = pendingGender()
+        let country = pendingCountry()
+        guard gender != nil || country != nil else { return }
+
+        await mergeProfile(userId: userId) { row in
+            if let gender { row.gender = gender }
+            if let country { row.country = country }
+        }
+    }
+
+    private func pendingGender() -> String? {
+        Self.normalizedGenderForStorage(UserDefaults.standard.string(forKey: Self.pendingGenderKey))
+    }
+
+    private func pendingCountry() -> String? {
+        Self.normalizedNonEmpty(UserDefaults.standard.string(forKey: Self.pendingCountryKey))
+    }
+
+    private func clearPendingOnboardingFields() {
+        UserDefaults.standard.removeObject(forKey: Self.pendingGenderKey)
+        UserDefaults.standard.removeObject(forKey: Self.pendingCountryKey)
+    }
+
+    /// Valeurs acceptées par `profiles.gender` : female | male | other.
+    static func normalizedGenderForStorage(_ raw: String?) -> String? {
+        guard let raw else { return nil }
+        switch raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "femme", "female", "f", "woman", "women": return "female"
+        case "homme", "male", "m", "man", "men": return "male"
+        case "other", "autre", "non-binary", "non_binary", "nb": return "other"
+        default: return nil
+        }
+    }
+
     private static func normalizedNonEmpty(_ raw: String?) -> String? {
         guard let raw else { return nil }
         let t = raw.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -180,9 +317,12 @@ final class ProfileManager: ObservableObject {
         let oauthAvatar = oauthFallbackUser.flatMap { SupabaseManager.shared.oauthAvatarURL(from: $0) }.flatMap(Self.normalizedNonEmpty)
         let resolvedAvatar = dbAvatar ?? oauthAvatar ?? normalizedURLString(store.avatarRemoteURLString)
 
+        let first = p.firstName ?? ""
+        let last = p.lastName ?? ""
+
         store.save(
-            firstName: p.firstName ?? "",
-            lastName: p.lastName ?? "",
+            firstName: first,
+            lastName: last,
             avatarFileName: store.avatarFileName,
             bannerFileName: store.bannerFileName,
             avatarRemoteURL: resolvedAvatar,

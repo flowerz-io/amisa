@@ -14,7 +14,7 @@ private struct CountryOption: Identifiable, Hashable {
 struct OnboardingCountryView: View {
     @ObservedObject var model: OnboardingFlowModel
     @State private var appeared = false
-    @State private var selection = CountryOption(id: "France", flag: "🇫🇷", name: "France")
+    @State private var highlightedId: String?
 
     private let countries: [CountryOption] = [
         CountryOption(id: "France", flag: "🇫🇷", name: "France"),
@@ -31,72 +31,98 @@ struct OnboardingCountryView: View {
     ]
 
     var body: some View {
-        ZStack {
-            Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
+        VStack(spacing: 0) {
+            OnboardingStepHeader(
+                segment: 2,
+                title: "Depuis quelle zone\nfais-tu tes achats ?",
+                subtitle: "On adapte la devise et les résultats Vinted selon ta zone."
+            )
+            .padding(.top, 8)
+            .onboardingStepEntrance(appeared)
 
-            VStack(spacing: 0) {
-                Spacer(minLength: 16)
-
-                OnboardingStepHeader(
-                    segment: 2,
-                    title: "Depuis quelle zone\nfais-tu tes achats ?",
-                    subtitle: "On adapte la devise et les résultats Vinted selon ta zone."
-                )
-                .opacity(appeared ? 1 : 0)
-
-                Spacer(minLength: 12)
-
-                Picker("Zone", selection: $selection) {
-                    ForEach(countries) { country in
-                        Text("\(country.flag)  \(country.name)")
-                            .font(.system(size: 22, weight: .medium))
-                            .tag(country)
+            ScrollView(.vertical, showsIndicators: false) {
+                LazyVStack(spacing: 10) {
+                    ForEach(Array(countries.enumerated()), id: \.element.id) { index, country in
+                        countryRow(country)
+                            .onboardingStaggeredEntrance(appeared, index: index, baseDelay: 0.06)
                     }
                 }
-                .pickerStyle(.wheel)
-                .frame(height: 280)
-
-                Spacer()
-
-                Button {
-                    model.selectCountry(selection.name)
-                } label: {
-                    HStack(spacing: 8) {
-                        Text("Continuer")
-                            .font(.system(size: 17, weight: .semibold))
-                        Image(systemName: "arrow.right")
-                            .font(.system(size: 14, weight: .semibold))
-                    }
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 17)
-                    .background(Color.accentColor)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                }
-                .buttonStyle(BouncyButtonStyle())
-                .padding(.horizontal, 24)
-
-                Button {
-                    model.selectCountry("")
-                } label: {
-                    Text("Passer cette étape")
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(.secondary)
-                        .padding(.vertical, 12)
-                }
-                .buttonStyle(.plain)
-                .padding(.bottom, 32)
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                .padding(.bottom, 16)
             }
-            .opacity(appeared ? 1 : 0)
+
+            OnboardingSecondaryTextButton(title: String(localized: "Passer cette étape")) {
+                model.selectCountry("")
+            }
+            .padding(.bottom, 28)
+            .onboardingStepEntrance(appeared, delay: 0.12)
         }
+        .onboardingScreen()
         .onAppear {
-            if let saved = model.selectedCountry,
-               let match = countries.first(where: { $0.name == saved }) {
-                selection = match
-            }
-            withAnimation(.spring(response: 0.55, dampingFraction: 0.82).delay(0.06)) {
+            withAnimation(OnboardingMotion.springPremium.delay(0.04)) {
                 appeared = true
             }
         }
+    }
+
+    private func countryRow(_ country: CountryOption) -> some View {
+        let isHighlighted = highlightedId == country.id
+
+        return Button {
+            highlightedId = country.id
+            withAnimation(OnboardingMotion.springSnappy) {}
+            Task {
+                try? await Task.sleep(for: .milliseconds(200))
+                model.selectCountry(country.name)
+            }
+        } label: {
+            HStack(spacing: 14) {
+                Text(country.flag)
+                    .font(.system(size: 26))
+                    .frame(width: 36)
+
+                Text(country.name)
+                    .font(.system(size: 17, weight: isHighlighted ? .semibold : .medium))
+                    .foregroundStyle(OnboardingTheme.offWhite)
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 20))
+                    .foregroundStyle(OnboardingTheme.accentRed)
+                    .opacity(isHighlighted ? 1 : 0)
+                    .scaleEffect(isHighlighted ? 1 : 0.6)
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 16)
+            .background {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(isHighlighted ? OnboardingTheme.accentRed.opacity(0.14) : OnboardingTheme.cardFill)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        Color.white.opacity(isHighlighted ? 0.08 : 0.04),
+                                        .clear,
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                    }
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .stroke(
+                                isHighlighted ? OnboardingTheme.accentRed.opacity(0.5) : OnboardingTheme.cardStroke,
+                                lineWidth: isHighlighted ? 1.5 : 1
+                            )
+                    }
+            }
+            .onboardingSelectionGlow(isSelected: isHighlighted)
+        }
+        .buttonStyle(OnboardingSelectablePressStyle(isSelected: isHighlighted))
+        .animation(OnboardingMotion.springSnappy, value: isHighlighted)
     }
 }

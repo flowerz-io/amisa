@@ -2,78 +2,158 @@
 //  OnboardingFakeAnalysisView.swift
 //  Amisa
 //
-//  Timer 1.5s unique — puis `completeFakeAnalysis()`.
-//
 
 import SwiftUI
 
 struct OnboardingFakeAnalysisView: View {
     @ObservedObject var model: OnboardingFlowModel
-    @State private var scanOffset: CGFloat = -120
+    @State private var zoomScale: CGFloat = 1.04
+    @State private var focusVisible = false
+    @State private var scanProgress: CGFloat = 0
+    @State private var pieceDetected = false
+    @State private var statusOpacity: Double = 0
+    @State private var focusBreathing: CGFloat = 1
+    @State private var focusPulse: Double = 0.55
 
     private var look: DemoLook? { model.selectedLook }
 
     var body: some View {
-        ZStack {
-            Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
+        Group {
+            if let look {
+                GeometryReader { geo in
+                    let preset = OnboardingAnalysisFocusPresets.preset(for: look.id)
+                    let focusRect = AnalysisFocusLayout.focusRect(
+                        imageName: look.imageName,
+                        preset: preset,
+                        containerSize: geo.size
+                    )
 
-            VStack(spacing: 0) {
-                Spacer(minLength: 32)
+                    ZStack {
+                        OnboardingAssetImageView(imageName: look.imageName)
+                            .frame(width: geo.size.width, height: geo.size.height)
+                            .clipped()
 
-                if let look {
-                    analysisCard(look: look)
-                        .frame(width: 260, height: 300)
-                } else {
-                    ProgressView()
+                        Color.black.opacity(0.38)
+
+                        AnalysisFocusOverlay(
+                            containerSize: geo.size,
+                            focusRect: focusRect,
+                            isVisible: focusVisible,
+                            scanProgress: scanProgress,
+                            pulseOpacity: focusPulse,
+                            breathingScale: focusBreathing
+                        )
+
+                        statusOverlay(
+                            preset: preset,
+                            focusRect: focusRect,
+                            containerSize: geo.size
+                        )
+                    }
+                    .scaleEffect(zoomScale)
+                    .animation(.easeOut(duration: 1.1), value: zoomScale)
                 }
-
-                VStack(spacing: 6) {
-                    Text("Analyse en cours…")
-                        .font(.system(size: 20, weight: .semibold))
-                    Text("Identification de la pièce principale")
-                        .font(.system(size: 14))
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.top, 28)
-
-                Spacer()
+            } else {
+                ProgressView()
+                    .tint(OnboardingTheme.accentRed)
             }
         }
+        .onboardingScreen()
         .task(id: look?.id) {
-            guard look != nil else { return }
-            withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
-                scanOffset = 120
-            }
-            try? await Task.sleep(for: .seconds(1.5))
-            guard !Task.isCancelled else { return }
-            model.completeFakeAnalysis()
+            guard let look else { return }
+            await runAnalysisSequence(look: look)
         }
     }
 
-    private func analysisCard(look: DemoLook) -> some View {
-        ZStack {
-            OnboardingAssetImageView(imageName: look.imageName)
-                .clipped()
+    private func statusOverlay(
+        preset: FocusPreset,
+        focusRect: CGRect,
+        containerSize: CGSize
+    ) -> some View {
+        let textBlockHeight: CGFloat = pieceDetected ? 36 : 64
+        let textCenterY = AnalysisStatusTextLayout.centerY(
+            focusRect: focusRect,
+            containerSize: containerSize,
+            textBlockHeight: textBlockHeight
+        )
 
-            LinearGradient(
-                colors: [.clear, .black.opacity(0.45)],
-                startPoint: .center,
-                endPoint: .bottom
-            )
-
-            Rectangle()
-                .fill(
-                    LinearGradient(
-                        colors: [.clear, Color.accentColor.opacity(0.85), .clear],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .frame(width: 3)
-                .blur(radius: 1)
-                .offset(x: scanOffset)
+        return VStack(spacing: 6) {
+            if pieceDetected {
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                    Text(preset.detectedLabel)
+                        .font(.system(size: 22, weight: .bold))
+                }
+                .foregroundStyle(OnboardingTheme.accentRed)
+            } else {
+                Text("Analyse en cours…")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(OnboardingTheme.offWhite)
+                Text("Détection de la pièce principale")
+                    .font(.system(size: 15))
+                    .foregroundStyle(OnboardingTheme.warmGray)
+            }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .shadow(color: .black.opacity(0.12), radius: 12, x: 0, y: 6)
+        .multilineTextAlignment(.center)
+        .padding(.horizontal, 28)
+        .frame(maxWidth: .infinity)
+        .position(x: containerSize.width / 2, y: textCenterY)
+        .opacity(statusOpacity)
+    }
+
+    @MainActor
+    private func runAnalysisSequence(look: DemoLook) async {
+        zoomScale = 1.04
+        focusVisible = false
+        scanProgress = 0
+        pieceDetected = false
+        statusOpacity = 0
+        focusBreathing = 1
+        focusPulse = 0.55
+
+        withAnimation(.easeOut(duration: 0.35)) {
+            statusOpacity = 1
+        }
+
+        withAnimation(.easeOut(duration: 1.15)) {
+            zoomScale = 1.1
+        }
+
+        try? await Task.sleep(for: .milliseconds(350))
+        guard !Task.isCancelled else { return }
+
+        withAnimation(.easeOut(duration: 0.5)) {
+            focusVisible = true
+        }
+
+        withAnimation(.easeInOut(duration: 1.85).repeatForever(autoreverses: true)) {
+            focusBreathing = 1.014
+        }
+        withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
+            focusPulse = 0.92
+        }
+
+        let scanDuration: TimeInterval = 1.6
+        let scanStart = Date()
+        while Date().timeIntervalSince(scanStart) < scanDuration {
+            guard !Task.isCancelled else { return }
+            let elapsed = Date().timeIntervalSince(scanStart)
+            scanProgress = CGFloat(min(1, elapsed / scanDuration))
+            try? await Task.sleep(for: .milliseconds(32))
+        }
+        scanProgress = 1
+
+        try? await Task.sleep(for: .milliseconds(280))
+        guard !Task.isCancelled else { return }
+
+        withAnimation(OnboardingMotion.springPremium) {
+            pieceDetected = true
+        }
+
+        try? await Task.sleep(for: .milliseconds(900))
+        guard !Task.isCancelled else { return }
+
+        model.completeFakeAnalysis()
     }
 }

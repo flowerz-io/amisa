@@ -35,6 +35,7 @@ struct AuthCoordinatorCore: View {
     enum EmbedKind {
         case modalSheet(close: () -> Void)
         case onboardingInline
+        case onboardingPremium(close: () -> Void)
     }
 
     let embed: EmbedKind
@@ -51,16 +52,33 @@ struct AuthCoordinatorCore: View {
         case main, email, emailSent
     }
 
+    private var isOnboardingPremium: Bool {
+        if case .onboardingPremium = embed { return true }
+        return false
+    }
+
+    private var showsModalChrome: Bool {
+        switch embed {
+        case .modalSheet, .onboardingPremium: return true
+        case .onboardingInline: return false
+        }
+    }
+
     private func closeModalOnly() {
-        if case .modalSheet(let close) = embed {
+        switch embed {
+        case .modalSheet(let close), .onboardingPremium(let close):
             close()
+        case .onboardingInline:
+            break
         }
     }
 
     private func emailSentDismiss() {
         switch embed {
-        case .modalSheet(let close): close()
-        case .onboardingInline: screen = .main
+        case .modalSheet(let close), .onboardingPremium(let close):
+            close()
+        case .onboardingInline:
+            screen = .main
         }
     }
 
@@ -91,13 +109,10 @@ struct AuthCoordinatorCore: View {
     // MARK: - Main
 
     private var mainScreen: some View {
-        let isSheet: Bool = {
-            if case .modalSheet = embed { return true }
-            return false
-        }()
+        let premium = isOnboardingPremium
 
         return VStack(alignment: .leading, spacing: 18) {
-            if isSheet {
+            if case .modalSheet = embed {
                 authHandle
                     .frame(maxWidth: .infinity)
             }
@@ -106,35 +121,42 @@ struct AuthCoordinatorCore: View {
                 VStack(alignment: .leading, spacing: 12) {
                     ZStack {
                         Circle()
-                            .fill(Color.accentColor.opacity(0.12))
+                            .fill((premium ? OnboardingTheme.accentRed : Color.accentColor).opacity(0.12))
                             .frame(width: 48, height: 48)
                         Image(systemName: "sparkles")
                             .font(.system(size: 22, weight: .semibold))
-                            .foregroundStyle(Color.accentColor)
+                            .foregroundStyle(premium ? OnboardingTheme.accentRed : Color.accentColor)
                     }
 
                     VStack(alignment: .leading, spacing: 6) {
                         Text(String(localized: "Commencer"))
                             .font(.system(size: 26, weight: .bold))
+                            .foregroundStyle(premium ? OnboardingTheme.offWhite : Color.primary)
 
                         Text("Crée ton compte pour retrouver tes analyses, favoris et recherches sur tous tes appareils.")
                             .font(.system(size: 14))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(premium ? OnboardingTheme.warmGray : Color.secondary)
                             .lineSpacing(2)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 Spacer(minLength: 0)
-                if isSheet {
+                if showsModalChrome {
                     Button {
                         closeModalOnly()
                     } label: {
                         ZStack {
                             Circle()
-                                .fill(.ultraThinMaterial)
-                                .overlay(Circle().stroke(Color.white.opacity(0.18), lineWidth: 1))
+                                .fill(premium ? OnboardingTheme.cardFillElevated : Color.primary.opacity(0.08))
+                                .overlay(
+                                    Circle().stroke(
+                                        premium ? OnboardingTheme.cardStroke : Color.white.opacity(0.18),
+                                        lineWidth: 1
+                                    )
+                                )
                             Image(systemName: "xmark")
                                 .font(.system(size: 13, weight: .bold))
+                                .foregroundStyle(premium ? OnboardingTheme.offWhite : Color.primary)
                         }
                         .frame(width: 34, height: 34)
                     }
@@ -153,15 +175,18 @@ struct AuthCoordinatorCore: View {
             }
 
             if auth.isLoading {
-                ProgressView().frame(maxWidth: .infinity)
+                ProgressView()
+                    .tint(premium ? OnboardingTheme.accentRed : Color.accentColor)
+                    .frame(maxWidth: .infinity)
             }
 
             if auth.isGoogleOAuthInProgress {
                 HStack(spacing: 10) {
                     ProgressView()
+                        .tint(premium ? OnboardingTheme.accentRed : Color.accentColor)
                     Text(String(localized: "Ouverture de Google…"))
                         .font(.system(size: 13))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(premium ? OnboardingTheme.warmGray : Color.secondary)
                 }
                 .frame(maxWidth: .infinity)
             }
@@ -175,15 +200,16 @@ struct AuthCoordinatorCore: View {
                 } label: {
                     Text(String(localized: "Continuer sans compte"))
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(premium ? OnboardingTheme.warmGray : Color.secondary)
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(.top, isSheet ? 12 : 22)
+        .padding(.top, showsModalChrome ? (premium ? 4 : 12) : 22)
         .padding(.horizontal, 24)
         .padding(.bottom, 14)
+        .preferredColorScheme(premium ? .dark : nil)
     }
 
     private var authButtonsGrid: some View {
@@ -224,28 +250,48 @@ struct AuthCoordinatorCore: View {
     }
 
     private func authStyledButton(title: String, sf: String, filled: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
+        let premium = isOnboardingPremium
+        return Button(action: action) {
             ZStack {
                 Text(title)
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(filled ? Color.black : .primary)
+                    .foregroundStyle(
+                        filled
+                            ? Color.black
+                            : (premium ? OnboardingTheme.offWhite : Color.primary)
+                    )
                     .frame(maxWidth: .infinity)
                 HStack {
                     Image(systemName: sf)
                         .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(filled ? Color.black : Color.primary)
+                        .foregroundStyle(
+                            filled
+                                ? Color.black
+                                : (premium ? OnboardingTheme.offWhite : Color.primary)
+                        )
                         .frame(width: 24)
                     Spacer()
                 }
                 .padding(.horizontal, 22)
             }
             .frame(height: 64)
-            .background(filled ? AnyShapeStyle(Color.white) : AnyShapeStyle(Material.ultraThin))
+            .background {
+                if filled {
+                    Capsule().fill(Color.white)
+                } else if premium {
+                    Capsule().fill(OnboardingTheme.cardFillElevated)
+                } else {
+                    Capsule().fill(Color.primary.opacity(0.08))
+                }
+            }
             .clipShape(Capsule())
             .overlay(
                 Group {
                     if !filled {
-                        Capsule().stroke(Color.primary.opacity(0.15), lineWidth: 1)
+                        Capsule().stroke(
+                            premium ? OnboardingTheme.cardStroke : Color.primary.opacity(0.15),
+                            lineWidth: 1
+                        )
                     }
                 }
             )
@@ -255,16 +301,16 @@ struct AuthCoordinatorCore: View {
     }
 
     private var legalBloc: some View {
-        Group {
-            Text("En continuant, tu acceptes les ").foregroundStyle(.secondary)
-                + Text("Conditions d'utilisation").foregroundStyle(.secondary).underline()
-                + Text(" et la ").foregroundStyle(.secondary)
-                + Text("Politique de confidentialité").foregroundStyle(.secondary).underline()
-                + Text(".").foregroundStyle(.secondary)
-        }
-        .font(.system(size: 12))
-        .multilineTextAlignment(.center)
-        .padding(.top, 4)
+        let secondary = isOnboardingPremium ? OnboardingTheme.warmGrayMuted : Color.secondary
+        let text = Text("En continuant, tu acceptes les ").foregroundStyle(secondary)
+            + Text("Conditions d'utilisation").foregroundStyle(secondary).underline()
+            + Text(" et la ").foregroundStyle(secondary)
+            + Text("Politique de confidentialité").foregroundStyle(secondary).underline()
+            + Text(".").foregroundStyle(secondary)
+        return text
+            .font(.system(size: 12))
+            .multilineTextAlignment(.center)
+            .padding(.top, 4)
     }
 
     private var authHandle: some View {
@@ -278,7 +324,7 @@ struct AuthCoordinatorCore: View {
 
     private var emailSentConfirmation: some View {
         VStack(spacing: 0) {
-            if case .modalSheet = embed { authHandle }
+            if showsModalChrome, !isOnboardingPremium { authHandle }
             Spacer()
             VStack(spacing: 16) {
                 ZStack {

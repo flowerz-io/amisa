@@ -7,103 +7,156 @@ import SwiftUI
 
 struct OnboardingHeroView: View {
     @ObservedObject var model: OnboardingFlowModel
+    @StateObject private var parallax = OnboardingParallaxMotion()
     @State private var appeared = false
-
+    @State private var floatPhase = false
     private let cards = OnboardingMockData.heroCards
 
     var body: some View {
-        ZStack {
-            heroBackground
+        VStack(spacing: 0) {
+            Spacer()
 
-            VStack(spacing: 0) {
-                Spacer()
-
-                floatingCardsLayer
-                    .frame(height: 380)
-
-                Spacer(minLength: 20)
-
-                headlineBlock
-                    .padding(.horizontal, 28)
-                    .opacity(appeared ? 1 : 0)
-                    .offset(y: appeared ? 0 : 24)
-
-                Spacer(minLength: 32)
-
-                Button {
-                    model.openAuthSheet()
-                } label: {
-                    HStack(spacing: 8) {
-                        Text("Commencer")
-                            .font(.system(size: 18, weight: .semibold))
-                        Image(systemName: "arrow.right")
-                            .font(.system(size: 15, weight: .semibold))
-                    }
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 18)
-                    .background(Color.accentColor)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .shadow(color: Color.accentColor.opacity(0.4), radius: 14, x: 0, y: 6)
-                }
-                .buttonStyle(BouncyButtonStyle())
-                .padding(.horizontal, 24)
+            floatingCardsLayer
+                .frame(height: 400)
+                .scaleEffect(appeared ? 1 : 0.94)
                 .opacity(appeared ? 1 : 0)
 
-                Spacer(minLength: 40)
+            Spacer(minLength: 24)
+
+            headlineBlock
+                .padding(.horizontal, 24)
+                .onboardingStepEntrance(appeared, delay: 0.12)
+
+            Spacer(minLength: 28)
+
+            OnboardingPrimaryButton(title: String(localized: "Commencer")) {
+                model.openAuthSheet()
             }
+            .padding(.horizontal, 24)
+            .onboardingStepEntrance(appeared, delay: 0.2)
+
+            Spacer(minLength: 44)
         }
-        .ignoresSafeArea()
         .onAppear {
-            withAnimation(.spring(response: 0.65, dampingFraction: 0.82).delay(0.12)) {
+            parallax.start()
+            withAnimation(OnboardingMotion.springPremium.delay(0.08)) {
                 appeared = true
             }
+            withAnimation(.easeInOut(duration: OnboardingMotion.floatDuration).repeatForever(autoreverses: true)) {
+                floatPhase = true
+            }
         }
-    }
-
-    private var heroBackground: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
-            Circle()
-                .fill(Color.accentColor.opacity(0.18))
-                .frame(width: 360)
-                .blur(radius: 80)
-                .offset(x: -80, y: -140)
+        .onDisappear {
+            parallax.stop()
         }
     }
 
     private var floatingCardsLayer: some View {
         ZStack {
             if cards.count >= 2 {
-                HeroFloatingCard(card: cards[1], x: 56, y: 24, rotation: 8, scale: 0.88)
-                    .blur(radius: 2)
-                    .opacity(0.85)
+                HeroFloatingCard(
+                    card: cards[1],
+                    x: 62, y: 28,
+                    rotation: 9, scale: 0.86,
+                    floatPhase: floatPhase,
+                    depth: 0,
+                    parallax: parallax.offset
+                )
+                .blur(radius: 2)
+                .opacity(0.78)
             }
             if cards.count >= 3 {
-                HeroFloatingCard(card: cards[2], x: -52, y: 40, rotation: -10, scale: 0.84)
-                    .blur(radius: 2)
-                    .opacity(0.8)
+                HeroFloatingCard(
+                    card: cards[2],
+                    x: -58, y: 44,
+                    rotation: -11, scale: 0.82,
+                    floatPhase: floatPhase,
+                    depth: 1,
+                    parallax: parallax.offset
+                )
+                .blur(radius: 2.5)
+                .opacity(0.72)
             }
             if cards.count >= 1 {
-                HeroFloatingCard(card: cards[0], x: 0, y: 0, rotation: -2, scale: 1)
+                HeroFloatingCard(
+                    card: cards[0],
+                    x: 0, y: 0,
+                    rotation: -2.5, scale: 1,
+                    floatPhase: floatPhase,
+                    depth: 2,
+                    parallax: parallax.offset
+                )
+                .shadow(color: .black.opacity(0.4), radius: 20, x: 0, y: 12)
             }
         }
         .frame(maxWidth: .infinity)
     }
 
     private var headlineBlock: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Trouve instantanément\nles pièces que tu vois")
-                .font(.system(size: 32, weight: .bold))
-                .foregroundStyle(.white)
-                .multilineTextAlignment(.leading)
+        let titleFont = Font.system(size: 32, weight: .bold)
+
+        return VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Trouve")
+                    .font(titleFont)
+                    .foregroundStyle(OnboardingTheme.offWhite)
+
+                HeroLavaGradientText(text: "instantanément", font: titleFont)
+
+                Text("les pièces que tu vois")
+                    .font(titleFont)
+                    .foregroundStyle(OnboardingTheme.offWhite)
+            }
+            .tracking(-0.2)
 
             Text("Importe une photo ou partage une image. Amisa retrouve les meilleures annonces Vinted similaires.")
-                .font(.system(size: 15))
-                .foregroundStyle(Color.white.opacity(0.62))
+                .font(.system(size: 16, weight: .regular))
+                .foregroundStyle(OnboardingTheme.warmGray)
                 .multilineTextAlignment(.leading)
+                .lineSpacing(4)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+// MARK: - Titre « instantanément » — gradient lava subtil
+
+private struct HeroLavaGradientText: View {
+    let text: String
+    let font: Font
+
+    private static let warmOrange = Color(red: 232 / 255, green: 58 / 255, blue: 48 / 255)
+
+    var body: some View {
+        Text(text)
+            .font(font)
+            .foregroundStyle(.clear)
+            .background {
+                TimelineView(.animation(minimumInterval: 1 / 30)) { timeline in
+                    let t = timeline.date.timeIntervalSinceReferenceDate
+                    let waveA = sin(t * 0.55) * 0.5 + 0.5
+                    let waveB = cos(t * 0.42 + 1.2) * 0.5 + 0.5
+                    let waveC = sin(t * 0.31 + 2.4) * 0.5 + 0.5
+
+                    Rectangle()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    OnboardingTheme.accentRed,
+                                    Self.warmOrange,
+                                    OnboardingTheme.accentRed.opacity(0.92),
+                                    Self.warmOrange.opacity(0.88),
+                                ],
+                                startPoint: UnitPoint(x: waveA * 0.45 + waveC * 0.1, y: 0.05),
+                                endPoint: UnitPoint(x: 0.3 + waveB * 0.5, y: 0.95)
+                            )
+                        )
+                }
+            }
+            .mask {
+                Text(text)
+                    .font(font)
+            }
     }
 }
 
@@ -113,39 +166,60 @@ private struct HeroFloatingCard: View {
     let y: CGFloat
     let rotation: Double
     let scale: CGFloat
+    let floatPhase: Bool
+    let depth: Int
+    let parallax: CGSize
+
+    private var depthFactor: CGFloat {
+        switch depth {
+        case 2: 1
+        case 1: 0.55
+        default: 0.3
+        }
+    }
+
+    private var floatOffset: CGFloat {
+        floatPhase ? (depth == 2 ? -11 : depth == 1 ? -7 : -5) : (depth == 2 ? 7 : 5)
+    }
+
+    private var organicRotation: Double {
+        rotation + (floatPhase ? (depth == 2 ? 1.2 : 0.8) : -0.6)
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            OnboardingAssetImageView(imageName: card.imageName)
-                .frame(height: 140)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        OnboardingGlassCard(cornerRadius: 20) {
+            VStack(alignment: .leading, spacing: 0) {
+                OnboardingAssetImageView(imageName: card.imageName)
+                    .frame(height: 148)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text(card.brand)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(0.5))
-                Text(card.title)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.white)
-                Text(card.price)
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(Color.accentColor)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(card.brand.uppercased())
+                        .font(.system(size: 10, weight: .bold))
+                        .tracking(0.8)
+                        .foregroundStyle(OnboardingTheme.warmGray)
+                    Text(card.title)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(OnboardingTheme.offWhite)
+                        .lineLimit(1)
+                    Text(card.price)
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundStyle(OnboardingTheme.accentRed)
+                }
+                .padding(14)
             }
-            .padding(12)
         }
-        .frame(width: 200)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .offset(x: x, y: y)
-        .rotationEffect(.degrees(rotation))
+        .frame(width: 212)
+        .offset(
+            x: x + parallax.width * depthFactor,
+            y: y + floatOffset + parallax.height * depthFactor
+        )
+        .rotationEffect(.degrees(organicRotation))
         .scaleEffect(scale)
-    }
-}
-
-struct BouncyButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.96 : 1)
-            .animation(.spring(response: 0.28, dampingFraction: 0.65), value: configuration.isPressed)
+        .animation(
+            .easeInOut(duration: OnboardingMotion.floatDuration + Double(depth) * 0.35)
+                .repeatForever(autoreverses: true),
+            value: floatPhase
+        )
     }
 }
