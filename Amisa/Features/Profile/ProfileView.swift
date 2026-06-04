@@ -24,7 +24,7 @@ struct ProfileView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
                 if auth.isAuthenticated {
-                    ProfileBannerHeaderView(store: store, onSettings: { showSettings = true })
+                    ProfileHeaderView(store: store, onSettings: { showSettings = true })
                 } else {
                     guestHeader
                 }
@@ -71,14 +71,14 @@ struct ProfileView: View {
     private var guestHeader: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 16) {
-                Circle()
-                    .fill(DesignTokens.accentMuted)
-                    .frame(width: 72, height: 72)
-                    .overlay {
-                        Image(systemName: "person.fill")
-                            .font(.system(size: 30))
-                            .foregroundStyle(DesignTokens.textSecondary)
-                    }
+                ProfileAvatarCircleView(
+                    localUIImage: nil,
+                    remoteURLString: nil,
+                    diameter: 72,
+                    initials: nil,
+                    fallbackSymbolName: "person.fill",
+                    fallbackFillColor: DesignTokens.accentMuted
+                )
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Non connecté")
@@ -111,10 +111,10 @@ struct ProfileView: View {
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.cornerRadiusL, style: .continuous))
     }
 
-    // MARK: - Moodboard
+    // MARK: - Analyses photo
 
     private var moodboardSection: some View {
-        VStack(alignment: .leading, spacing: DesignTokens.spacingS) {
+        VStack(alignment: .leading, spacing: DesignTokens.spacingM) {
             HStack {
                 Text(String(localized: "Tes analyses photo"))
                     .font(DesignTokens.headlineFont)
@@ -134,9 +134,7 @@ struct ProfileView: View {
             .padding(.horizontal, auth.isAuthenticated ? 24 : 0)
 
             if scannedSessions.isEmpty {
-                Text(String(localized: "Aucun scan pour l'instant."))
-                    .font(DesignTokens.captionFont)
-                    .foregroundStyle(DesignTokens.textSecondary)
+                ProfileAnalysesEmptyState()
                     .padding(.horizontal, auth.isAuthenticated ? 24 : 0)
             } else {
                 let previewSessions = Array(scannedSessions.prefix(12))
@@ -179,6 +177,44 @@ struct ProfileView: View {
                         .foregroundStyle(DesignTokens.textSecondary)
                 }
         }
+    }
+}
+
+// MARK: - Empty state analyses
+
+private struct ProfileAnalysesEmptyState: View {
+    private let cardCount = 3
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 10) {
+                ForEach(0 ..< cardCount, id: \.self) { index in
+                    ProfileAnalysisSkeletonCard()
+                        .opacity(1 - Double(index) * 0.12)
+                }
+            }
+
+            Text(String(localized: "Tes analyses apparaîtront ici après avoir analysé tes premières photos."))
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(DesignTokens.textSecondary)
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(DesignTokens.backgroundSecondary)
+        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.cornerRadiusL, style: .continuous))
+    }
+}
+
+private struct ProfileAnalysisSkeletonCard: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 12, style: .continuous)
+            .fill(Color(uiColor: .tertiarySystemFill).opacity(colorScheme == .dark ? 0.42 : 0.58))
+            .aspectRatio(1, contentMode: .fit)
+            .frame(maxWidth: .infinity)
     }
 }
 

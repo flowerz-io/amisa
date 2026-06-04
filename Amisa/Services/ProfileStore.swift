@@ -41,6 +41,13 @@ final class ProfileStore: ObservableObject {
         return "\(f) \(l)"
     }
 
+    var initials: String {
+        let f = firstName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let l = lastName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let parts = [f, l].filter { !$0.isEmpty }
+        return parts.prefix(2).compactMap { $0.first.map { String($0).uppercased() } }.joined()
+    }
+
     /// Sauvegarde locale + URLs distantes optionnelles (`mergeRemoteURLs` met à jour les URLs Supabase persistées).
     func save(
         firstName: String,

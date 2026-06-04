@@ -7,59 +7,21 @@ struct EditProfileView: View {
     @ObservedObject private var auth = AuthManager.shared
     @ObservedObject private var profileManager = ProfileManager.shared
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var colorScheme
 
     @State private var firstName = ""
     @State private var lastName = ""
     @State private var birthDate = Date()
 
     @State private var profilePickerItem: PhotosPickerItem?
-    @State private var bannerPickerItem: PhotosPickerItem?
-
     @State private var pickedProfileImage: UIImage?
-    @State private var pickedBannerImage: UIImage?
-
     @State private var profilePhotoChanged = false
-    @State private var bannerPhotoChanged = false
     @State private var isSaving = false
 
     private let avatarPreviewSize: CGFloat = 144
 
-    private var bannerPlaceholderGradient: LinearGradient {
-        LinearGradient(
-            colors: [
-                Color.accentColor.opacity(0.35),
-                BrandColors.secondary.opacity(0.22),
-                Color.black.opacity(colorScheme == .dark ? 0.45 : 0.25),
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-    }
-
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
-                PhotosPicker(selection: $bannerPickerItem, matching: .images) {
-                    ZStack(alignment: .bottomTrailing) {
-                        bannerPreviewContent
-                            .frame(height: 150)
-                            .frame(maxWidth: .infinity)
-                            .background(Color.gray.opacity(0.16))
-                            .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
-
-                        Label(String(localized: "Changer la bannière"), systemImage: "photo")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(.primary)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 10)
-                            .background(.ultraThinMaterial)
-                            .clipShape(Capsule())
-                            .padding(12)
-                    }
-                }
-                .buttonStyle(.plain)
-
                 HStack {
                     Spacer(minLength: 0)
                     PhotosPicker(selection: $profilePickerItem, matching: .images) {
@@ -81,6 +43,7 @@ struct EditProfileView: View {
                     .buttonStyle(.plain)
                     Spacer(minLength: 0)
                 }
+                .padding(.top, 8)
 
                 VStack(alignment: .leading, spacing: 12) {
                     TextField(String(localized: "Prénom"), text: $firstName)
@@ -130,9 +93,7 @@ struct EditProfileView: View {
                 lastName = store.lastName
             }
             pickedProfileImage = store.avatarImage()
-            pickedBannerImage = store.bannerImage()
             profilePhotoChanged = false
-            bannerPhotoChanged = false
         }
         .onChange(of: profilePickerItem) { _, new in
             guard let new else { return }
@@ -145,33 +106,6 @@ struct EditProfileView: View {
                     }
                 }
             }
-        }
-        .onChange(of: bannerPickerItem) { _, new in
-            guard let new else { return }
-            Task {
-                if let data = try? await new.loadTransferable(type: Data.self),
-                   let ui = UIImage(data: data) {
-                    await MainActor.run {
-                        pickedBannerImage = ui
-                        bannerPhotoChanged = true
-                    }
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var bannerPreviewContent: some View {
-        if let pickedBannerImage {
-            Image(uiImage: pickedBannerImage)
-                .resizable()
-                .scaledToFill()
-        } else if let ui = store.bannerImage() {
-            Image(uiImage: ui)
-                .resizable()
-                .scaledToFill()
-        } else {
-            bannerPlaceholderGradient
         }
     }
 
@@ -186,6 +120,7 @@ struct EditProfileView: View {
                 localUIImage: store.avatarImage(),
                 remoteURLString: store.avatarRemoteURLString,
                 diameter: avatarPreviewSize,
+                initials: store.initials,
                 outerSeparatorRingColor: nil,
                 innerAccentBorder: nil,
                 fallbackSymbolName: "person.fill",
@@ -200,7 +135,6 @@ struct EditProfileView: View {
         defer { isSaving = false }
 
         var avatarName: String? = store.avatarFileName
-        var bannerName: String? = store.bannerFileName
 
         if profilePhotoChanged, let pickedProfileImage,
            let data = pickedProfileImage.jpegData(compressionQuality: 0.88) {
@@ -210,26 +144,14 @@ struct EditProfileView: View {
             avatarName = ImagePersistenceService.shared.saveImage(data)
         }
 
-        if bannerPhotoChanged, let pickedBannerImage,
-           let data = pickedBannerImage.jpegData(compressionQuality: 0.88) {
-            if let old = store.bannerFileName {
-                ImagePersistenceService.shared.deleteImage(fileName: old)
-            }
-            bannerName = ImagePersistenceService.shared.saveImage(data)
-        }
-
         if auth.isAuthenticated, let uid = auth.currentUser?.id {
-            await saveAuthenticatedProfile(
-                userId: uid,
-                avatarFileName: avatarName,
-                bannerFileName: bannerName
-            )
+            await saveAuthenticatedProfile(userId: uid, avatarFileName: avatarName)
         } else {
             store.save(
                 firstName: firstName,
                 lastName: lastName,
                 avatarFileName: avatarName,
-                bannerFileName: bannerName,
+                bannerFileName: store.bannerFileName,
                 mergeRemoteURLs: false
             )
         }
@@ -237,21 +159,14 @@ struct EditProfileView: View {
         dismiss()
     }
 
-    private func saveAuthenticatedProfile(userId: String, avatarFileName: String?, bannerFileName: String?) async {
+    private func saveAuthenticatedProfile(userId: String, avatarFileName: String?) async {
         var avatarURL = profileManager.profile?.avatarURL
-        var bannerURL = profileManager.profile?.bannerURL
+        let bannerURL = profileManager.profile?.bannerURL
 
         if profilePhotoChanged, let pickedProfileImage,
            let data = pickedProfileImage.jpegData(compressionQuality: 0.88) {
             if let url = try? await SupabaseManager.shared.uploadProfileImage(imageData: data, userId: userId) {
                 avatarURL = url
-            }
-        }
-
-        if bannerPhotoChanged, let pickedBannerImage,
-           let data = pickedBannerImage.jpegData(compressionQuality: 0.88) {
-            if let url = try? await SupabaseManager.shared.uploadBannerImage(imageData: data, userId: userId) {
-                bannerURL = url
             }
         }
 
@@ -276,7 +191,7 @@ struct EditProfileView: View {
             firstName: trimmedFirst,
             lastName: trimmedLast,
             avatarFileName: avatarFileName,
-            bannerFileName: bannerFileName,
+            bannerFileName: store.bannerFileName,
             mergeRemoteURLs: false
         )
 

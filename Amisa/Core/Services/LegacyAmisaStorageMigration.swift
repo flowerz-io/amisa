@@ -8,8 +8,8 @@
 import Foundation
 
 enum LegacyAmisaStorageMigration {
-    static let legacyAppGroupIdentifier = "group.flowerz.io.Amisa"
-    static let currentAppGroupIdentifier = "group.flowerz.io.Amisa"
+    static let legacyAppGroupIdentifier = AmisaAppGroup.legacyIdentifier
+    static let currentAppGroupIdentifier = AmisaAppGroup.identifier
 
     private static let migratedStandardDefaultsKey = "amisa.migratedStandardDefaultsFromBalibu"
     private static let migratedAppGroupKey = "amisa.migratedAppGroupFromBalibu"

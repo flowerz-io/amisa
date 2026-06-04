@@ -11,7 +11,7 @@ import UIKit
 final class ImagePersistenceService {
     static let shared = ImagePersistenceService()
 
-    static let appGroupIdentifier = ShareStorageService.appGroupIdentifier
+    static let appGroupIdentifier = AmisaAppGroup.identifier
     private let sharedImagesDirectory = "SharedImages"
 
     private var containerURL: URL? {
@@ -33,13 +33,17 @@ final class ImagePersistenceService {
 
     /// Enregistre une image et retourne le nom du fichier.
     func saveImage(_ imageData: Data) -> String? {
-        guard let dir = sharedImagesURL else { return nil }
+        guard let dir = sharedImagesURL else {
+            print("[PICK_IMAGE] saveImage: sharedImagesURL nil appGroup:", Self.appGroupIdentifier)
+            return nil
+        }
         let fileName = "\(UUID().uuidString).jpg"
         let fileURL = dir.appending(path: fileName)
         do {
-            try imageData.write(to: fileURL)
+            try imageData.write(to: fileURL, options: .atomic)
             return fileName
         } catch {
+            print("[PICK_IMAGE] saveImage write failed:", fileURL.path, error)
             return nil
         }
     }

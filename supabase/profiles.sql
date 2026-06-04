@@ -29,15 +29,7 @@ create table if not exists public.profiles (
   )
 );
 
-comment on table public.profiles is
-  'Profil utilisateur Amisa — source de vérité hors auth.users (id = auth.users.id).';
-
-comment on column public.profiles.id is 'UUID Supabase Auth, identique à auth.users.id';
-comment on column public.profiles.display_name is 'Libellé affiché ; souvent dérivé de first_name + last_name côté app';
-comment on column public.profiles.gender is 'female | male | other | null';
-comment on column public.profiles.country is 'Pays / zone d’achat (texte libre, nullable)';
-
--- Colonnes ajoutées si la table existait déjà sans elles
+-- Colonnes ajoutées si la table existait déjà sans elles (AVANT les commentaires)
 alter table public.profiles
   add column if not exists first_name text,
   add column if not exists last_name text,
@@ -49,6 +41,14 @@ alter table public.profiles
   add column if not exists banner_url text,
   add column if not exists created_at timestamptz not null default now(),
   add column if not exists updated_at timestamptz not null default now();
+
+comment on table public.profiles is
+  'Profil utilisateur Amisa — source de vérité hors auth.users (id = auth.users.id).';
+
+comment on column public.profiles.id is 'UUID Supabase Auth, identique à auth.users.id';
+comment on column public.profiles.display_name is 'Libellé affiché ; souvent dérivé de first_name + last_name côté app';
+comment on column public.profiles.gender is 'female | male | other | null';
+comment on column public.profiles.country is 'Pays / zone d’achat (texte libre, nullable)';
 
 -- Normaliser d’éventuelles valeurs legacy avant d’appliquer la contrainte gender
 update public.profiles

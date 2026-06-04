@@ -7,20 +7,18 @@
 
 import AVFoundation
 import Photos
-import PhotosUI
 import SwiftUI
 
 struct CameraCaptureView: View {
+    @EnvironmentObject private var router: Router
     @StateObject private var viewModel = CameraViewModel()
     @StateObject private var recentLibrary = RecentPhotosLibraryModel()
 
-    let onCapturedImage: (SharedImportPayload) -> Void
-
     @Environment(\.dismiss) private var dismiss
 
-    // PhotosPicker état (déclenché depuis le bouton pellicule ou la fin du ruban)
     @State private var showLibraryPicker = false
-    @State private var libraryPickerItem: PhotosPickerItem?
+    @State private var isProcessingPick = false
+    @State private var pickErrorMessage: String?
 
     private let bottomPanelOpacity: CGFloat = 0.38
 
@@ -28,16 +26,21 @@ struct CameraCaptureView: View {
         ZStack(alignment: .bottom) {
             previewStack
                 .ignoresSafeArea()
+                .allowsHitTesting(false)
+                .zIndex(0)
 
             VStack {
                 topBar
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
-                Spacer()
+                Spacer(minLength: 0)
+                    .allowsHitTesting(false)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .zIndex(2)
 
             bottomPanel
+                .zIndex(3)
         }
         .background(Color.black)
         .onAppear {
@@ -47,20 +50,28 @@ struct CameraCaptureView: View {
         .onDisappear {
             viewModel.onDisappear()
         }
-        // PhotosPicker déclenché par showLibraryPicker = true
-        .photosPicker(
-            isPresented: $showLibraryPicker,
-            selection: $libraryPickerItem,
-            matching: .images
-        )
-        .onChange(of: libraryPickerItem) { _, item in
-            guard let item else { return }
-            Task {
-                if let data = try? await item.loadTransferable(type: Data.self) {
-                    deliver(data: data)
+        .sheet(isPresented: $showLibraryPicker) {
+            PhotoLibraryPicker(
+                onImagePicked: { image in
+                    showLibraryPicker = false
+                    handlePickedImage(image)
+                },
+                onCancel: {
+                    showLibraryPicker = false
                 }
-                await MainActor.run { libraryPickerItem = nil }
-            }
+            )
+            .ignoresSafeArea()
+        }
+        .alert(
+            String(localized: "Photo indisponible"),
+            isPresented: Binding(
+                get: { pickErrorMessage != nil },
+                set: { if !$0 { pickErrorMessage = nil } }
+            )
+        ) {
+            Button(String(localized: "OK"), role: .cancel) {}
+        } message: {
+            Text(pickErrorMessage ?? "")
         }
     }
 
@@ -99,6 +110,7 @@ struct CameraCaptureView: View {
             Color.black.opacity(bottomPanelOpacity)
                 .ignoresSafeArea(edges: .bottom)
         )
+        .contentShape(Rectangle())
     }
 
     // MARK: - Preview
@@ -112,7 +124,7 @@ struct CameraCaptureView: View {
                     session: viewModel.sessionController.session,
                     isMirrored: viewModel.cameraPosition == .front
                 )
-                .gesture(
+                .simultaneousGesture(
                     MagnificationGesture()
                         .onChanged { value in viewModel.pinchChanged(scale: value) }
                         .onEnded { _ in viewModel.pinchEnded() }
@@ -155,6 +167,7 @@ struct CameraCaptureView: View {
                 .accessibilityLabel(String(localized: "Flash"))
             }
         }
+        .allowsHitTesting(true)
     }
 
     // MARK: - Zoom
@@ -165,11 +178,10 @@ struct CameraCaptureView: View {
             .foregroundStyle(.white.opacity(0.9))
     }
 
-    // MARK: - Contrôles bas : pellicule | obturateur | flip
+    // MARK: - Contrôles bas
 
     private var bottomControls: some View {
         HStack(spacing: 0) {
-            // Pellicule (gauche)
             Button {
                 showLibraryPicker = true
             } label: {
@@ -183,11 +195,9 @@ struct CameraCaptureView: View {
             .frame(maxWidth: .infinity)
             .accessibilityLabel(String(localized: "Ouvrir la photothèque"))
 
-            // Obturateur (centre)
             shutterButton
                 .frame(maxWidth: .infinity)
 
-            // Flip (droite)
             Button { viewModel.flipCamera() } label: {
                 Image(systemName: "arrow.triangle.2.circlepath.camera")
                     .font(.title2)
@@ -201,8 +211,6 @@ struct CameraCaptureView: View {
         }
         .frame(height: 100)
     }
-
-    // MARK: - Obturateur
 
     private var shutterButton: some View {
         Button {
@@ -221,8 +229,6 @@ struct CameraCaptureView: View {
         .opacity(viewModel.uiState == .ready ? 1 : 0.45)
         .accessibilityLabel(String(localized: "Prendre une photo"))
     }
-
-    // MARK: - États caméra non disponible
 
     private var deniedState: some View {
         VStack(spacing: 16) {
@@ -258,22 +264,37 @@ struct CameraCaptureView: View {
 
     // MARK: - Actions
 
+    private func handlePickedImage(_ image: UIImage) {
+        guard !isProcessingPick else { return }
+        isProcessingPick = true
+        defer { isProcessingPick = false }
+
+        if !PickedImageAnalysisHandler.handlePickedImage(image, router: router) {
+            pickErrorMessage = String(localized: "Impossible d’enregistrer cette photo. Réessaie ou choisis une autre image.")
+        }
+    }
+
     private func capturePhoto() {
         viewModel.capturePhoto { data in
-            deliver(data: data)
+            guard let data, let image = UIImage(data: data) else { return }
+            Task { @MainActor in
+                handlePickedImage(image)
+            }
         }
     }
 
     private func selectFromLibrary(_ asset: PHAsset) {
-        RecentPhotosLibraryModel.loadImageData(for: asset) { data in
-            deliver(data: data)
-        }
-    }
-
-    private func deliver(data: Data?) {
-        guard let data, let name = ImagePersistenceService.shared.saveImage(data) else { return }
-        Task { @MainActor in
-            onCapturedImage(SharedImportPayload(imageFileName: name))
+        guard !isProcessingPick else { return }
+        isProcessingPick = true
+        RecentPhotosLibraryModel.loadFullImage(for: asset) { image in
+            Task { @MainActor in
+                defer { isProcessingPick = false }
+                guard let image else {
+                    pickErrorMessage = String(localized: "Impossible de charger cette photo depuis ta bibliothèque.")
+                    return
+                }
+                handlePickedImage(image)
+            }
         }
     }
 }

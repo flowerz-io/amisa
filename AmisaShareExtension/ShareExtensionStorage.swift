@@ -1,21 +1,31 @@
 //
 //  ShareExtensionStorage.swift
-//  BalibuShareExtension
+//  AmisaShareExtension
 //
-//  Écriture App Group alignée sur ShareStorageService côté app.
+//  Écriture App Group alignée sur l’app principale (`AmisaAppGroup.identifier`).
 //
 
 import Foundation
+import UIKit
 
 enum ShareExtensionStorage {
-    static let appGroupIdentifier = "group.flowerz.io.Amisa"
+    /// Doit être identique à `AmisaAppGroup.identifier` et aux entitlements.
+    static let appGroupIdentifier = "group.io.flowerz.amisa"
     private static let sharedImagesDirectory = "SharedImages"
+    private static let maxJPEGBytes = 12 * 1024 * 1024
+
+    private static var containerURL: URL? {
+        let url = FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: appGroupIdentifier
+        )
+        if url == nil {
+            print("[SHARE_EXTENSION] containerURL: nil for appGroup:", appGroupIdentifier)
+        }
+        return url
+    }
 
     private static var sharedImagesURL: URL? {
-        guard let container = FileManager.default.containerURL(
-            forSecurityApplicationGroupIdentifier: appGroupIdentifier
-        ) else { return nil }
-        return container.appendingPathComponent(sharedImagesDirectory)
+        containerURL?.appendingPathComponent(sharedImagesDirectory, isDirectory: true)
     }
 
     private static var userDefaults: UserDefaults? {
@@ -27,27 +37,34 @@ enum ShareExtensionStorage {
     }
 
     private static let pendingImportIdKey = "amisa.pendingImportId"
-    /// Aligné sur `ShareStorageService` : l’app lit ce statut au lancement pour lancer l’analyse.
     private static let shareImportStatusKey = "amisa.shareImportStatus"
     private static let shareImportStatusPending = "pending"
 
-    /// JPEG dans `SharedImages` uniquement (flux session Railway — sans clés d’import legacy).
+    /// JPEG dans `SharedImages` uniquement (flux session Railway).
     static func saveJPEGToSharedImagesOnly(_ imageData: Data) throws -> String {
+        print("[SHARE_EXTENSION] appGroup:", appGroupIdentifier)
         guard let dir = sharedImagesURL else {
             throw ShareExtensionStorageError.containerUnavailable
         }
+        print("[SHARE_EXTENSION] containerURL:", dir.deletingLastPathComponent().absoluteString)
+
+        let prepared = preparedJPEGData(from: imageData)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let fileName = "\(UUID().uuidString).jpg"
-        try imageData.write(to: dir.appendingPathComponent(fileName))
-        return fileName
+        let fileURL = dir.appendingPathComponent(fileName)
+        do {
+            try prepared.write(to: fileURL, options: .atomic)
+            print("[SHARE_EXTENSION] image write success:", fileURL.path, "bytes:", prepared.count)
+            return fileName
+        } catch {
+            print("[SHARE_EXTENSION] storage error:", error)
+            throw ShareExtensionStorageError.writeFailed(fileURL.path, error)
+        }
     }
 
-    /// Corps JSON brut d’un GET `/search-sessions/:id` (pour décodage dans l’app).
     static func saveSessionResultJSON(_ data: Data, sessionId: String) throws -> String {
         let fileName = "session-\(sessionId).json"
-        guard let base = FileManager.default.containerURL(
-            forSecurityApplicationGroupIdentifier: appGroupIdentifier
-        ) else {
+        guard let base = containerURL else {
             throw ShareExtensionStorageError.containerUnavailable
         }
         let dir = base.appendingPathComponent("SessionResults", isDirectory: true)
@@ -59,12 +76,9 @@ enum ShareExtensionStorage {
 
     private static let continuityDirectory = "ContinuitySnapshots"
 
-    /// Snapshot léger (listings + statut) pour reprendre le même état visuel dans l’app.
     static func saveContinuitySnapshot(_ data: Data, sessionId: String) throws -> String {
         let fileName = "continuity-\(sessionId).json"
-        guard let base = FileManager.default.containerURL(
-            forSecurityApplicationGroupIdentifier: appGroupIdentifier
-        ) else {
+        guard let base = containerURL else {
             throw ShareExtensionStorageError.containerUnavailable
         }
         let dir = base.appendingPathComponent(continuityDirectory, isDirectory: true)
@@ -73,14 +87,15 @@ enum ShareExtensionStorage {
         return fileName
     }
 
-    /// Enregistre le JPEG final + JSON + id + statut `pending` (l’app consomme au prochain lancement).
     static func saveImport(payload: SharedImportPayload, imageData: Data) throws {
         guard let dir = sharedImagesURL else {
             throw ShareExtensionStorageError.containerUnavailable
         }
+        let prepared = preparedJPEGData(from: imageData)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let fileURL = dir.appendingPathComponent(payload.imageFileName)
-        try imageData.write(to: fileURL)
+        try prepared.write(to: fileURL, options: .atomic)
+        print("[SHARE_EXTENSION] import write success:", fileURL.path)
 
         let encoded = try JSONEncoder().encode(payload)
         userDefaults?.set(encoded, forKey: payloadKey(for: payload.id))
@@ -89,23 +104,40 @@ enum ShareExtensionStorage {
         userDefaults?.synchronize()
     }
 
-    /// Rétrocompat : ancienne API (fichier seul, sans JSON) — non utilisée par le nouveau flux.
     static func saveImage(_ imageData: Data) -> String? {
-        guard let dir = sharedImagesURL else { return nil }
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        let fileName = "\(UUID().uuidString).jpg"
-        let fileURL = dir.appendingPathComponent(fileName)
-        do {
-            try imageData.write(to: fileURL)
-            userDefaults?.set(fileName, forKey: "amisa.sharedImagePayload")
-            userDefaults?.synchronize()
-            return fileName
-        } catch {
-            return nil
+        try? saveJPEGToSharedImagesOnly(imageData)
+    }
+
+    // MARK: - Compression
+
+    private static func preparedJPEGData(from raw: Data) -> Data {
+        if raw.count <= maxJPEGBytes, UIImage(data: raw) != nil {
+            return raw
         }
+        guard let image = UIImage(data: raw) else { return raw }
+        var quality: CGFloat = 0.88
+        var data = image.jpegData(compressionQuality: quality) ?? raw
+        while data.count > maxJPEGBytes, quality > 0.35 {
+            quality -= 0.12
+            data = image.jpegData(compressionQuality: quality) ?? data
+        }
+        print("[SHARE_EXTENSION] compressed JPEG bytes:", data.count)
+        return data
     }
 }
 
 enum ShareExtensionStorageError: Error {
     case containerUnavailable
+    case writeFailed(String, Error)
+}
+
+extension ShareExtensionStorageError: LocalizedError {
+    var errorDescription: String? {
+        switch self {
+        case .containerUnavailable:
+            return "Conteneur App Group indisponible (\(ShareExtensionStorage.appGroupIdentifier))."
+        case .writeFailed(let path, let error):
+            return "Écriture impossible (\(path)) : \(error.localizedDescription)"
+        }
+    }
 }

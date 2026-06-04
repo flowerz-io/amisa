@@ -37,10 +37,8 @@ struct MainTabContainerView: View {
             if newCount == 0 { router.restoreSourceTabIfNeeded() }
         }
         .fullScreenCover(isPresented: $router.showCameraCapture) {
-            CameraCaptureView { payload in
-                router.showCameraCapture = false
-                router.navigateToSharedImportReview(payload: payload)
-            }
+            CameraCaptureView()
+                .environmentObject(router)
         }
         .onAppear {
             appDelegate.router = router

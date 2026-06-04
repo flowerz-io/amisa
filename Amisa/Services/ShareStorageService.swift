@@ -10,7 +10,7 @@ import Foundation
 final class ShareStorageService {
     static let shared = ShareStorageService()
 
-    static let appGroupIdentifier = "group.flowerz.io.Amisa"
+    static let appGroupIdentifier = AmisaAppGroup.identifier
 
     /// Ancienne clé : uniquement le nom de fichier (sans JSON).
     private let legacyFilenameKey = "amisa.sharedImagePayload"

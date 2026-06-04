@@ -1,8 +1,8 @@
 //
 //  ProfileTabAvatarView.swift
-//  Balibu
+//  Amisa
 //
-//  Avatar profil (tab bar, réglages, header) : cache distant + fallback SF Symbol.
+//  Avatar profil (tab bar, réglages, header) : cache distant + fallback premium.
 //
 
 import SwiftUI
@@ -13,6 +13,7 @@ struct ProfileAvatarCircleView: View {
     let localUIImage: UIImage?
     let remoteURLString: String?
     let diameter: CGFloat
+    var initials: String? = nil
     var outerSeparatorRingColor: Color?
     var outerSeparatorRingWidth: CGFloat = 0
     var innerAccentBorder: (color: Color, width: CGFloat)?
@@ -20,6 +21,7 @@ struct ProfileAvatarCircleView: View {
     var fallbackFillColor: Color = Color.gray.opacity(0.15)
 
     @State private var resolvedRemote: UIImage?
+    @State private var remoteFailed = false
 
     var body: some View {
         Group {
@@ -31,15 +33,14 @@ struct ProfileAvatarCircleView: View {
                 Image(uiImage: resolvedRemote)
                     .resizable()
                     .scaledToFill()
-            } else if hasRemoteURL {
-                ProgressView()
-                    .scaleEffect(0.85)
+            } else if isLoadingRemote {
+                placeholderContent
+                    .overlay {
+                        ProgressView()
+                            .scaleEffect(0.85)
+                    }
             } else {
-                Image(systemName: fallbackSymbolName)
-                    .font(.system(size: diameter * 0.38, weight: .medium))
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(fallbackFillColor)
+                placeholderContent
             }
         }
         .frame(width: diameter, height: diameter)
@@ -61,21 +62,67 @@ struct ProfileAvatarCircleView: View {
         }
     }
 
-    private var hasRemoteURL: Bool {
-        guard let s = remoteURLString?.trimmingCharacters(in: .whitespacesAndNewlines) else { return false }
-        return !s.isEmpty
+    private var isLoadingRemote: Bool {
+        validRemoteURL != nil && !remoteFailed && resolvedRemote == nil && localUIImage == nil
+    }
+
+    private var validRemoteURL: URL? {
+        guard let s = remoteURLString?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !s.isEmpty,
+              let url = URL(string: s),
+              let scheme = url.scheme?.lowercased(),
+              scheme == "http" || scheme == "https"
+        else { return nil }
+        return url
+    }
+
+    @ViewBuilder
+    private var placeholderContent: some View {
+        ZStack {
+            Circle()
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            fallbackFillColor,
+                            fallbackFillColor.opacity(0.65),
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+
+            if let initials, !initials.isEmpty {
+                Text(initials)
+                    .font(.system(size: diameter * 0.34, weight: .semibold, design: .rounded))
+                    .foregroundStyle(DesignTokens.textPrimary.opacity(0.85))
+            } else {
+                Image(systemName: fallbackSymbolName)
+                    .font(.system(size: diameter * 0.38, weight: .medium))
+                    .foregroundStyle(DesignTokens.textSecondary)
+            }
+        }
     }
 
     private func resolveRemote() async {
-        guard localUIImage == nil else {
-            resolvedRemote = nil
+        remoteFailed = false
+        resolvedRemote = nil
+
+        guard localUIImage == nil else { return }
+        guard validRemoteURL != nil else {
+            remoteFailed = true
             return
         }
-        guard hasRemoteURL else {
+
+        let img = await RemoteAvatarCache.shared.image(for: remoteURLString)
+        if Task.isCancelled { return }
+
+        if let img {
+            resolvedRemote = img
+            remoteFailed = false
+        } else {
             resolvedRemote = nil
-            return
+            remoteFailed = true
         }
-        resolvedRemote = await RemoteAvatarCache.shared.image(for: remoteURLString)
     }
 }
 
@@ -88,14 +135,20 @@ struct ProfileTabAvatarView: View {
 
     private let diameter: CGFloat = 34
 
-    private var hasRemoteHint: Bool {
-        guard let s = remoteURLString?.trimmingCharacters(in: .whitespacesAndNewlines) else { return false }
-        return !s.isEmpty
+    private var hasAvatarHint: Bool {
+        if localUIImage != nil { return true }
+        guard let s = remoteURLString?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !s.isEmpty,
+              let url = URL(string: s),
+              let scheme = url.scheme?.lowercased(),
+              scheme == "http" || scheme == "https"
+        else { return false }
+        return true
     }
 
     var body: some View {
         Group {
-            if localUIImage != nil || hasRemoteHint {
+            if hasAvatarHint {
                 ProfileAvatarCircleView(
                     localUIImage: localUIImage,
                     remoteURLString: remoteURLString,

@@ -48,15 +48,36 @@ final class RecentPhotosLibraryModel: ObservableObject {
         }
     }
 
-    static func loadImageData(for asset: PHAsset, completion: @escaping (Data?) -> Void) {
+    /// Charge une image pour l’analyse (max 1200 pt côté long).
+    static func loadFullImage(for asset: PHAsset, completion: @escaping (UIImage?) -> Void) {
         let opts = PHImageRequestOptions()
         opts.deliveryMode = .highQualityFormat
         opts.isNetworkAccessAllowed = true
         opts.resizeMode = .fast
-        PHImageManager.default().requestImageDataAndOrientation(for: asset, options: opts) { data, _, _, _ in
+        opts.isSynchronous = false
+
+        let target = CGSize(width: 1200, height: 1200)
+
+        PHImageManager.default().requestImage(
+            for: asset,
+            targetSize: target,
+            contentMode: .aspectFill,
+            options: opts
+        ) { image, info in
+            if (info?[PHImageCancelledKey] as? Bool) == true { return }
+            if (info?[PHImageResultIsDegradedKey] as? Bool) == true { return }
+            guard let image else { return }
+
             DispatchQueue.main.async {
-                completion(data)
+                completion(image)
             }
+        }
+    }
+
+    /// @deprecated — préférer `loadFullImage`.
+    static func loadImageData(for asset: PHAsset, completion: @escaping (Data?) -> Void) {
+        loadFullImage(for: asset) { image in
+            completion(image?.jpegData(compressionQuality: 0.88))
         }
     }
 }
@@ -64,7 +85,6 @@ final class RecentPhotosLibraryModel: ObservableObject {
 struct RecentPhotosStrip: View {
     @ObservedObject var library: RecentPhotosLibraryModel
     let onSelectAsset: (PHAsset) -> Void
-    /// Optionnel : bouton pellicule complète en fin de liste.
     var onOpenLibrary: (() -> Void)? = nil
 
     private let thumbSize: CGFloat = 56
@@ -79,15 +99,17 @@ struct RecentPhotosStrip: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
                             ForEach(library.assets, id: \.localIdentifier) { asset in
-                                RecentPhotoThumbnail(asset: asset, size: thumbSize)
-                                    .onTapGesture { onSelectAsset(asset) }
+                                Button {
+                                    onSelectAsset(asset)
+                                } label: {
+                                    RecentPhotoThumbnail(asset: asset, size: thumbSize)
+                                }
+                                .buttonStyle(.plain)
+                                .contentShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                             }
 
-                            // Bouton "tout voir" en fin de ruban
                             if let openLibrary = onOpenLibrary {
-                                Button {
-                                    openLibrary()
-                                } label: {
+                                Button(action: openLibrary) {
                                     ZStack {
                                         RoundedRectangle(cornerRadius: 6, style: .continuous)
                                             .fill(Color.white.opacity(0.18))
@@ -142,7 +164,7 @@ private struct RecentPhotoThumbnail: View {
                     .resizable()
                     .aspectRatio(contentMode: .fill)
             } else {
-                RoundedRectangle(cornerRadius: 6)
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
                     .fill(Color.white.opacity(0.12))
             }
         }
@@ -152,6 +174,7 @@ private struct RecentPhotoThumbnail: View {
             RoundedRectangle(cornerRadius: 6, style: .continuous)
                 .strokeBorder(Color.white.opacity(0.2), lineWidth: 0.5)
         }
+        .allowsHitTesting(false)
         .onAppear {
             loadThumb()
         }
