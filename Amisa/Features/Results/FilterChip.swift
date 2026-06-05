@@ -23,16 +23,17 @@ struct FilterChip: View {
                     .font(.caption.weight(.medium))
             }
             .foregroundStyle(Color.primary)
-            .padding(.horizontal, DesignTokens.spacingS)
-            .padding(.vertical, DesignTokens.spacingXXS + 2)
+            .padding(.horizontal, AmisaChrome.filterPillHorizontalPadding)
+            .padding(.vertical, AmisaChrome.filterPillVerticalPadding)
             .background(
                 Capsule(style: .continuous)
-                    .fill(.ultraThinMaterial)
+                    .fill(.thinMaterial)
             )
             .overlay(
                 Capsule(style: .continuous)
-                    .stroke(Color.white.opacity(0.18), lineWidth: 0.8)
+                    .strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5)
             )
+            .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 2)
         }
         .buttonStyle(.plain)
     }

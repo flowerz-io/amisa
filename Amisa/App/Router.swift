@@ -142,6 +142,15 @@ final class Router: ObservableObject {
         path = NavigationPath()
     }
 
+    /// Depuis l’écran résultats : retour Home sans repasser par Review / chargement.
+    func returnToHomeFromResults() {
+        path = NavigationPath()
+        sourceTab = nil
+        selectedTab = .home
+        isTabBarHidden = false
+        showCameraCapture = false
+    }
+
     func processPendingShareImportIfNeeded() {
         guard path.isEmpty else { return }
         if SharedSearchSessionStore.shared.peekPending() != nil { return }

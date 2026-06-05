@@ -12,7 +12,7 @@ import SwiftUI
 private struct ShareExtensionTeaserCard: View {
     let listing: ShareExtensionTeaserListing
 
-    private let corner: CGFloat = 14
+    private let corner: CGFloat = 18
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -44,7 +44,12 @@ private struct ShareExtensionTeaserCard: View {
         }
         .padding(10)
         .background(Color(uiColor: .secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: corner + 4, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: corner + 2, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: corner + 2, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.06), lineWidth: 0.5)
+        }
+        .shadow(color: Color.black.opacity(0.05), radius: 6, x: 0, y: 3)
     }
 
     @ViewBuilder
@@ -83,7 +88,7 @@ private struct ShareExtensionTeaserCard: View {
 // MARK: - Skeleton + shimmer
 
 private struct ShareExtensionPremiumSkeletonCard: View {
-    private let corner: CGFloat = 14
+    private let corner: CGFloat = 18
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -122,7 +127,12 @@ private struct ShareExtensionPremiumSkeletonCard: View {
         }
         .padding(10)
         .background(Color(uiColor: .secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: corner + 4, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: corner + 2, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: corner + 2, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.06), lineWidth: 0.5)
+        }
+        .shadow(color: Color.black.opacity(0.05), radius: 6, x: 0, y: 3)
     }
 }
 
@@ -222,24 +232,32 @@ struct ShareExtensionResultsTeaserView: View {
                 Image(uiImage: img)
                     .resizable()
                     .scaledToFill()
-                    .frame(width: 64, height: 64)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .frame(width: 72, height: 72)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                     .overlay {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .strokeBorder(Color(uiColor: .separator), lineWidth: 0.5)
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5)
                     }
+                    .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
             }
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 5) {
                 Text(String(localized: "Recherche en cours"))
-                    .font(.system(size: 17, weight: .semibold))
+                    .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(.primary)
                 Text(String(localized: "Amisa parcourt les marketplaces pour toi."))
-                    .font(.subheadline)
+                    .font(.system(size: 14))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)
+        }
+        .padding(14)
+        .background(Color(uiColor: .secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.06), lineWidth: 0.5)
         }
     }
 

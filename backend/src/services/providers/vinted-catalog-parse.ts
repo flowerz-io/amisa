@@ -1,4 +1,9 @@
 import type { MarketplaceListingDTO } from '../../types.js';
+import {
+  logVintedListingRaw,
+  logVintedSize,
+  normalizeVintedSizeFromItem,
+} from './vinted-size-extract.js';
 
 function perPageFromEnv(): number {
   const n = Number(process.env.VINTED_SCRAPER_PER_PAGE?.trim() || '24');
@@ -115,6 +120,25 @@ export function parseVintedCatalogResponse(
           : `https://www.vinted.fr${urlVal}`
         : `https://www.vinted.fr/items/${idStr}`;
 
+    const brandTitle = row.brand_title ?? row.brand;
+    const brand =
+      typeof brandTitle === 'string' && brandTitle.trim()
+        ? brandTitle.trim()
+        : undefined;
+
+    const statusVal = row.status ?? row.condition ?? row.condition_title;
+    const condition =
+      typeof statusVal === 'string' && statusVal.trim()
+        ? statusVal.trim()
+        : undefined;
+
+    const { size, source } = normalizeVintedSizeFromItem(row, title);
+
+    logVintedListingRaw(row, title, size);
+    if (source) {
+      logVintedSize(title, source, size);
+    }
+
     out.push({
       id: idStr,
       source: 'vinted',
@@ -124,6 +148,9 @@ export function parseVintedCatalogResponse(
       imageUrl: photo,
       thumbnailUrl: photo,
       listingUrl,
+      brand,
+      size: size ?? undefined,
+      condition,
     });
   }
 

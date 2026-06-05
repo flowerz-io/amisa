@@ -13,10 +13,6 @@ struct AllPhotoAnalysesView: View {
     @EnvironmentObject private var router: Router
     @Environment(\.dismiss) private var dismiss
 
-    private let moodColumns = [
-        GridItem(.adaptive(minimum: 72), spacing: 6),
-    ]
-
     private var allSessions: [SearchSession] {
         SearchHistoryService.shared.fetchSessions().filter { session in
             guard session.mode == .imageAnalysis else { return false }
@@ -25,41 +21,63 @@ struct AllPhotoAnalysesView: View {
     }
 
     var body: some View {
-        ScrollView {
-            if allSessions.isEmpty {
-                VStack(spacing: 16) {
-                    Image(systemName: "photo.stack")
-                        .font(.system(size: 42))
-                        .foregroundStyle(.secondary)
-                    Text("Aucune analyse photo pour l'instant.")
-                        .font(.system(size: 15))
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.top, 80)
-            } else {
-                LazyVGrid(columns: moodColumns, spacing: 6) {
-                    ForEach(allSessions) { session in
-                        Button {
+        GeometryReader { proxy in
+            let horizontalPadding: CGFloat = 16
+            let columnSpacing: CGFloat = AmisaChrome.analysisGridSpacing
+            let cardWidth = floor((proxy.size.width - horizontalPadding * 2 - columnSpacing) / 2)
+
+            ScrollView {
+                if allSessions.isEmpty {
+                    AmisaPremiumEmptyState(
+                        icon: "photo.stack",
+                        title: String(localized: "Aucune analyse photo"),
+                        message: String(localized: "Tes analyses apparaîtront ici après avoir scanné tes premières pièces."),
+                        secondaryActionTitle: String(localized: "Analyser une photo"),
+                        secondaryAction: {
                             dismiss()
-                            router.navigateToResults(session: session)
-                        } label: {
-                            moodThumb(for: session)
-                                .aspectRatio(1, contentMode: .fill)
-                                .frame(minWidth: 72, minHeight: 72)
-                                .clipped()
-                                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                            router.openPhotoAnalysis()
                         }
-                        .buttonStyle(.plain)
+                    )
+                    .padding(.horizontal, horizontalPadding)
+                    .padding(.top, 32)
+                } else {
+                    LazyVGrid(
+                        columns: [
+                            GridItem(.fixed(cardWidth), spacing: columnSpacing),
+                            GridItem(.fixed(cardWidth), spacing: columnSpacing),
+                        ],
+                        spacing: columnSpacing
+                    ) {
+                        ForEach(allSessions) { session in
+                            Button {
+                                dismiss()
+                                router.navigateToResults(session: session)
+                            } label: {
+                                analysisCard(for: session, width: cardWidth)
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
+                    .padding(.horizontal, horizontalPadding)
+                    .padding(.vertical, 16)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 16)
             }
         }
         .background(DesignTokens.backgroundColor)
-        .navigationTitle("Toutes tes analyses")
+        .navigationTitle(String(localized: "Toutes tes analyses"))
         .navigationBarTitleDisplayMode(.large)
+    }
+
+    private func analysisCard(for session: SearchSession, width: CGFloat) -> some View {
+        moodThumb(for: session)
+            .frame(width: width, height: width * 1.12)
+            .clipped()
+            .clipShape(RoundedRectangle(cornerRadius: AmisaChrome.analysisThumbRadius, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: AmisaChrome.analysisThumbRadius, style: .continuous)
+                    .strokeBorder(Color.primary.opacity(0.06), lineWidth: 0.5)
+            }
+            .shadow(color: Color.black.opacity(0.06), radius: 6, x: 0, y: 3)
     }
 
     @ViewBuilder
@@ -75,7 +93,7 @@ struct AllPhotoAnalysesView: View {
                 .resizable()
                 .scaledToFill()
         } else {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
+            RoundedRectangle(cornerRadius: AmisaChrome.analysisThumbRadius, style: .continuous)
                 .fill(DesignTokens.accentMuted)
                 .overlay {
                     Image(systemName: "photo")

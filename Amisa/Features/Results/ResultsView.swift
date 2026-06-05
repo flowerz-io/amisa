@@ -15,7 +15,7 @@ import UIKit
 
 struct ResultsView: View {
     @StateObject private var viewModel: ResultsViewModel
-    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var router: Router
 
     @State private var showDetailsSheet        = false
     @State private var showImageFullscreen     = false
@@ -227,7 +227,7 @@ struct ResultsView: View {
 
                 ResultsHeaderButtonsOverlay(
                     isFavorite: isFavorite,
-                    onBack: { dismiss() },
+                    onBack: { router.returnToHomeFromResults() },
                     onFavorite: { toggleFavorite() },
                     safeTop: safeTop
                 )
@@ -453,5 +453,6 @@ private struct ResultsImageFullscreenViewer: View {
 #Preview {
     NavigationStack {
         ResultsView(session: .mock)
+            .environmentObject(Router())
     }
 }

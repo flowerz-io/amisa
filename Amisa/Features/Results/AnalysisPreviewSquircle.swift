@@ -21,16 +21,16 @@ struct AnalysisPreviewSquircle: View {
         .frame(width: size, height: size)
         .clipShape(
             RoundedRectangle(
-                cornerRadius: size * 0.28,
+                cornerRadius: size * 0.26,
                 style: .continuous
             )
         )
         .overlay(
             RoundedRectangle(
-                cornerRadius: size * 0.28,
+                cornerRadius: size * 0.26,
                 style: .continuous
             )
-            .stroke(Color.black, lineWidth: 2)
+            .strokeBorder(Color.primary.opacity(AmisaChrome.analyzedImageBorderOpacity), lineWidth: 0.5)
         )
         .clipped()
         .drawingGroup()

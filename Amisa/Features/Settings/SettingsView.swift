@@ -21,7 +21,7 @@ struct SettingsView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
+            VStack(alignment: .leading, spacing: AmisaChrome.settingsSectionSpacing) {
 
                 // MARK: Compte
                 lumaSection(String(localized: "Compte")) {
@@ -123,14 +123,20 @@ struct SettingsView: View {
     // MARK: - Luma section
 
     private func lumaSection<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             Text(title.uppercased())
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: 11, weight: .semibold))
+                .tracking(0.6)
                 .foregroundStyle(.secondary)
-                .padding(.leading, 4)
+                .padding(.leading, 6)
             VStack(spacing: 0) { content() }
                 .background(.regularMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: AmisaChrome.settingsSectionRadius, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: AmisaChrome.settingsSectionRadius, style: .continuous)
+                        .strokeBorder(Color.primary.opacity(0.05), lineWidth: 0.5)
+                }
+                .shadow(color: Color.black.opacity(0.03), radius: 8, x: 0, y: 3)
         }
     }
 
@@ -212,7 +218,7 @@ struct SettingsView: View {
             }
         }
         .padding(.horizontal, 16)
-        .frame(height: 52)
+        .frame(height: AmisaChrome.settingsRowHeight)
         .contentShape(Rectangle())
     }
 

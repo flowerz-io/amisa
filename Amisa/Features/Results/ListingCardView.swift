@@ -33,13 +33,14 @@ struct MarketplaceVisualCard: View {
     // MARK: Layout
 
     private enum Layout {
-        static let cardHeight: CGFloat     = 236
-        static let cornerRadius: CGFloat   = 19
-        static let logoHeight: CGFloat     = 17
-        static let logoMaxWidth: CGFloat   = 70
-        static let topEdgePadding: CGFloat = 12
-        /// ~90 % de la taille « callout » pour le prix.
-        static let priceFontSize: CGFloat  = 15.3
+        static let cardHeight: CGFloat     = AmisaChrome.productCardHeight
+        static let cornerRadius: CGFloat   = AmisaChrome.productCardRadius
+        static let logoHeight: CGFloat     = 14
+        static let logoMaxWidth: CGFloat   = 56
+        static let topEdgePadding: CGFloat = 10
+        static let contentPaddingH: CGFloat = 10
+        static let contentPaddingV: CGFloat = 8
+        static let priceFontSize: CGFloat  = 16
     }
 
     // MARK: - Couleurs validées
@@ -67,14 +68,8 @@ struct MarketplaceVisualCard: View {
         !listing.displayBrand.isEmpty && listing.displayBrand != "No brand"
     }
 
-    /// Toujours une valeur (`listing.size`, sinon `displaySize`, sinon `NS`).
     private var displaySizeLabel: String {
-        let rawSize = (listing.size ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        if !rawSize.isEmpty { return rawSize }
-        if let ds = listing.displaySize, !ds.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return ds.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-        return "NS"
+        listing.cardSizeLabel
     }
 
     /// Couleur du texte de la pill taille, adaptée à la luminosité de l'image.
@@ -93,7 +88,12 @@ struct MarketplaceVisualCard: View {
             cardContainer
                 .clipShape(RoundedRectangle(cornerRadius: Layout.cornerRadius, style: .continuous))
                 .overlay(cardBorder)
-                .shadow(color: .black.opacity(0.10), radius: 8, x: 0, y: 3)
+                .shadow(
+                    color: AmisaChrome.productCardShadow,
+                    radius: AmisaChrome.productCardShadowRadius,
+                    x: 0,
+                    y: AmisaChrome.productCardShadowY
+                )
                 .contentShape(RoundedRectangle(cornerRadius: Layout.cornerRadius, style: .continuous))
         }
         .buttonStyle(.plain)
@@ -104,6 +104,9 @@ struct MarketplaceVisualCard: View {
             palette = await ImagePaletteExtractor.shared.palette(
                 for: listing.thumbnailURL ?? listing.imageURL
             )
+        }
+        .onAppear {
+            print("[RESULT_CARD] title:", listing.title, "size:", listing.size ?? "nil")
         }
     }
 
@@ -172,13 +175,13 @@ struct MarketplaceVisualCard: View {
     /// Toujours noir pour garantir la lisibilité du texte blanc.
     /// Opacité max adaptée : 0.12 (image sombre) → 0.48 (image très claire).
     private var bottomGradient: some View {
-        let maxOp = min(0.12 + palette.bottomLuminance * 0.40, 0.48)
+        let maxOp = min(0.16 + palette.bottomLuminance * 0.42, 0.52)
 
         return LinearGradient(
             stops: [
                 .init(color: .clear,                   location: 0.00),
-                .init(color: .clear,                   location: 0.55),
-                .init(color: .black.opacity(0.18),     location: 0.72),
+                .init(color: .clear,                   location: 0.50),
+                .init(color: .black.opacity(0.22),     location: 0.70),
                 .init(color: .black.opacity(maxOp),    location: 1.00),
             ],
             startPoint: .top,
@@ -190,44 +193,44 @@ struct MarketplaceVisualCard: View {
     // MARK: - Bloc texte (marque + titre + prix) ancré en bas
 
     private var textBlock: some View {
-        ZStack(alignment: .bottomTrailing) {
-            VStack(alignment: .leading, spacing: 3) {
-                if showBrand {
-                    Text(listing.displayBrand)
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(brandColor)
-                        .lineLimit(1)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .shadow(color: .black.opacity(0.28), radius: 2, x: 0, y: 1)
-                }
-
-                Text(listing.title)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(titleColor)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.85)
-                    .multilineTextAlignment(.leading)
+        VStack(alignment: .leading, spacing: 3) {
+            if showBrand {
+                Text(listing.displayBrand)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(brandColor)
+                    .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .shadow(color: .black.opacity(0.28), radius: 2, x: 0, y: 1)
-
-                LiquidGlassPill(text: displaySizeLabel, textColor: adaptivePillTextColor)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
 
-            Text(listing.formattedPrice)
-                .font(.system(size: Layout.priceFontSize, weight: .bold))
+            Text(listing.title)
+                .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(titleColor)
-                .lineLimit(1)
+                .lineLimit(2)
+                .minimumScaleFactor(0.85)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .shadow(color: .black.opacity(0.28), radius: 2, x: 0, y: 1)
+
+            HStack(alignment: .center, spacing: 8) {
+                LiquidGlassPill(text: displaySizeLabel, textColor: adaptivePillTextColor)
+
+                Spacer(minLength: 4)
+
+                Text(listing.formattedPrice)
+                    .font(.system(size: Layout.priceFontSize, weight: .bold))
+                    .foregroundStyle(titleColor)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.9)
+                    .shadow(color: .black.opacity(0.32), radius: 2, x: 0, y: 1)
+            }
         }
-        // Paddings internes divisés par 2 (12→6, 9→5)
-        .padding(.horizontal, 6)
-        .padding(.vertical, 5)
+        .padding(.horizontal, Layout.contentPaddingH)
+        .padding(.vertical, Layout.contentPaddingV)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background { TextReadabilityPlate() }
-        // Paddings externes divisés par 2 (12→6)
-        .padding(.bottom, 6)
-        .padding(.horizontal, 6)
+        .padding(.bottom, Layout.contentPaddingV)
+        .padding(.horizontal, Layout.contentPaddingH)
     }
 
     // MARK: - Provider badge
@@ -239,7 +242,8 @@ struct MarketplaceVisualCard: View {
             logoHeight: Layout.logoHeight,
             logoMaxWidth: Layout.logoMaxWidth
         )
-        .opacity(0.92)
+        .opacity(0.88)
+        .scaleEffect(0.92, anchor: .topTrailing)
         .padding(.top, Layout.topEdgePadding)
         .padding(.trailing, Layout.topEdgePadding)
     }

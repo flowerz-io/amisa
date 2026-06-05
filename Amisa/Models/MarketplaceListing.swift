@@ -27,6 +27,47 @@ struct MarketplaceListingDTO: Decodable {
     /// Score similarité visuelle / couleur 0…100 (calcul client, optionnel).
     let visualSimilarityScore: Double?
 
+    private enum CodingKeys: String, CodingKey {
+        case id, source, title, price, currency
+        case imageUrl, thumbnailUrl, listingUrl
+        case brand, size, condition
+        case publishedAtRelative, relevanceScore, visualSimilarityScore
+        case itemSize, sizeLabel, taille
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        source = try c.decode(String.self, forKey: .source)
+        title = try c.decode(String.self, forKey: .title)
+        price = try c.decode(Double.self, forKey: .price)
+        currency = try c.decodeIfPresent(String.self, forKey: .currency)
+        imageUrl = try c.decodeIfPresent(String.self, forKey: .imageUrl)
+        thumbnailUrl = try c.decodeIfPresent(String.self, forKey: .thumbnailUrl)
+        listingUrl = try c.decodeIfPresent(String.self, forKey: .listingUrl)
+        brand = try c.decodeIfPresent(String.self, forKey: .brand)
+        size = Self.firstNonEmptyString(
+            in: c,
+            keys: [.size, .itemSize, .sizeLabel, .taille]
+        )
+        condition = try c.decodeIfPresent(String.self, forKey: .condition)
+        publishedAtRelative = try c.decodeIfPresent(String.self, forKey: .publishedAtRelative)
+        relevanceScore = try c.decodeIfPresent(Double.self, forKey: .relevanceScore)
+        visualSimilarityScore = try c.decodeIfPresent(Double.self, forKey: .visualSimilarityScore)
+    }
+
+    private static func firstNonEmptyString(
+        in container: KeyedDecodingContainer<CodingKeys>,
+        keys: [CodingKeys]
+    ) -> String? {
+        for key in keys {
+            guard let raw = try? container.decodeIfPresent(String.self, forKey: key) else { continue }
+            let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty { return trimmed }
+        }
+        return nil
+    }
+
     init(
         id: String,
         source: String,
@@ -104,11 +145,25 @@ struct MarketplaceListing: Identifiable, Codable, Equatable, Hashable {
         return value
     }
 
-    /// Taille affichée normalisée en majuscules.
+    /// Taille affichée normalisée en majuscules (champ API uniquement).
     var displaySize: String? {
-        let value = (size ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !value.isEmpty else { return nil }
-        return value.uppercased()
+        ListingSizeExtractor.normalizedSize(from: size)
+    }
+
+    /// Taille pour l’UI : champ API (jamais écrasé par `NS`) → fallback titre → `NS`.
+    var resolvedSizeLabel: String {
+        ListingSizeExtractor.resolvedLabel(size: size, title: title)
+    }
+
+    /// Libellé court pour la pill : `size` API ou `NS` si absent.
+    var cardSizeLabel: String {
+        if let normalized = ListingSizeExtractor.normalizedSize(from: size) {
+            return normalized
+        }
+        if let raw = size?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty {
+            return raw
+        }
+        return ListingSizeExtractor.extractFromTitle(title) ?? "NS"
     }
 
     /// État affiché nettoyé.

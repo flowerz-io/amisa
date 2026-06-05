@@ -31,7 +31,7 @@ struct SearchHomeView: View {
                 recentTextSearchesSection
                     .padding(.horizontal, 24)
             }
-            .padding(.top, 12)
+            .padding(.top, 8)
             .padding(.bottom, 120)
         }
         .background(Color(.systemGroupedBackground))
@@ -119,10 +119,12 @@ struct SearchHomeView: View {
     private var recentTextSearchesSection: some View {
         Group {
             if viewModel.recentTextOnlySessions.isEmpty {
-                EmptyStateView(
-                    icon: "clock.arrow.circlepath",
+                AmisaPremiumEmptyState(
+                    icon: "sparkle.magnifyingglass",
                     title: String(localized: "Aucune recherche récente"),
-                    message: String(localized: "Lance une recherche depuis la barre ci-dessus.")
+                    message: String(localized: "Saisis un mot-clé pour explorer Vinted, ou analyse une photo pour trouver des pièces similaires."),
+                    secondaryActionTitle: String(localized: "Analyser une photo"),
+                    secondaryAction: { router.openPhotoAnalysis() }
                 )
             } else {
                 VStack(alignment: .leading, spacing: DesignTokens.spacingM) {

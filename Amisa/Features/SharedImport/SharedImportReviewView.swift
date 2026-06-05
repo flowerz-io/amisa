@@ -28,8 +28,19 @@ struct SharedImportReviewView: View {
         case searching
     }
 
-    private var reviewBackground: Color {
-        colorScheme == .dark ? .black : Color(.systemBackground)
+    private var reviewBackground: LinearGradient {
+        if colorScheme == .dark {
+            return LinearGradient(
+                colors: [Color(white: 0.06), Color.black],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        }
+        return LinearGradient(
+            colors: [Color(.systemGroupedBackground), Color(.systemBackground)],
+            startPoint: .top,
+            endPoint: .bottom
+        )
     }
 
     init(payload: SharedImagePayload, apiClient: (any APIClientProtocol)? = nil) {
@@ -70,28 +81,29 @@ struct SharedImportReviewView: View {
 
     private var editingView: some View {
         GeometryReader { geo in
+            let safeTop = EffectiveSafeArea.topInset(proxy: geo)
+
             ZStack(alignment: .top) {
                 reviewBackground.ignoresSafeArea()
 
-                // Contenu vertical
                 VStack(spacing: 0) {
-                    // Espace réservé pour le header : safeTop + 26 (padding) + 50 (bouton) + 20 (respiration)
                     Color.clear
-                        .frame(height: geo.safeAreaInsets.top + 96)
+                        .frame(height: reviewHeaderReservedHeight(safeTop: safeTop))
 
-                    // Zone image (Google Lens)
                     cropZone(geo: geo)
-
-                    // Panel inférieur
                     bottomPanel(geo: geo)
                 }
 
-                // Header custom (positionné en overlay)
-                customHeader(safeTop: geo.safeAreaInsets.top)
+                customHeader(safeTop: safeTop)
                     .zIndex(9_999)
             }
         }
         .ignoresSafeArea(edges: .top)
+    }
+
+    /// Espace sous la Dynamic Island : safe top + 10 pt + rangée 44 pt + respiration.
+    private func reviewHeaderReservedHeight(safeTop: CGFloat) -> CGFloat {
+        safeTop + 10 + 44 + 12
     }
 
     // MARK: - Zone image
@@ -106,7 +118,14 @@ struct SharedImportReviewView: View {
             }
             .id(cropKey)
             .frame(height: imageHeight)
-            .background(reviewBackground)
+            .padding(.horizontal, 16)
+            .clipShape(RoundedRectangle(cornerRadius: AmisaChrome.reviewCropContainerRadius, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: AmisaChrome.reviewCropContainerRadius, style: .continuous)
+                    .strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5)
+            }
+            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.35 : 0.08), radius: 16, x: 0, y: 8)
+            .padding(.horizontal, 4)
         } else {
             ZStack {
                 reviewBackground
@@ -171,35 +190,39 @@ struct SharedImportReviewView: View {
 
     private func customHeader(safeTop: CGFloat) -> some View {
         HStack(alignment: .center, spacing: 0) {
-            // Bouton retour — AccentColor, 50×50
             Button {
                 router.goBackToCamera()
             } label: {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(.white)
-                    .frame(width: 50, height: 50)
-                    .background(Color.accentColor)
+                    .frame(width: 44, height: 44)
+                    .background(reviewBackButtonFill)
                     .clipShape(Circle())
-                    .shadow(color: Color.accentColor.opacity(0.30), radius: 7, x: 0, y: 3)
+                    .shadow(color: Color.black.opacity(0.22), radius: 6, x: 0, y: 3)
             }
-            .buttonStyle(.plain)
-            .offset(y: 10)
+            .buttonStyle(ReviewBackButtonStyle())
+            .accessibilityLabel(String(localized: "Retour"))
 
             Spacer()
 
-            Text(String(localized: "Review"))
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundStyle(.primary)
+            Text(String(localized: "Ajuster"))
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(DesignTokens.textPrimary)
 
             Spacer()
 
-            // Miroir pour centrer le titre
-            Color.clear.frame(width: 50, height: 50)
+            Color.clear
+                .frame(width: 44, height: 44)
+                .accessibilityHidden(true)
         }
         .padding(.horizontal, 20)
-        .padding(.top, safeTop + 26)
-        .frame(maxWidth: .infinity)
+        .padding(.top, safeTop + 10)
+        .frame(maxWidth: .infinity, alignment: .top)
+    }
+
+    private var reviewBackButtonFill: Color {
+        Color.black.opacity(colorScheme == .dark ? 0.44 : 0.40)
     }
 
     // MARK: - Logic
@@ -290,6 +313,16 @@ struct SharedImportReviewView: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Bouton retour Review
+
+private struct ReviewBackButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.94 : 1)
+            .animation(.spring(response: 0.22, dampingFraction: 0.78), value: configuration.isPressed)
     }
 }
 

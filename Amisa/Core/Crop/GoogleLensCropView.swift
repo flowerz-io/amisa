@@ -368,18 +368,18 @@ private final class LensCropOverlayView: UIView {
         backgroundColor = .clear
         isOpaque        = false
 
-        dimLayer.fillColor  = UIColor.black.withAlphaComponent(0.45).cgColor
+        dimLayer.fillColor  = UIColor.black.withAlphaComponent(0.38).cgColor
         dimLayer.fillRule   = .evenOdd
         layer.addSublayer(dimLayer)
 
         cornersLayer.fillColor    = UIColor.clear.cgColor
         cornersLayer.strokeColor  = UIColor.white.cgColor
-        cornersLayer.lineWidth    = 5
+        cornersLayer.lineWidth    = 3.5
         cornersLayer.lineCap      = .round
         cornersLayer.lineJoin     = .round
         cornersLayer.shadowColor  = UIColor.black.cgColor
-        cornersLayer.shadowOpacity = 0.55
-        cornersLayer.shadowRadius = 2.5
+        cornersLayer.shadowOpacity = 0.38
+        cornersLayer.shadowRadius = 3
         cornersLayer.shadowOffset = .zero
         layer.addSublayer(cornersLayer)
     }
@@ -419,7 +419,7 @@ private final class LensCropOverlayView: UIView {
         dimLayer.frame = bounds
 
         // Poignées de coin (style Google Lens)
-        let L: CGFloat = 34
+        let L: CGFloat = 28
         let r = cropRect
         let cp = CGMutablePath()
         // TL

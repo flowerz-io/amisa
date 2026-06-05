@@ -2,7 +2,7 @@
 //  RecentPhotosStrip.swift
 //  Balibu
 //
-//  Ruban horizontal de miniatures (photothèque récente) + bouton "ouvrir tout" en fin de liste.
+//  Ruban horizontal de miniatures (photothèque récente).
 //
 
 import Combine
@@ -48,46 +48,87 @@ final class RecentPhotosLibraryModel: ObservableObject {
         }
     }
 
-    /// Charge une image pour l’analyse (max 1200 pt côté long).
-    static func loadFullImage(for asset: PHAsset, completion: @escaping (UIImage?) -> Void) {
-        let opts = PHImageRequestOptions()
-        opts.deliveryMode = .highQualityFormat
-        opts.isNetworkAccessAllowed = true
-        opts.resizeMode = .fast
-        opts.isSynchronous = false
+    /// PHAsset → UIImage (haute qualité, async). Toujours termine (jamais de continuation bloquée).
+    static func loadUIImage(from asset: PHAsset) async -> UIImage? {
+        await withCheckedContinuation { continuation in
+            let resumed = ContinuationResumeGuard()
 
-        let target = CGSize(width: 1200, height: 1200)
+            let options = PHImageRequestOptions()
+            options.isNetworkAccessAllowed = true
+            options.deliveryMode = .highQualityFormat
+            options.resizeMode = .fast
+            options.isSynchronous = false
 
-        PHImageManager.default().requestImage(
-            for: asset,
-            targetSize: target,
-            contentMode: .aspectFill,
-            options: opts
-        ) { image, info in
-            if (info?[PHImageCancelledKey] as? Bool) == true { return }
-            if (info?[PHImageResultIsDegradedKey] as? Bool) == true { return }
-            guard let image else { return }
+            PHImageManager.default().requestImage(
+                for: asset,
+                targetSize: CGSize(width: 1600, height: 1600),
+                contentMode: .aspectFit,
+                options: options
+            ) { image, info in
+                if let error = info?[PHImageErrorKey] {
+                    print("[RECENTS] PHImage error:", error)
+                }
 
-            DispatchQueue.main.async {
-                completion(image)
+                if let cancelled = info?[PHImageCancelledKey] as? Bool, cancelled {
+                    print("[RECENTS] request cancelled")
+                    resumed.resumeOnce { continuation.resume(returning: nil) }
+                    return
+                }
+
+                let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) == true
+                let inCloud = (info?[PHImageResultIsInCloudKey] as? Bool) == true
+
+                if let image {
+                    if isDegraded {
+                        return
+                    }
+                    resumed.resumeOnce { continuation.resume(returning: image) }
+                    return
+                }
+
+                if inCloud {
+                    print("[RECENTS] asset in iCloud and unavailable locally")
+                }
+
+                if !isDegraded {
+                    print("[RECENTS] failed to load UIImage (nil result)")
+                    resumed.resumeOnce { continuation.resume(returning: nil) }
+                }
             }
-        }
-    }
 
-    /// @deprecated — préférer `loadFullImage`.
-    static func loadImageData(for asset: PHAsset, completion: @escaping (Data?) -> Void) {
-        loadFullImage(for: asset) { image in
-            completion(image?.jpegData(compressionQuality: 0.88))
+            Task {
+                try? await Task.sleep(nanoseconds: 45_000_000_000)
+                resumed.resumeOnce {
+                    print("[RECENTS] loadUIImage timeout for:", asset.localIdentifier)
+                    continuation.resume(returning: nil)
+                }
+            }
         }
     }
 }
 
+/// Évite un double `resume` si Photos renvoie plusieurs callbacks.
+private final class ContinuationResumeGuard: @unchecked Sendable {
+    private let lock = NSLock()
+    private var didResume = false
+
+    func resumeOnce(_ action: () -> Void) {
+        lock.lock()
+        defer { lock.unlock() }
+        guard !didResume else { return }
+        didResume = true
+        action()
+    }
+}
+
+// MARK: - Strip
+
 struct RecentPhotosStrip: View {
     @ObservedObject var library: RecentPhotosLibraryModel
-    let onSelectAsset: (PHAsset) -> Void
+    let onSelectAsset: (PHAsset) async -> Void
     var onOpenLibrary: (() -> Void)? = nil
 
-    private let thumbSize: CGFloat = 56
+    private let thumbSize: CGFloat = 52
 
     var body: some View {
         Group {
@@ -99,13 +140,7 @@ struct RecentPhotosStrip: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
                             ForEach(library.assets, id: \.localIdentifier) { asset in
-                                Button {
-                                    onSelectAsset(asset)
-                                } label: {
-                                    RecentPhotoThumbnail(asset: asset, size: thumbSize)
-                                }
-                                .buttonStyle(.plain)
-                                .contentShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                                recentAssetButton(asset)
                             }
 
                             if let openLibrary = onOpenLibrary {
@@ -119,18 +154,19 @@ struct RecentPhotosStrip: View {
                                     }
                                     .frame(width: thumbSize, height: thumbSize)
                                     .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-                                    .overlay {
-                                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                            .strokeBorder(Color.white.opacity(0.2), lineWidth: 0.5)
-                                    }
                                 }
                                 .buttonStyle(.plain)
-                                .accessibilityLabel(String(localized: "Ouvrir la photothèque"))
+                                .frame(width: thumbSize, height: thumbSize)
+                                .contentShape(Rectangle())
+                                .allowsHitTesting(true)
                             }
                         }
                         .padding(.horizontal, 4)
                     }
+                    .frame(maxWidth: .infinity)
                     .frame(height: thumbSize + 12)
+                    .zIndex(100)
+                    .allowsHitTesting(true)
                 }
             case .denied, .restricted:
                 stripPlaceholder(String(localized: "Accès à la photothèque refusé"))
@@ -140,6 +176,23 @@ struct RecentPhotosStrip: View {
                 stripPlaceholder(String(localized: "Photothèque indisponible"))
             }
         }
+        .allowsHitTesting(true)
+    }
+
+    private func recentAssetButton(_ asset: PHAsset) -> some View {
+        Button {
+            print("[RECENTS] tapped asset:", asset.localIdentifier)
+            Task {
+                await onSelectAsset(asset)
+            }
+        } label: {
+            RecentPhotoThumbnail(asset: asset, size: thumbSize)
+                .frame(width: thumbSize, height: thumbSize)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .frame(width: thumbSize, height: thumbSize)
+        .contentShape(Rectangle())
     }
 
     private func stripPlaceholder(_ message: String) -> some View {
@@ -148,10 +201,13 @@ struct RecentPhotosStrip: View {
             .foregroundStyle(.white.opacity(0.55))
             .frame(maxWidth: .infinity)
             .frame(height: thumbSize + 12)
+            .allowsHitTesting(false)
     }
 }
 
-private struct RecentPhotoThumbnail: View {
+// MARK: - Thumbnail
+
+struct RecentPhotoThumbnail: View {
     let asset: PHAsset
     let size: CGFloat
 
@@ -173,11 +229,9 @@ private struct RecentPhotoThumbnail: View {
         .overlay {
             RoundedRectangle(cornerRadius: 6, style: .continuous)
                 .strokeBorder(Color.white.opacity(0.2), lineWidth: 0.5)
+                .allowsHitTesting(false)
         }
-        .allowsHitTesting(false)
-        .onAppear {
-            loadThumb()
-        }
+        .onAppear { loadThumb() }
     }
 
     private func loadThumb() {

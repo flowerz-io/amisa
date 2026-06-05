@@ -48,7 +48,7 @@ struct FavoritesView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
-        .background(Color(.systemBackground))
+        .background(Color(.systemGroupedBackground))
         .navigationTitle(String(localized: "Favoris"))
         .navigationBarTitleDisplayMode(.large)
         .onAppear {
@@ -62,19 +62,15 @@ struct FavoritesView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "heart.fill")
-                .font(.system(size: 52))
-                .foregroundStyle(.secondary)
-
-            Text(String(localized: "Tes favoris apparaîtront ici"))
-                .font(.system(size: 17))
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.top, 100)
-        .padding(.horizontal, 24)
+        AmisaPremiumEmptyState(
+            icon: "heart.fill",
+            title: String(localized: "Tes pièces favorites apparaîtront ici."),
+            message: String(localized: "Ajoute des annonces à tes favoris pour les retrouver facilement."),
+            iconTint: DesignTokens.accent.opacity(0.75),
+            secondaryActionTitle: String(localized: "Explorer les résultats"),
+            secondaryAction: { router.selectedTab = .search }
+        )
+        .padding(.top, 24)
     }
 }
 

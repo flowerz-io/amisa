@@ -11,7 +11,7 @@ struct ResultsFiltersBar: View {
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 10) {
+            HStack(spacing: AmisaChrome.filterBarSpacing) {
                 FilterChip(title: String(localized: "Filtrer"), systemImage: "line.3.horizontal.decrease.circle") {
                     onSelectTab(.marketplace)
                 }
@@ -29,7 +29,7 @@ struct ResultsFiltersBar: View {
                 }
             }
             .padding(.horizontal, 4)
-            .padding(.vertical, 2)
+            .padding(.vertical, 1)
         }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 0)

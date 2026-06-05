@@ -29,18 +29,17 @@ struct CameraCaptureView: View {
                 .allowsHitTesting(false)
                 .zIndex(0)
 
-            VStack {
-                topBar
-                    .padding(.horizontal, 16)
-                    .padding(.top, 12)
-                Spacer(minLength: 0)
-                    .allowsHitTesting(false)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .zIndex(2)
+            bottomPanelVisualOverlay
+                .allowsHitTesting(false)
+                .zIndex(1)
 
-            bottomPanel
-                .zIndex(3)
+            bottomPanelInteractive
+                .zIndex(100)
+        }
+        .overlay(alignment: .top) {
+            topBar
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
         }
         .background(Color.black)
         .onAppear {
@@ -75,66 +74,87 @@ struct CameraCaptureView: View {
         }
     }
 
-    // MARK: - Panel bas
+    // MARK: - Panel bas (fond décoratif)
 
-    private var bottomPanel: some View {
-        VStack(spacing: 0) {
-            if viewModel.uiState == .ready {
-                zoomBadge
+    private var bottomPanelVisualOverlay: some View {
+        Color.black.opacity(bottomPanelOpacity)
+            .ignoresSafeArea(edges: .bottom)
+    }
+
+    // MARK: - Panel bas (contrôles + récents, tappable)
+
+    private var bottomPanelInteractive: some View {
+        ZStack(alignment: .bottom) {
+            VStack(spacing: 0) {
+                bottomControls
+            }
+            .zIndex(0)
+
+            VStack(spacing: 0) {
+                if viewModel.uiState == .ready {
+                    zoomBadge
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 12)
+                        .padding(.bottom, 8)
+                        .allowsHitTesting(false)
+                }
+
+                Text(String(localized: "Récents"))
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(.white.opacity(0.5))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 12)
-                    .padding(.bottom, 8)
+                    .padding(.bottom, 4)
+                    .allowsHitTesting(false)
+
+                RecentPhotosStrip(
+                    library: recentLibrary,
+                    onSelectAsset: { asset in
+                        await handleRecentAssetSelection(asset)
+                    },
+                    onOpenLibrary: { showLibraryPicker = true }
+                )
+                .padding(.horizontal, 8)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity)
+                .zIndex(100)
+
+                Color.clear
+                    .frame(height: bottomControlsHeight)
+                    .allowsHitTesting(false)
             }
-
-            Text(String(localized: "Récents"))
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(.white.opacity(0.5))
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 12)
-                .padding(.bottom, 4)
-
-            RecentPhotosStrip(
-                library: recentLibrary,
-                onSelectAsset: { selectFromLibrary($0) },
-                onOpenLibrary: { showLibraryPicker = true }
-            )
-            .padding(.horizontal, 8)
-            .padding(.vertical, 8)
-
-            bottomControls
+            .zIndex(100)
+            .allowsHitTesting(true)
         }
         .padding(.top, 12)
         .padding(.bottom, 12)
         .frame(maxWidth: .infinity)
-        .background(
-            Color.black.opacity(bottomPanelOpacity)
-                .ignoresSafeArea(edges: .bottom)
-        )
-        .contentShape(Rectangle())
     }
+
+    private var bottomControlsHeight: CGFloat { 100 }
 
     // MARK: - Preview
 
     private var previewStack: some View {
         ZStack {
             Color.black
+                .allowsHitTesting(false)
             switch viewModel.uiState {
             case .ready:
                 CameraPreviewView(
                     session: viewModel.sessionController.session,
                     isMirrored: viewModel.cameraPosition == .front
                 )
-                .simultaneousGesture(
-                    MagnificationGesture()
-                        .onChanged { value in viewModel.pinchChanged(scale: value) }
-                        .onEnded { _ in viewModel.pinchEnded() }
-                )
+                .allowsHitTesting(false)
             case .loading:
                 ProgressView().tint(.white).scaleEffect(1.2)
+                    .allowsHitTesting(false)
             case .denied:
                 deniedState
+                    .allowsHitTesting(false)
             case .noHardware:
                 noHardwareState
+                    .allowsHitTesting(false)
             }
         }
     }
@@ -167,7 +187,6 @@ struct CameraCaptureView: View {
                 .accessibilityLabel(String(localized: "Flash"))
             }
         }
-        .allowsHitTesting(true)
     }
 
     // MARK: - Zoom
@@ -192,11 +211,15 @@ struct CameraCaptureView: View {
                     .background(Color.white.opacity(0.14))
                     .clipShape(Circle())
             }
-            .frame(maxWidth: .infinity)
+            .frame(width: 52, height: 52)
+            .contentShape(Circle())
             .accessibilityLabel(String(localized: "Ouvrir la photothèque"))
 
+            Spacer(minLength: 0)
+
             shutterButton
-                .frame(maxWidth: .infinity)
+
+            Spacer(minLength: 0)
 
             Button { viewModel.flipCamera() } label: {
                 Image(systemName: "arrow.triangle.2.circlepath.camera")
@@ -204,12 +227,15 @@ struct CameraCaptureView: View {
                     .foregroundStyle(.white)
                     .frame(width: 52, height: 52)
             }
+            .frame(width: 52, height: 52)
+            .contentShape(Circle())
             .disabled(viewModel.uiState != .ready)
             .opacity(viewModel.uiState == .ready ? 1 : 0.4)
             .accessibilityLabel(String(localized: "Changer de caméra"))
-            .frame(maxWidth: .infinity)
         }
-        .frame(height: 100)
+        .padding(.horizontal, 28)
+        .frame(height: bottomControlsHeight)
+        .allowsHitTesting(true)
     }
 
     private var shutterButton: some View {
@@ -225,6 +251,8 @@ struct CameraCaptureView: View {
                     .frame(width: 62, height: 62)
             }
         }
+        .frame(width: 74, height: 74)
+        .contentShape(Circle())
         .disabled(viewModel.uiState != .ready || viewModel.isCapturing)
         .opacity(viewModel.uiState == .ready ? 1 : 0.45)
         .accessibilityLabel(String(localized: "Prendre une photo"))
@@ -264,35 +292,44 @@ struct CameraCaptureView: View {
 
     // MARK: - Actions
 
+    @MainActor
+    private func handleRecentAssetSelection(_ asset: PHAsset) async {
+        print("[RECENTS] start loading image:", asset.localIdentifier)
+        guard !isProcessingPick else { return }
+        isProcessingPick = true
+
+        guard let image = await RecentPhotosLibraryModel.loadUIImage(from: asset) else {
+            print("[RECENTS] failed to load UIImage")
+            isProcessingPick = false
+            pickErrorMessage = String(localized: "Impossible de charger cette photo depuis ta bibliothèque.")
+            return
+        }
+
+        print("[RECENTS] UIImage loaded:", image.size)
+        applyPickedImage(image)
+        isProcessingPick = false
+    }
+
+    /// Pipeline commun galerie / récents / capture.
+    private func applyPickedImage(_ image: UIImage) {
+        showLibraryPicker = false
+        print("[RECENTS] calling handlePickedImage — same flow as gallery")
+        if !PickedImageAnalysisHandler.handlePickedImage(image, router: router) {
+            pickErrorMessage = String(localized: "Impossible d’enregistrer cette photo. Réessaie ou choisis une autre image.")
+        }
+    }
+
     private func handlePickedImage(_ image: UIImage) {
         guard !isProcessingPick else { return }
         isProcessingPick = true
         defer { isProcessingPick = false }
-
-        if !PickedImageAnalysisHandler.handlePickedImage(image, router: router) {
-            pickErrorMessage = String(localized: "Impossible d’enregistrer cette photo. Réessaie ou choisis une autre image.")
-        }
+        applyPickedImage(image)
     }
 
     private func capturePhoto() {
         viewModel.capturePhoto { data in
             guard let data, let image = UIImage(data: data) else { return }
             Task { @MainActor in
-                handlePickedImage(image)
-            }
-        }
-    }
-
-    private func selectFromLibrary(_ asset: PHAsset) {
-        guard !isProcessingPick else { return }
-        isProcessingPick = true
-        RecentPhotosLibraryModel.loadFullImage(for: asset) { image in
-            Task { @MainActor in
-                defer { isProcessingPick = false }
-                guard let image else {
-                    pickErrorMessage = String(localized: "Impossible de charger cette photo depuis ta bibliothèque.")
-                    return
-                }
                 handlePickedImage(image)
             }
         }

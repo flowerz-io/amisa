@@ -51,9 +51,13 @@ struct LoadingSearchView: View {
                 Image(uiImage: img)
                     .resizable()
                     .scaledToFill()
-                    .frame(width: 120, height: 120)
-                    .clipShape(RoundedRectangle(cornerRadius: DesignTokens.cornerRadiusM, style: .continuous))
-                    .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
+                    .frame(width: 128, height: 128)
+                    .clipShape(RoundedRectangle(cornerRadius: AmisaChrome.reviewCropContainerRadius, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: AmisaChrome.reviewCropContainerRadius, style: .continuous)
+                            .strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5)
+                    }
+                    .shadow(color: AmisaChrome.analyzedImageShadow, radius: 12, x: 0, y: 6)
             }
 
         case .text(let query):

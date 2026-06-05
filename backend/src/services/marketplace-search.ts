@@ -1,5 +1,6 @@
 import type { MarketplaceListingDTO } from '../types.js';
 import { fetchVintedCatalogPage } from './providers/vinted-api-search.js';
+import { enrichVintedListingsWithDetailSizes } from './providers/vinted-detail-size.js';
 import { marketplaceListingDedupeKey } from '../lib/listing-dedupe.js';
 
 const USE_MOCK =
@@ -95,18 +96,25 @@ export async function searchVintedListingsWithMeta(
         if (cap !== undefined && merged.length >= cap) break outer;
       }
     }
+    const enrichLimit = Number(
+      process.env.VINTED_DETAIL_SIZE_ENRICH_LIMIT?.trim() || '12'
+    );
+    const enriched = await enrichVintedListingsWithDetailSizes(merged, {
+      limit: Number.isFinite(enrichLimit) && enrichLimit > 0 ? enrichLimit : 12,
+    });
+
     const ms = Math.round(performance.now() - t0);
-    logSuccess('vinted', merged.length, ms);
+    logSuccess('vinted', enriched.length, ms);
     console.log(
-      `[VINTED_MERGE] total=${totalFetched} deduped=${merged.length}`
+      `[VINTED_MERGE] total=${totalFetched} deduped=${enriched.length}`
     );
     console.log('[RESULTS_BATCH]', {
-      merged: merged.length,
+      merged: enriched.length,
       queriesUsed: qs.length,
       primaryHasMore,
       capped: cap != null,
     });
-    return { listings: merged, primaryHasMore };
+    return { listings: enriched, primaryHasMore };
   } catch (e) {
     logError('vinted', e);
     throw e;

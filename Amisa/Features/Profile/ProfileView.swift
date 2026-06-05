@@ -10,7 +10,7 @@ struct ProfileView: View {
     @State private var showAllAnalyses   = false
 
     private let moodColumns = [
-        GridItem(.adaptive(minimum: 72), spacing: 6),
+        GridItem(.adaptive(minimum: AmisaChrome.analysisThumbMinSize), spacing: AmisaChrome.analysisGridSpacing),
     ]
 
     private var scannedSessions: [SearchSession] {
@@ -124,9 +124,17 @@ struct ProfileView: View {
                     Button {
                         showAllAnalyses = true
                     } label: {
-                        Text("Voir tout (\(scannedSessions.count))")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(Color.accentColor)
+                        HStack(spacing: 4) {
+                            Text(String(localized: "Voir tout"))
+                            Text("(\(scannedSessions.count))")
+                                .foregroundStyle(DesignTokens.textSecondary)
+                        }
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color.accentColor)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.accentColor.opacity(0.1))
+                        .clipShape(Capsule(style: .continuous))
                     }
                     .buttonStyle(.plain)
                 }
@@ -145,9 +153,14 @@ struct ProfileView: View {
                         } label: {
                             moodThumb(for: session)
                                 .aspectRatio(1, contentMode: .fill)
-                                .frame(minWidth: 72, minHeight: 72)
+                                .frame(minWidth: AmisaChrome.analysisThumbMinSize, minHeight: AmisaChrome.analysisThumbMinSize)
                                 .clipped()
-                                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                                .clipShape(RoundedRectangle(cornerRadius: AmisaChrome.analysisThumbRadius, style: .continuous))
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: AmisaChrome.analysisThumbRadius, style: .continuous)
+                                        .strokeBorder(Color.primary.opacity(0.06), lineWidth: 0.5)
+                                }
+                                .shadow(color: Color.black.opacity(0.06), radius: 4, x: 0, y: 2)
                         }
                         .buttonStyle(.plain)
                     }
@@ -170,7 +183,7 @@ struct ProfileView: View {
                 .resizable()
                 .scaledToFill()
         } else {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
+            RoundedRectangle(cornerRadius: AmisaChrome.analysisThumbRadius, style: .continuous)
                 .fill(DesignTokens.accentMuted)
                 .overlay {
                     Image(systemName: "photo")
@@ -200,10 +213,14 @@ private struct ProfileAnalysesEmptyState: View {
                 .lineSpacing(3)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(16)
+        .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(DesignTokens.backgroundSecondary)
-        .clipShape(RoundedRectangle(cornerRadius: DesignTokens.cornerRadiusL, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: AmisaChrome.emptyStateRadius, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: AmisaChrome.emptyStateRadius, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.05), lineWidth: 0.5)
+        }
     }
 }
 
