@@ -69,7 +69,7 @@ struct MarketplaceVisualCard: View {
     }
 
     private var displaySizeLabel: String {
-        listing.cardSizeLabel
+        listing.size ?? "NS"
     }
 
     /// Couleur du texte de la pill taille, adaptée à la luminosité de l'image.

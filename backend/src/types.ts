@@ -9,7 +9,7 @@ export interface MarketplaceListingDTO {
   thumbnailUrl?: string;
   listingUrl?: string;
   brand?: string;
-  size?: string;
+  size?: string | null;
   condition?: string;
   publishedAtRelative?: string;
   relevanceScore?: number;

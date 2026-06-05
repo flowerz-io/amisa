@@ -96,11 +96,9 @@ export async function searchVintedListingsWithMeta(
         if (cap !== undefined && merged.length >= cap) break outer;
       }
     }
-    const enrichLimit = Number(
-      process.env.VINTED_DETAIL_SIZE_ENRICH_LIMIT?.trim() || '12'
-    );
     const enriched = await enrichVintedListingsWithDetailSizes(merged, {
-      limit: Number.isFinite(enrichLimit) && enrichLimit > 0 ? enrichLimit : 12,
+      window: 25,
+      concurrency: 5,
     });
 
     const ms = Math.round(performance.now() - t0);

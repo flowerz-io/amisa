@@ -1,7 +1,6 @@
 import type { MarketplaceListingDTO } from '../../types.js';
 import {
   logVintedListingRaw,
-  logVintedSize,
   normalizeVintedSizeFromItem,
 } from './vinted-size-extract.js';
 
@@ -132,12 +131,9 @@ export function parseVintedCatalogResponse(
         ? statusVal.trim()
         : undefined;
 
-    const { size, source } = normalizeVintedSizeFromItem(row, title);
+    const { size } = normalizeVintedSizeFromItem(row, title);
 
     logVintedListingRaw(row, title, size);
-    if (source) {
-      logVintedSize(title, source, size);
-    }
 
     out.push({
       id: idStr,
@@ -149,7 +145,7 @@ export function parseVintedCatalogResponse(
       thumbnailUrl: photo,
       listingUrl,
       brand,
-      size: size ?? undefined,
+      size: size ?? null,
       condition,
     });
   }

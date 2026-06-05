@@ -2,7 +2,7 @@
  * Extraction / normalisation taille Vinted (champs API, titre, page détail).
  */
 
-export type VintedSizeSource = 'list' | 'detail' | 'regex';
+export type VintedSizeSource = 'list' | 'title' | 'detail' | 'none';
 
 export interface VintedResolvedSize {
   size: string | null;
@@ -20,11 +20,14 @@ const SHOE_FRACTION_RE =
 const SHOE_DECIMAL_RE = /\b(3[5-9]|4[0-8])[.,]([05])\b/;
 const SHOE_T_RE = /\bT\s*(3[5-9]|4[0-8])(?:[.,][05])?\b/i;
 const TAILLE_NUM_RE =
-  /\btaille\s*(3[5-9]|4[0-8])(?:\s*[12]\s*\/\s*[23])?\b/i;
+  /\btaille\s*:?\s*(3[5-9]|4[0-8])(?:\s*[12]\s*\/\s*[23])?\b/i;
 const SIZE_KW_RE =
-  /\b(?:size|pointure|eu|uk|us)\s*(3[5-9]|4[0-8])(?:\s*[12]\s*\/\s*[23]|[.,][05])?\b/i;
+  /\b(?:size|pointure|eu|uk|us)\s*:?\s*(3[5-9]|4[0-8])(?:\s*[12]\s*\/\s*[23]|[.,][05])?\b/i;
+const NUM_DOT_RE = /\bnum\.?\s*(3[5-9]|4[0-8])(?:\s*[12]\s*\/\s*[23]|[.,][05])?\b/i;
+const PAREN_FRAC_RE =
+  /\(\s*(3[5-9]|4[0-8])\s*([12])\s*\/\s*([23])\s*\)/;
 const FEMME_HOMME_RE =
-  /\b(3[5-9]|4[0-8])\s*(?:femme|homme|women|men|w|m)\b/i;
+  /\b(3[5-9]|4[0-8])\s*(?:femme|homme|women|men)\b/i;
 const FEMME_HOMME_SUFFIX_RE =
   /\b(?:femme|homme|women|men)\s*(3[5-9]|4[0-8])\b/i;
 
@@ -34,7 +37,26 @@ const MODEL_NOISE_RE =
 const YEAR_RE = /\b(19|20)\d{2}\b/;
 const PRICE_LIKE_RE = /\b\d+[.,]\d{2}\s*€/;
 
-/** Normalise un libellé brut en taille affichable ou `null`. */
+/** Taille existante invalide ou absente → enrichissement détail requis. */
+export function needsVintedSizeEnrichment(
+  size: string | undefined | null
+): boolean {
+  if (size == null) return true;
+  const t = size.trim();
+  if (!t || t.toUpperCase() === 'NS') return true;
+  return normalizeVintedSize(t) === null;
+}
+
+/** Formate une fraction chaussure sans la convertir en décimal. */
+export function formatShoeFraction(
+  whole: string,
+  num: string,
+  den: string
+): string {
+  return `${whole} ${num}/${den}`;
+}
+
+/** Normalise un libellé brut en taille affichable ou `null`. Conserve 39 1/3, 40 2/3. */
 export function normalizeVintedSize(raw: string): string | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
@@ -47,7 +69,7 @@ export function normalizeVintedSize(raw: string): string | null {
   if (upper === 'NS') return null;
 
   const frac = trimmed.match(SHOE_FRACTION_RE);
-  if (frac) return `${frac[1]} ${frac[2]}/${frac[3]}`;
+  if (frac) return formatShoeFraction(frac[1], frac[2], frac[3]);
 
   const dec = trimmed.match(SHOE_DECIMAL_RE);
   if (dec) return `${dec[1]}.${dec[2]}`;
@@ -160,6 +182,27 @@ function titleLooksNoisy(title: string): boolean {
   );
 }
 
+function matchShoeFromKeyword(
+  text: string,
+  base: RegExpMatchArray
+): string | null {
+  const fracIn = text.match(
+    new RegExp(
+      `${base[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*([12])\\s*\\/\\s*([23])`,
+      'i'
+    )
+  );
+  if (fracIn) return formatShoeFraction(base[1], fracIn[1], fracIn[2]);
+  const decIn = text.match(
+    new RegExp(
+      `${base[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[.,]([05])`,
+      'i'
+    )
+  );
+  if (decIn) return `${base[1]}.${decIn[1]}`;
+  return base[1];
+}
+
 /** Fallback : extrait une taille probable depuis le titre (regex prudentes). */
 export function extractSizeFromTitle(title: string): string | null {
   const t = title.trim();
@@ -168,7 +211,10 @@ export function extractSizeFromTitle(title: string): string | null {
   if (ONE_SIZE_RE.test(t)) return 'OS';
 
   const frac = t.match(SHOE_FRACTION_RE);
-  if (frac) return `${frac[1]} ${frac[2]}/${frac[3]}`;
+  if (frac) return formatShoeFraction(frac[1], frac[2], frac[3]);
+
+  const paren = t.match(PAREN_FRAC_RE);
+  if (paren) return formatShoeFraction(paren[1], paren[2], paren[3]);
 
   const dec = t.match(SHOE_DECIMAL_RE);
   if (dec) return `${dec[1]}.${dec[2]}`;
@@ -177,29 +223,13 @@ export function extractSizeFromTitle(title: string): string | null {
   if (tShoe) return tShoe[1];
 
   const taille = t.match(TAILLE_NUM_RE);
-  if (taille) {
-    const fracIn = t.match(
-      new RegExp(`taille\\s*${taille[1]}\\s*([12])\\s*\\/\\s*([23])`, 'i')
-    );
-    if (fracIn) return `${taille[1]} ${fracIn[1]}/${fracIn[2]}`;
-    return taille[1];
-  }
+  if (taille) return matchShoeFromKeyword(t, taille) ?? taille[1];
 
   const sizeKw = t.match(SIZE_KW_RE);
-  if (sizeKw) {
-    const fracIn = t.match(
-      new RegExp(
-        `(?:size|pointure|eu|uk|us)\\s*${sizeKw[1]}\\s*([12])\\s*\\/\\s*([23])`,
-        'i'
-      )
-    );
-    if (fracIn) return `${sizeKw[1]} ${fracIn[1]}/${fracIn[2]}`;
-    const decIn = t.match(
-      new RegExp(`(?:size|pointure|eu|uk|us)\\s*${sizeKw[1]}[.,]([05])`, 'i')
-    );
-    if (decIn) return `${sizeKw[1]}.${decIn[1]}`;
-    return sizeKw[1];
-  }
+  if (sizeKw) return matchShoeFromKeyword(t, sizeKw) ?? sizeKw[1];
+
+  const numDot = t.match(NUM_DOT_RE);
+  if (numDot) return matchShoeFromKeyword(t, numDot) ?? numDot[1];
 
   const femme = t.match(FEMME_HOMME_RE);
   if (femme) return femme[1];
@@ -208,16 +238,35 @@ export function extractSizeFromTitle(title: string): string | null {
   if (femmeSuffix) return femmeSuffix[1];
 
   const clothing = t.match(CLOTHING_RE);
-  if (clothing) return clothing[1].toUpperCase();
+  if (clothing && !titleLooksNoisy(t)) return clothing[1].toUpperCase();
 
   if (!titleLooksNoisy(t)) {
     const contextual = t.match(
-      /\b(?:taille|size|pointure)\s*(XXXL|XXL|XL|L|M|S|XS|XXS)\b/i
+      /\b(?:taille|size|pointure)\s*:?\s*(XXXL|XXL|XL|L|M|S|XS|XXS)\b/i
     );
     if (contextual) return contextual[1].toUpperCase();
   }
 
   return null;
+}
+
+/** Extrait la taille depuis la description d’une page détail. */
+export function extractSizeFromDescription(text: string): string | null {
+  const t = text.trim();
+  if (!t) return null;
+  return extractSizeFromTitle(t);
+}
+
+/** Ex. « 37 · Neuf avec étiquette » ou « 39 1/3 · Très bon état ». */
+export function extractSizeFromDetailHeaderLine(line: string): string | null {
+  const trimmed = line.trim();
+  const m = trimmed.match(
+    /^(XXXL|XXL|XL|L|M|S|XS|XXS|OS|TU|(3[5-9]|4[0-8])(?:\s*[12]\s*\/\s*[23])?)\s*(?:·|•)/i
+  );
+  if (!m) return null;
+  const raw = m[1];
+  if (!raw) return null;
+  return normalizeVintedSize(raw) ?? raw.toUpperCase();
 }
 
 /** Résout la taille depuis tous les champs d'un item brut + titre. */
@@ -232,7 +281,7 @@ export function normalizeVintedSizeFromItem(
 
   const fromTitle = extractSizeFromTitle(title);
   if (fromTitle) {
-    return { size: fromTitle, source: 'regex' };
+    return { size: fromTitle, source: 'title' };
   }
 
   return { size: null, source: null };
@@ -261,11 +310,13 @@ export function logVintedListingRaw(
 export function logVintedSize(
   title: string,
   source: VintedSizeSource,
-  size: string | null
+  size: string | null,
+  url?: string
 ): void {
   console.log('[VINTED_SIZE]', {
-    title: title.slice(0, 80),
+    title: title.slice(0, 120),
     source,
     size,
+    url: url ?? null,
   });
 }

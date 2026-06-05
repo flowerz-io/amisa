@@ -75,7 +75,27 @@ enum ListingSizeExtractor {
             return tShoe[1]
         }
 
-        if let taille = firstMatch(in: t, pattern: #"(?i)\btaille\s*(3[5-9]|4[0-8])(?:\s+[12]\s*/\s*[23])?\b"#) {
+        if let paren = firstMatch(in: t, pattern: #"\(\s*(3[5-9]|4[0-8])\s+([12])\s*/\s*([23])\s*\)"#) {
+            return "\(paren[1]) \(paren[2])/\(paren[3])"
+        }
+
+        if let numDot = firstMatch(in: t, pattern: #"(?i)\bnum\.?\s*(3[5-9]|4[0-8])(?:\s+[12]\s*/\s*[23]|[.,][05])?\b"#) {
+            if let fracIn = firstMatch(
+                in: t,
+                pattern: #"(?i)\bnum\.?\s*(3[5-9]|4[0-8])\s+([12])\s*/\s*([23])\b"#
+            ) {
+                return "\(fracIn[1]) \(fracIn[2])/\(fracIn[3])"
+            }
+            if let decIn = firstMatch(
+                in: t,
+                pattern: #"(?i)\bnum\.?\s*(3[5-9]|4[0-8])[.,]([05])\b"#
+            ) {
+                return "\(decIn[1]).\(decIn[2])"
+            }
+            return numDot[1]
+        }
+
+        if let taille = firstMatch(in: t, pattern: #"(?i)\btaille\s*:?\s*(3[5-9]|4[0-8])(?:\s+[12]\s*/\s*[23])?\b"#) {
             if let fracIn = firstMatch(
                 in: t,
                 pattern: #"(?i)\btaille\s*(3[5-9]|4[0-8])\s+([12])\s*/\s*([23])\b"#
@@ -87,7 +107,7 @@ enum ListingSizeExtractor {
 
         if let sizeKw = firstMatch(
             in: t,
-            pattern: #"(?i)\b(?:size|pointure|eu|uk|us)\s*(3[5-9]|4[0-8])(?:\s+[12]\s*/\s*[23]|[.,][05])?\b"#
+            pattern: #"(?i)\b(?:size|pointure|eu|uk|us)\s*:?\s*(3[5-9]|4[0-8])(?:\s+[12]\s*/\s*[23]|[.,][05])?\b"#
         ) {
             if let fracIn = firstMatch(
                 in: t,
@@ -104,7 +124,7 @@ enum ListingSizeExtractor {
             return sizeKw[1]
         }
 
-        if let femme = firstMatch(in: t, pattern: #"(?i)\b(3[5-9]|4[0-8])\s*(?:femme|homme|women|men|w|m)\b"#) {
+        if let femme = firstMatch(in: t, pattern: #"(?i)\b(3[5-9]|4[0-8])\s*(?:femme|homme|women|men)\b"#) {
             return femme[1]
         }
 
