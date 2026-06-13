@@ -48,7 +48,7 @@ struct ProfileView: View {
             }
         }
         .sheet(isPresented: $showAuthSheet) {
-            AuthBottomSheet(onSignedIn: { showAuthSheet = false })
+            AuthBottomSheet(onSignedIn: { @MainActor in showAuthSheet = false })
                 .presentationDetents([.height(560)])
                 .presentationCornerRadius(32)
                 .presentationBackground(.ultraThinMaterial)

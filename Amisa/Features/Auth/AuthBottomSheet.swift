@@ -10,19 +10,22 @@ import SwiftUI
 // MARK: - Sheet modale
 
 struct AuthBottomSheet: View {
-    var onSignedIn: () -> Void
-    var onSkip: (() -> Void)?
+    var onSignedIn: @MainActor @Sendable () -> Void
+    var onSkip: (@MainActor @Sendable () -> Void)?
 
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        AuthCoordinatorCore(
+        let signedInHandler = onSignedIn
+        return AuthCoordinatorCore(
             embed: .modalSheet(close: { dismiss() }),
-            skipTrailing: onSkip.map { callback in {
-                dismiss()
-                Task { @MainActor in callback() }
-            }},
-            onAuthenticated: onSignedIn
+            skipTrailing: onSkip.map { callback in
+                { @MainActor in
+                    dismiss()
+                    callback()
+                }
+            },
+            onAuthenticated: { @MainActor in signedInHandler() }
         )
     }
 }
@@ -40,10 +43,10 @@ struct AuthCoordinatorCore: View {
 
     let embed: EmbedKind
     /// Bouton « Continuer sans compte » ; pour la modal, inclut la fermeture du parent avant le callback utilisateur.
-    var skipTrailing: (() -> Void)? = nil
+    var skipTrailing: (@MainActor @Sendable () -> Void)? = nil
 
     /// Succès OAuth / session ; appeler côté app sur MainActor après fermeture modale si besoin.
-    let onAuthenticated: @MainActor () -> Void
+    let onAuthenticated: @MainActor @Sendable () -> Void
 
     @ObservedObject private var auth = AuthManager.shared
     @State private var screen: AuthScreen = .main
@@ -196,7 +199,7 @@ struct AuthCoordinatorCore: View {
 
             if let skipTrailing {
                 Button {
-                    Task { @MainActor in skipTrailing() }
+                    skipTrailing()
                 } label: {
                     Text(String(localized: "Continuer sans compte"))
                         .font(.system(size: 14, weight: .medium))

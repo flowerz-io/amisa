@@ -49,8 +49,8 @@ struct OnboardingAuthSheetView: View {
 
             AuthCoordinatorCore(
                 embed: .onboardingPremium(close: { dismiss() }),
-                skipTrailing: { model.continueWithoutAccount() },
-                onAuthenticated: { model.completeAuth() }
+                skipTrailing: { @MainActor in model.continueWithoutAccount() },
+                onAuthenticated: { @MainActor in model.completeAuth() }
             )
             .padding(.bottom, 10 + bottomBleed)
         }
