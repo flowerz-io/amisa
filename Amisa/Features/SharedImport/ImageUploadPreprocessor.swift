@@ -32,9 +32,10 @@ enum ImageUploadPreprocessor {
     static let minCompressionQuality: CGFloat = 0.35
     static let minPixelWidth: CGFloat = 480
 
-    /// Retourne des données JPEG prêtes pour `analyze-search`.
+    /// Retourne des données JPEG prêtes pour `analyze-search` (orientation .up, image/jpeg).
     static func prepareForUpload(_ image: UIImage) throws -> Data {
-        let scaled = resizeIfNeeded(image, maxLongSide: maxLongSidePixels)
+        let normalized = image.amisaNormalizedForUpload()
+        let scaled = resizeIfNeeded(normalized, maxLongSide: maxLongSidePixels)
         var quality = initialCompressionQuality
         var data = scaled.jpegData(compressionQuality: quality) ?? Data()
         if data.isEmpty { throw ImageUploadPreprocessorError.couldNotEncode }
@@ -60,7 +61,7 @@ enum ImageUploadPreprocessor {
 
             if w > minPixelWidth + 40 {
                 w *= 0.85
-                working = resizeIfNeeded(image, maxLongSide: w)
+                working = resizeIfNeeded(normalized, maxLongSide: w)
                 quality = min(initialCompressionQuality, quality + 0.05)
                 if let d = working.jpegData(compressionQuality: quality), !d.isEmpty {
                     data = d
@@ -105,6 +106,6 @@ enum ImageUploadPreprocessor {
         let renderer = UIGraphicsImageRenderer(size: newSize, format: format)
         return renderer.image { _ in
             image.draw(in: CGRect(origin: .zero, size: newSize))
-        }
+        }.amisaNormalizedForUpload()
     }
 }

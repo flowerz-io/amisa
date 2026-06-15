@@ -150,7 +150,10 @@ struct ResultsView: View {
 
                         // 4–6. Grille : état vide dans la page / skeletons / résultats (+ shimmer fin de vague partielle)
                         if viewModel.shouldShowEmptyGridState {
-                            ResultsEmptyGridStateView(debugMessage: session.searchDebugMessage)
+                            ResultsEmptyGridStateView(
+                                debugMessage: session.searchDebugMessage,
+                                noRelevantResults: session.noRelevantResults
+                            )
                                 .padding(.horizontal, gridHorizontalPadding)
                                 .padding(.vertical, DesignTokens.spacingS)
                         } else if viewModel.shouldShowFullSkeletonGrid {
@@ -377,20 +380,37 @@ struct ResultsView: View {
 
 private struct ResultsEmptyGridStateView: View {
     var debugMessage: String?
+    var noRelevantResults: Bool = false
+
+    private var title: String {
+        if noRelevantResults || debugMessage == "no_relevant_results" {
+            return String(localized: "Aucune annonce pertinente")
+        }
+        return String(localized: "Aucune annonce Vinted trouvée")
+    }
+
+    private var subtitle: String {
+        if noRelevantResults || debugMessage == "no_relevant_results" {
+            return String(localized: "Des annonces existent sur Vinted mais ne correspondent pas à ton article.")
+        }
+        return String(localized: "Essaie une autre photo ou une requête différente.")
+    }
 
     var body: some View {
         VStack(spacing: DesignTokens.spacingM) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 40))
                 .foregroundStyle(Color.secondary)
-            Text(String(localized: "Aucune annonce Vinted trouvée"))
+            Text(title)
                 .font(DesignTokens.headline)
                 .foregroundStyle(Color.primary)
-            Text(String(localized: "Essaie une autre photo ou une requête différente."))
+            Text(subtitle)
                 .font(DesignTokens.caption)
                 .foregroundStyle(Color.secondary)
                 .multilineTextAlignment(.center)
-            if let debugMessage, !debugMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            if let debugMessage,
+               !debugMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+               debugMessage != "no_relevant_results" {
                 Text(debugMessage)
                     .font(DesignTokens.caption)
                     .foregroundStyle(Color.secondary.opacity(0.95))

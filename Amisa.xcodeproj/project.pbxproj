@@ -507,6 +507,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Amisa/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Amisa;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.shopping";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Amisa utilise la caméra pour photographier une pièce et trouver des annonces similaires.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Amisa affiche tes photos récentes pour en choisir une rapidement.";
@@ -545,6 +546,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Amisa/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Amisa;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.shopping";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Amisa utilise la caméra pour photographier une pièce et trouver des annonces similaires.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Amisa affiche tes photos récentes pour en choisir une rapidement.";

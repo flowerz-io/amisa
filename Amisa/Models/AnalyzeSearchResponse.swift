@@ -18,6 +18,7 @@ struct AnalyzeSearchResponse: Decodable {
     let vintedSearchFailed: Bool?
     let initialResponseTimeMs: Int?
     let searchDebugMessage: String?
+    let noRelevantResults: Bool?
 }
 
 extension AnalyzeSearchResponse {

@@ -36,6 +36,7 @@ enum SearchSessionFromRemote {
             vintedPagination: response.pagination,
             initialResponseTimeMs: response.initialResponseTimeMs,
             searchDebugMessage: response.searchDebugMessage,
+            noRelevantResults: response.noRelevantResults ?? (response.searchDebugMessage == "no_relevant_results"),
             searchSessionId: response.searchSessionId
         )
 

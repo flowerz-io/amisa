@@ -120,7 +120,8 @@ extension AnalyzeSearchResponse {
             ),
             vintedSearchFailed: nil,
             initialResponseTimeMs: 1200,
-            searchDebugMessage: nil
+            searchDebugMessage: nil,
+            noRelevantResults: nil
         )
     }
 }

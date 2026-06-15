@@ -19,6 +19,7 @@ import { buildPrimaryQueries } from '../lib/query-from-vision.js';
 import { generateVintedQueries } from './search/generate-vinted-queries.js';
 import { analyzeFashionVision } from './vision/analyze-fashion-vision.js';
 import { searchVintedListingsWithMeta } from './marketplace-search.js';
+import { rerankVintedListings } from './providers/vinted-rerank.js';
 import { ProviderScrapeError } from '../lib/provider-scrape-error.js';
 import { PlaywrightChromiumMissingError } from '../lib/playwright-browser.js';
 
@@ -126,8 +127,10 @@ export async function runAnalyzePipeline(
 
   let listings: MarketplaceListingDTO[] = [];
   let vintedSearchFailed: boolean | undefined;
+  let noRelevantResults: boolean | undefined;
   let searchDebugMessage: string | undefined;
   let primaryHasMore = false;
+  let rawListingCount = 0;
 
   function summarizeVintedTask(row: ProviderTaskResult): string {
     const reason = row.reason ?? row.status;
@@ -172,17 +175,38 @@ export async function runAnalyzePipeline(
       25
     );
     listings = merged.listings;
+    rawListingCount = listings.length;
     console.log('[VISIBLE_RESULTS]', { analyzePipe: listings.length });
+
+    if (listings.length > 0) {
+      const reranked = await rerankVintedListings(listings, vision, queries);
+      listings = reranked.listings;
+      if (reranked.noRelevantResults) {
+        noRelevantResults = true;
+        searchDebugMessage = 'no_relevant_results';
+        console.log('[VINTED_RERANK] no_relevant_results', {
+          rawCount: reranked.rawCount,
+          rejected: reranked.rejectedCount,
+        });
+      }
+    }
+
     primaryHasMore = metaHolder.primaryHasMore;
 
     const failed = failedFlagsFromResults(snapshot, enabled);
 
     if (listings.length === 0) {
-      vintedSearchFailed = failed.vintedSearchFailed ?? true;
-      searchDebugMessage =
-        r0.status === 'success'
-          ? 'Aucune annonce Vinted trouvée pour cette recherche.'
-          : summarizeVintedTask(r0);
+      if (noRelevantResults) {
+        vintedSearchFailed = undefined;
+      } else {
+        vintedSearchFailed = failed.vintedSearchFailed ?? true;
+        searchDebugMessage =
+          r0.status === 'success'
+            ? rawListingCount > 0
+              ? 'no_relevant_results'
+              : 'Aucune annonce Vinted trouvée pour cette recherche.'
+            : summarizeVintedTask(r0);
+      }
     } else {
       vintedSearchFailed = failed.vintedSearchFailed;
     }
@@ -214,6 +238,7 @@ export async function runAnalyzePipeline(
     listings,
     pagination,
     vintedSearchFailed: listings.length > 0 ? undefined : vintedSearchFailed,
+    noRelevantResults,
     initialResponseTimeMs: Math.round(performance.now() - wall),
     searchDebugMessage,
   };

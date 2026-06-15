@@ -71,4 +71,6 @@ export interface AnalyzeSearchResponseJSON {
   initialResponseTimeMs?: number;
   /** Message si aucune annonce ou provider indisponible. */
   searchDebugMessage?: string;
+  /** Annonces trouvées mais aucune assez pertinente après reranking IA. */
+  noRelevantResults?: boolean;
 }

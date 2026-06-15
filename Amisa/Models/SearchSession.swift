@@ -42,6 +42,8 @@ struct SearchSession: Identifiable, Equatable, Hashable {
     var awaitsRailwayHydration: Bool
     var hydratingBackendResults: Bool
     var searchDebugMessage: String?
+    /// Annonces Vinted trouvées mais filtrées (hors sujet) par le reranking serveur.
+    var noRelevantResults: Bool
     var searchSessionId: String?
 
     init(
@@ -61,6 +63,7 @@ struct SearchSession: Identifiable, Equatable, Hashable {
         awaitsRailwayHydration: Bool = false,
         hydratingBackendResults: Bool = false,
         searchDebugMessage: String? = nil,
+        noRelevantResults: Bool = false,
         searchSessionId: String? = nil
     ) {
         self.id = id
@@ -79,6 +82,7 @@ struct SearchSession: Identifiable, Equatable, Hashable {
         self.awaitsRailwayHydration = awaitsRailwayHydration
         self.hydratingBackendResults = hydratingBackendResults
         self.searchDebugMessage = searchDebugMessage
+        self.noRelevantResults = noRelevantResults
         self.searchSessionId = searchSessionId
     }
 
@@ -167,7 +171,7 @@ extension SearchSession: Codable {
         case vintedSearchFailed, vintedPagination = "pagination"
         case legacyPaginationState = "paginationState"
         case initialResponseTimeMs, mode, previewImageURLs, awaitsRailwayHydration, hydratingBackendResults
-        case searchDebugMessage, searchSessionId
+        case searchDebugMessage, noRelevantResults, searchSessionId
     }
 
     init(from decoder: Decoder) throws {
@@ -203,6 +207,9 @@ extension SearchSession: Codable {
         let awaitsRailwayHydration = try c.decodeIfPresent(Bool.self, forKey: .awaitsRailwayHydration) ?? false
         let hydratingBackendResults = try c.decodeIfPresent(Bool.self, forKey: .hydratingBackendResults) ?? false
         let searchDebugMessage = try c.decodeIfPresent(String.self, forKey: .searchDebugMessage)
+        let noRelevantResults =
+            try c.decodeIfPresent(Bool.self, forKey: .noRelevantResults)
+            ?? (searchDebugMessage == "no_relevant_results")
         let searchSessionId = try c.decodeIfPresent(String.self, forKey: .searchSessionId)
 
         self.init(
@@ -222,6 +229,7 @@ extension SearchSession: Codable {
             awaitsRailwayHydration: awaitsRailwayHydration,
             hydratingBackendResults: hydratingBackendResults,
             searchDebugMessage: searchDebugMessage,
+            noRelevantResults: noRelevantResults,
             searchSessionId: searchSessionId
         )
     }
@@ -244,6 +252,7 @@ extension SearchSession: Codable {
         try c.encode(awaitsRailwayHydration, forKey: .awaitsRailwayHydration)
         try c.encode(hydratingBackendResults, forKey: .hydratingBackendResults)
         try c.encodeIfPresent(searchDebugMessage, forKey: .searchDebugMessage)
+        try c.encode(noRelevantResults, forKey: .noRelevantResults)
         try c.encodeIfPresent(searchSessionId, forKey: .searchSessionId)
     }
 }

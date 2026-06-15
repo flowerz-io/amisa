@@ -59,7 +59,8 @@ final class HomeViewModel: ObservableObject {
             initialResponseTimeMs: response.initialResponseTimeMs,
             mode: .textQuery,
             previewImageURLs: snapshot.previewImageURLs,
-            searchDebugMessage: response.searchDebugMessage
+            searchDebugMessage: response.searchDebugMessage,
+            noRelevantResults: response.noRelevantResults ?? (response.searchDebugMessage == "no_relevant_results")
         )
 
         searchHistoryService.addSession(session)

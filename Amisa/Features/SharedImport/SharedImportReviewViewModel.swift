@@ -95,6 +95,7 @@ final class SharedImportReviewViewModel: ObservableObject {
             initialResponseTimeMs: response.initialResponseTimeMs,
             hydratingBackendResults: false,
             searchDebugMessage: response.searchDebugMessage,
+            noRelevantResults: response.noRelevantResults ?? (response.searchDebugMessage == "no_relevant_results"),
             searchSessionId: response.searchSessionId
         )
 
