@@ -45,6 +45,8 @@ final class HomeViewModel: ObservableObject {
 
         let snapshot = ManualSearchSnapshot(query: trimmed, createdAt: Date(), listings: listings)
 
+        let provider = SearchSessionFromRemote.providerFields(from: response)
+
         let session = SearchSession(
             id: presetSessionId ?? UUID(),
             imageFileName: nil,
@@ -60,7 +62,10 @@ final class HomeViewModel: ObservableObject {
             mode: .textQuery,
             previewImageURLs: snapshot.previewImageURLs,
             searchDebugMessage: response.searchDebugMessage,
-            noRelevantResults: response.noRelevantResults ?? (response.searchDebugMessage == "no_relevant_results")
+            noRelevantResults: response.noRelevantResults ?? (response.searchDebugMessage == "no_relevant_results"),
+            providerUnavailable: provider.providerUnavailable,
+            providerUnavailableMessage: provider.providerUnavailableMessage,
+            reviewFallback: provider.reviewFallback
         )
 
         searchHistoryService.addSession(session)

@@ -81,6 +81,8 @@ final class SharedImportReviewViewModel: ObservableObject {
         let primaryQuery = response.generatedQueries.first ?? ""
         let listings = response.listings.map { MarketplaceListing.from($0) }
 
+        let provider = SearchSessionFromRemote.providerFields(from: response)
+
         let session = SearchSession(
             id: presetId,
             imageFileName: savedFileName,
@@ -96,6 +98,9 @@ final class SharedImportReviewViewModel: ObservableObject {
             hydratingBackendResults: false,
             searchDebugMessage: response.searchDebugMessage,
             noRelevantResults: response.noRelevantResults ?? (response.searchDebugMessage == "no_relevant_results"),
+            providerUnavailable: provider.providerUnavailable,
+            providerUnavailableMessage: provider.providerUnavailableMessage,
+            reviewFallback: provider.reviewFallback,
             searchSessionId: response.searchSessionId
         )
 

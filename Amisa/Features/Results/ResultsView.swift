@@ -145,11 +145,25 @@ struct ResultsView: View {
                             .filterBarGlobalMinYAnchor()
 
                         // 3. Compteur d'annonces
-                        annoncesCountRow(session: session)
-                            .padding(.horizontal, DesignTokens.spacingM)
+                        if !viewModel.shouldShowProviderUnavailableState {
+                            annoncesCountRow(session: session)
+                                .padding(.horizontal, DesignTokens.spacingM)
+                        }
 
                         // 4–6. Grille : état vide dans la page / skeletons / résultats (+ shimmer fin de vague partielle)
-                        if viewModel.shouldShowEmptyGridState {
+                        if viewModel.shouldShowProviderUnavailableState {
+                            ProviderUnavailableResultsView(
+                                isRetrying: viewModel.isRetryingProvider,
+                                onRetry: {
+                                    Task { await viewModel.retryProviderSearch() }
+                                },
+                                onNewSearch: {
+                                    router.returnToHomeFromResults()
+                                }
+                            )
+                            .padding(.horizontal, gridHorizontalPadding)
+                            .padding(.vertical, DesignTokens.spacingS)
+                        } else if viewModel.shouldShowEmptyGridState {
                             ResultsEmptyGridStateView(
                                 debugMessage: session.searchDebugMessage,
                                 noRelevantResults: session.noRelevantResults
@@ -312,7 +326,7 @@ struct ResultsView: View {
                 }
             }
 
-            if session.vintedSearchFailed {
+            if session.vintedSearchFailed && !session.providerUnavailable {
                 Text(String(localized: "Le catalogue Vinted n'a pas pu être chargé pour cette recherche. Tu peux réessayer plus tard."))
                     .font(DesignTokens.caption)
                     .foregroundStyle(Color.secondary)
@@ -373,6 +387,63 @@ struct ResultsView: View {
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+// MARK: - Provider indisponible
+
+private struct ProviderUnavailableResultsView: View {
+    var isRetrying: Bool
+    var onRetry: () -> Void
+    var onNewSearch: () -> Void
+
+    var body: some View {
+        VStack(spacing: DesignTokens.spacingL) {
+            Image(systemName: "wifi.exclamationmark")
+                .font(.system(size: 44))
+                .foregroundStyle(Color.secondary)
+
+            Text(String(localized: "Résultats temporairement indisponibles"))
+                .font(DesignTokens.headline)
+                .foregroundStyle(Color.primary)
+                .multilineTextAlignment(.center)
+
+            Text(String(localized: "Amisa n’a pas pu récupérer les annonces pour le moment. Réessaie dans quelques instants."))
+                .font(DesignTokens.caption)
+                .foregroundStyle(Color.secondary)
+                .multilineTextAlignment(.center)
+
+            VStack(spacing: DesignTokens.spacingS) {
+                Button(action: onRetry) {
+                    Group {
+                        if isRetrying {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else {
+                            Text(String(localized: "Réessayer"))
+                                .font(DesignTokens.body.weight(.semibold))
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(isRetrying)
+
+                Button(action: onNewSearch) {
+                    Text(String(localized: "Nouvelle recherche"))
+                        .font(DesignTokens.body)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                }
+                .buttonStyle(.bordered)
+                .disabled(isRetrying)
+            }
+            .padding(.top, 8)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 36)
+        .accessibilityElement(children: .combine)
     }
 }
 

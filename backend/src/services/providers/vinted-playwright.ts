@@ -2,7 +2,6 @@ import type { MarketplaceListingDTO } from '../../types.js';
 import { ProviderScrapeError } from '../../lib/provider-scrape-error.js';
 import {
   detectVintedBlockFromApiPayload,
-  isRetryableVintedBlock,
 } from '../../lib/vinted-block-detect.js';
 import {
   launchChromiumHeadless,
@@ -10,10 +9,8 @@ import {
 } from '../../lib/playwright-browser.js';
 import { parseVintedCatalogResponse } from './vinted-catalog-parse.js';
 
-const MAX_RETRIES = Number(process.env.VINTED_PLAYWRIGHT_RETRIES?.trim() || '3');
-const RETRY_BASE_MS = Number(process.env.VINTED_PLAYWRIGHT_RETRY_MS?.trim() || '1200');
 const CATALOG_SETTLE_MS = Number(
-  process.env.VINTED_PLAYWRIGHT_SETTLE_MS?.trim() || '2500'
+  process.env.VINTED_PLAYWRIGHT_SETTLE_MS?.trim() || '1500'
 );
 
 function sleep(ms: number): Promise<void> {
@@ -196,48 +193,32 @@ async function fetchOnceViaPlaywright(
 }
 
 /**
- * Vinted sans token : Playwright + fetch same-origin, retry automatique, détection blocage.
+ * Vinted sans token : Playwright + fetch same-origin.
+ * Blocage anti-bot (403 / DataDome) → échec immédiat, sans retry.
  */
 export async function fetchVintedViaPlaywright(
   searchText: string,
   page: number = 1
 ): Promise<{ listings: MarketplaceListingDTO[]; hasMore: boolean }> {
-  const attempts = Math.max(1, Math.min(5, Math.floor(MAX_RETRIES)));
-  let lastError: unknown;
-
-  for (let attempt = 1; attempt <= attempts; attempt++) {
-    try {
-      const result = await fetchOnceViaPlaywright(searchText, page);
-      if (result.listings.length > 0 || attempt === attempts) {
-        return result;
-      }
-      console.log('[VINTED_PLAYWRIGHT] retry_empty', { attempt, query: searchText.slice(0, 60) });
-      await sleep(RETRY_BASE_MS * attempt);
-    } catch (e) {
-      lastError = e;
-      const reason =
-        e instanceof ProviderScrapeError && e.blocked403
-          ? 'blocked_403'
-          : e instanceof Error
-            ? e.message.slice(0, 80)
-            : 'unknown';
-      const retryable =
-        e instanceof ProviderScrapeError
-          ? e.blocked403 || isRetryableVintedBlock('http_403')
-          : true;
-
-      console.warn('[VINTED_PLAYWRIGHT] attempt_failed', {
-        attempt,
-        reason,
-        retryable,
+  try {
+    const result = await fetchOnceViaPlaywright(searchText, page);
+    if (result.listings.length > 0) return result;
+    console.log('[VINTED_PLAYWRIGHT] empty_catalog', {
+      query: searchText.slice(0, 60),
+    });
+    return result;
+  } catch (e) {
+    if (e instanceof ProviderScrapeError && e.blocked403) {
+      console.log('[PROVIDER_BLOCKED]', {
+        provider: 'vinted',
+        reason: e.message.slice(0, 120),
       });
-
-      if (!retryable || attempt === attempts) break;
-      await sleep(RETRY_BASE_MS * attempt);
+      console.log('[PROVIDER_FAST_FAIL]', { provider: 'vinted', attempt: 1 });
+      throw e;
     }
+    const reason =
+      e instanceof Error ? e.message.slice(0, 80) : 'unknown';
+    console.warn('[VINTED_PLAYWRIGHT] attempt_failed', { attempt: 1, reason });
+    throw e;
   }
-
-  if (lastError instanceof ProviderScrapeError) throw lastError;
-  if (lastError instanceof Error) throw lastError;
-  throw new Error('vinted: échec Playwright après retries');
 }

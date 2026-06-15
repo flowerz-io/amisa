@@ -19,6 +19,13 @@ struct AnalyzeSearchResponse: Decodable {
     let initialResponseTimeMs: Int?
     let searchDebugMessage: String?
     let noRelevantResults: Bool?
+    let provider: String?
+    let message: String?
+    let reviewFallback: Bool?
+
+    var isProviderUnavailable: Bool {
+        status == "provider_unavailable"
+    }
 }
 
 extension AnalyzeSearchResponse {

@@ -7,6 +7,22 @@ import Foundation
 import UIKit
 
 enum SearchSessionFromRemote {
+    static func providerFields(from response: AnalyzeSearchResponse) -> (
+        providerUnavailable: Bool,
+        providerUnavailableMessage: String?,
+        reviewFallback: Bool
+    ) {
+        let unavailable = response.isProviderUnavailable
+            || response.searchDebugMessage == "provider_unavailable"
+        let message = response.message
+            ?? (unavailable ? String(localized: "Les résultats sont temporairement indisponibles.") : nil)
+        return (
+            providerUnavailable: unavailable,
+            providerUnavailableMessage: message,
+            reviewFallback: response.reviewFallback ?? false
+        )
+    }
+
     @MainActor
     static func buildSession(
         response: AnalyzeSearchResponse,
@@ -22,6 +38,7 @@ enum SearchSessionFromRemote {
             return ""
         }()
         let listings = response.listings.map { MarketplaceListing.from($0) }
+        let provider = providerFields(from: response)
 
         var session = SearchSession(
             id: UUID(),
@@ -37,6 +54,9 @@ enum SearchSessionFromRemote {
             initialResponseTimeMs: response.initialResponseTimeMs,
             searchDebugMessage: response.searchDebugMessage,
             noRelevantResults: response.noRelevantResults ?? (response.searchDebugMessage == "no_relevant_results"),
+            providerUnavailable: provider.providerUnavailable,
+            providerUnavailableMessage: provider.providerUnavailableMessage,
+            reviewFallback: provider.reviewFallback,
             searchSessionId: response.searchSessionId
         )
 

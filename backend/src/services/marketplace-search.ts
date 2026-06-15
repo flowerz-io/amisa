@@ -1,4 +1,5 @@
 import type { MarketplaceListingDTO } from '../types.js';
+import { ProviderScrapeError } from '../lib/provider-scrape-error.js';
 import { fetchVintedCatalogPage } from './providers/vinted-api-search.js';
 import { enrichVintedListingsWithDetailSizes } from './providers/vinted-detail-size.js';
 import { marketplaceListingDedupeKey } from '../lib/listing-dedupe.js';
@@ -81,7 +82,17 @@ export async function searchVintedListingsWithMeta(
     let totalFetched = 0;
     outer: for (let i = 0; i < qs.length; i++) {
       const q = qs[i]!;
-      const page = await fetchVintedCatalogPage(q, 1);
+      let page;
+      try {
+        page = await fetchVintedCatalogPage(q, 1);
+      } catch (e) {
+        if (e instanceof ProviderScrapeError && e.blocked403) {
+          logError('vinted', e);
+          throw e;
+        }
+        logError('vinted', e);
+        throw e;
+      }
       console.log(
         `[VINTED_RESULTS] query=${JSON.stringify(q)} count=${page.listings.length}`
       );

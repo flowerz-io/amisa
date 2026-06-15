@@ -60,8 +60,10 @@ export interface VintedPaginationDTO {
   loadedCount: number;
 }
 
+export type AnalyzeSearchStatus = 'completed' | 'provider_unavailable';
+
 export interface AnalyzeSearchResponseJSON {
-  status?: 'completed';
+  status: AnalyzeSearchStatus;
   searchSessionId?: string;
   visionResult: FashionVisionResult;
   generatedQueries: string[];
@@ -73,4 +75,9 @@ export interface AnalyzeSearchResponseJSON {
   searchDebugMessage?: string;
   /** Annonces trouvées mais aucune assez pertinente après reranking IA. */
   noRelevantResults?: boolean;
+  /** Marketplace indisponible (ex. blocage temporaire). */
+  provider?: string;
+  message?: string;
+  /** Mock App Store Review — jamais exposé comme erreur utilisateur. */
+  reviewFallback?: boolean;
 }

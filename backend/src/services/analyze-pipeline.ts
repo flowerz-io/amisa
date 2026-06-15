@@ -7,12 +7,17 @@ import type {
 import { gateVintedServer } from '../lib/provider-env.js';
 import {
   failedFlagsFromResults,
+  isProviderBlockedStatus,
   mergeAndCapListings,
   PROVIDER_TIMEOUT_MS,
   runProvidersAllSettled,
   type ProviderRunResult,
   type ProviderTaskResult,
 } from '../lib/parallel-providers.js';
+import {
+  buildReviewFallbackListings,
+  isReviewSafeModeEnabled,
+} from './providers/review-fallback-listings.js';
 import { putSearchSession } from '../lib/search-session-store.js';
 import { visionProviderName } from '../config.js';
 import { buildPrimaryQueries } from '../lib/query-from-vision.js';
@@ -54,6 +59,11 @@ function runResultFromVintedCatch(e: unknown): ProviderRunResult {
       blocked403: e.blocked403,
     });
     if (blocked) {
+      console.log('[PROVIDER_BLOCKED]', {
+        provider: 'vinted',
+        httpStatus: e.httpStatus,
+      });
+      console.log('[PROVIDER_FAST_FAIL]', { provider: 'vinted' });
       return {
         listings: [],
         runStatus: 'blocked_403',
@@ -130,6 +140,7 @@ export async function runAnalyzePipeline(
   let noRelevantResults: boolean | undefined;
   let searchDebugMessage: string | undefined;
   let primaryHasMore = false;
+  let reviewFallback: boolean | undefined;
   let rawListingCount = 0;
 
   function summarizeVintedTask(row: ProviderTaskResult): string {
@@ -170,6 +181,65 @@ export async function runAnalyzePipeline(
       },
     ]);
     const r0 = snapshot[0]!;
+
+    if (isProviderBlockedStatus(r0.status)) {
+      console.log('[PROVIDER_BLOCKED]', {
+        provider: 'vinted',
+        status: r0.status,
+        durationMs: r0.ms,
+      });
+      console.log('[PROVIDER_FAST_FAIL]', {
+        provider: 'vinted',
+        durationMs: r0.ms,
+      });
+
+      if (isReviewSafeModeEnabled()) {
+        listings = buildReviewFallbackListings(vision);
+        reviewFallback = true;
+        primaryHasMore = false;
+        logAnalyzeResponseCounts(listings);
+        const response: AnalyzeSearchResponseJSON = {
+          status: 'completed',
+          searchSessionId: opts.fixedSessionId,
+          visionResult: vision,
+          generatedQueries: queries,
+          listings,
+          reviewFallback: true,
+          initialResponseTimeMs: Math.round(performance.now() - wall),
+        };
+        if (opts.fixedSessionId) {
+          putSearchSession(opts.fixedSessionId, {
+            pollStatus: 'completed',
+            response,
+          });
+        }
+        console.log(`[PERF] total=${Math.round(performance.now() - wall)}ms`);
+        return response;
+      }
+
+      listings = [];
+      logAnalyzeResponseCounts(listings);
+      const response: AnalyzeSearchResponseJSON = {
+        status: 'provider_unavailable',
+        provider: 'vinted',
+        message: 'Les résultats sont temporairement indisponibles.',
+        searchSessionId: opts.fixedSessionId,
+        visionResult: vision,
+        generatedQueries: queries,
+        listings: [],
+        initialResponseTimeMs: Math.round(performance.now() - wall),
+        searchDebugMessage: 'provider_unavailable',
+      };
+      if (opts.fixedSessionId) {
+        putSearchSession(opts.fixedSessionId, {
+          pollStatus: 'completed',
+          response,
+        });
+      }
+      console.log(`[PERF] total=${Math.round(performance.now() - wall)}ms`);
+      return response;
+    }
+
     const merged = mergeAndCapListings(
       r0.status === 'success' ? [r0.listings] : [[]],
       25
@@ -239,6 +309,7 @@ export async function runAnalyzePipeline(
     pagination,
     vintedSearchFailed: listings.length > 0 ? undefined : vintedSearchFailed,
     noRelevantResults,
+    reviewFallback,
     initialResponseTimeMs: Math.round(performance.now() - wall),
     searchDebugMessage,
   };

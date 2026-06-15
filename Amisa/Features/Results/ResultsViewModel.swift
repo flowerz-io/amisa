@@ -85,8 +85,19 @@ final class ResultsViewModel: ObservableObject {
         isLoadingMore && !displayedListings.isEmpty && !isInitialSearchPending
     }
 
+    @Published private(set) var isRetryingProvider: Bool = false
+
+    var shouldShowProviderUnavailableState: Bool {
+        guard case .loaded(let session) = state else { return false }
+        return session.providerUnavailable
+            && !session.reviewFallback
+            && !shouldShowSkeletons
+            && displayedListings.isEmpty
+    }
+
     var shouldShowEmptyGridState: Bool {
         guard case .loaded = state else { return false }
+        if shouldShowProviderUnavailableState { return false }
         return !shouldShowSkeletons && displayedListings.isEmpty
     }
 
@@ -694,5 +705,55 @@ final class ResultsViewModel: ObservableObject {
             }
         }
         return out
+    }
+
+    // MARK: - Provider indisponible
+
+    func retryProviderSearch() async {
+        guard case .loaded(let session) = state else { return }
+        guard session.providerUnavailable else { return }
+        isRetryingProvider = true
+        defer { isRetryingProvider = false }
+
+        do {
+            let response: AnalyzeSearchResponse
+            if session.isTextOnlySearch {
+                let q = session.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !q.isEmpty else { return }
+                response = try await apiClient.analyzeTextSearch(query: q)
+            } else if let fileName = session.imageFileName,
+                      let url = ImagePersistenceService.shared.fullPath(for: fileName),
+                      let data = try? Data(contentsOf: url) {
+                response = try await apiClient.analyzeAndSearch(imageData: data)
+            } else {
+                return
+            }
+
+            let refreshed = SearchSessionFromRemote.buildSession(
+                response: response,
+                imageFileName: session.imageFileName
+            )
+            applyRefreshedSession(refreshed)
+        } catch {
+            print("[RESULTS_RETRY] failed:", error.localizedDescription)
+        }
+    }
+
+    private func applyRefreshedSession(_ session: SearchSession) {
+        allListings = Self.sortSmart(session.listings)
+        vintedPagination = session.vintedPagination
+        initialResponseTimeMs = session.initialResponseTimeMs
+        if let p = session.vintedPagination {
+            currentPage = max(1, p.nextPage - 1)
+            nextPageToFetch = p.nextPage
+            hasMoreVinted = p.hasMore
+            hasMoreResults = p.hasMore && session.listings.count < maxResultsCap
+        } else {
+            hasMoreVinted = false
+            hasMoreResults = false
+        }
+        state = .loaded(session)
+        applyDisplayedListingsRespectingFilter()
+        requestColorScoring(for: allListings, reason: "retry")
     }
 }

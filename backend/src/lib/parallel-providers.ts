@@ -6,8 +6,8 @@ import { withTimeout } from './with-timeout.js';
 export type ProviderName = 'vinted';
 
 export const PROVIDER_TIMEOUT_MS: Record<ProviderName, number> = {
-  /** Playwright (catalogue / anti-bot lent). */
-  vinted: 50_000,
+  /** Échec rapide si blocage anti-bot (pas d’attente 40–50 s). */
+  vinted: 8_000,
 };
 
 /** Retour attendu par chaque tâche provider (sans throw en usage nominal). */
@@ -274,6 +274,12 @@ export function mergeAndCapListings(
   return { listings: out, stats };
 }
 
+export function isProviderBlockedStatus(
+  status: ProviderTaskResult['status']
+): boolean {
+  return status === 'blocked_403' || status === 'blocked';
+}
+
 export function failedFlagsFromResults(
   results: ProviderTaskResult[],
   enabled: Set<string>
@@ -285,7 +291,8 @@ export function failedFlagsFromResults(
     const hard =
       r.status === 'timeout' ||
       r.status === 'error' ||
-      r.status === 'rate_limited';
+      r.status === 'rate_limited' ||
+      isProviderBlockedStatus(r.status);
     if (!hard) continue;
     if (r.name === 'vinted') o.vintedSearchFailed = true;
   }

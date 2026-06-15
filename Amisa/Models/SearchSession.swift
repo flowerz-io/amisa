@@ -44,6 +44,11 @@ struct SearchSession: Identifiable, Equatable, Hashable {
     var searchDebugMessage: String?
     /// Annonces Vinted trouvées mais filtrées (hors sujet) par le reranking serveur.
     var noRelevantResults: Bool
+    /// Marketplace temporairement indisponible (ex. blocage serveur).
+    var providerUnavailable: Bool
+    var providerUnavailableMessage: String?
+    /// Données mock App Store Review — pas d’erreur UI.
+    var reviewFallback: Bool
     var searchSessionId: String?
 
     init(
@@ -64,6 +69,9 @@ struct SearchSession: Identifiable, Equatable, Hashable {
         hydratingBackendResults: Bool = false,
         searchDebugMessage: String? = nil,
         noRelevantResults: Bool = false,
+        providerUnavailable: Bool = false,
+        providerUnavailableMessage: String? = nil,
+        reviewFallback: Bool = false,
         searchSessionId: String? = nil
     ) {
         self.id = id
@@ -83,6 +91,9 @@ struct SearchSession: Identifiable, Equatable, Hashable {
         self.hydratingBackendResults = hydratingBackendResults
         self.searchDebugMessage = searchDebugMessage
         self.noRelevantResults = noRelevantResults
+        self.providerUnavailable = providerUnavailable
+        self.providerUnavailableMessage = providerUnavailableMessage
+        self.reviewFallback = reviewFallback
         self.searchSessionId = searchSessionId
     }
 
@@ -171,7 +182,7 @@ extension SearchSession: Codable {
         case vintedSearchFailed, vintedPagination = "pagination"
         case legacyPaginationState = "paginationState"
         case initialResponseTimeMs, mode, previewImageURLs, awaitsRailwayHydration, hydratingBackendResults
-        case searchDebugMessage, noRelevantResults, searchSessionId
+        case searchDebugMessage, noRelevantResults, providerUnavailable, providerUnavailableMessage, reviewFallback, searchSessionId
     }
 
     init(from decoder: Decoder) throws {
@@ -210,6 +221,11 @@ extension SearchSession: Codable {
         let noRelevantResults =
             try c.decodeIfPresent(Bool.self, forKey: .noRelevantResults)
             ?? (searchDebugMessage == "no_relevant_results")
+        let providerUnavailable =
+            try c.decodeIfPresent(Bool.self, forKey: .providerUnavailable)
+            ?? (searchDebugMessage == "provider_unavailable")
+        let providerUnavailableMessage = try c.decodeIfPresent(String.self, forKey: .providerUnavailableMessage)
+        let reviewFallback = try c.decodeIfPresent(Bool.self, forKey: .reviewFallback) ?? false
         let searchSessionId = try c.decodeIfPresent(String.self, forKey: .searchSessionId)
 
         self.init(
@@ -230,6 +246,9 @@ extension SearchSession: Codable {
             hydratingBackendResults: hydratingBackendResults,
             searchDebugMessage: searchDebugMessage,
             noRelevantResults: noRelevantResults,
+            providerUnavailable: providerUnavailable,
+            providerUnavailableMessage: providerUnavailableMessage,
+            reviewFallback: reviewFallback,
             searchSessionId: searchSessionId
         )
     }
@@ -253,6 +272,9 @@ extension SearchSession: Codable {
         try c.encode(hydratingBackendResults, forKey: .hydratingBackendResults)
         try c.encodeIfPresent(searchDebugMessage, forKey: .searchDebugMessage)
         try c.encode(noRelevantResults, forKey: .noRelevantResults)
+        try c.encode(providerUnavailable, forKey: .providerUnavailable)
+        try c.encodeIfPresent(providerUnavailableMessage, forKey: .providerUnavailableMessage)
+        try c.encode(reviewFallback, forKey: .reviewFallback)
         try c.encodeIfPresent(searchSessionId, forKey: .searchSessionId)
     }
 }
