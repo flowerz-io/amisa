@@ -2,7 +2,7 @@
 //  AuthManager.swift
 //  Balibu
 //
-//  Singleton d'authentification — Apple, Google, Email (magic link).
+//  Singleton d'authentification — Apple, Google, e-mail + mot de passe.
 //  Source de vérité pour l'état connecté dans toute l'app.
 //
 
@@ -18,8 +18,12 @@ enum AppAuthError: LocalizedError {
     case appleSignInCancelled
     case appleSignInFailed(Error)
     case googleSignInFailed(Error)
-    case emailSignInFailed(Error)
-    /// Retour `amisa://login-callback` (magic link ou OAuth).
+    case emailAlreadyInUse
+    case invalidCredentials
+    case userNotFound
+    case emailAuthFailed(Error)
+    case networkError
+    /// Retour `amisa://auth-callback` (OAuth Google ou réinitialisation mot de passe).
     case authRedirectFailed(Error)
     case signOutFailed(Error)
     case unknown
@@ -32,8 +36,16 @@ enum AppAuthError: LocalizedError {
             return "La connexion Apple a échoué."
         case .googleSignInFailed(let error):
             return Self.describeUnderlyingSupabaseError(error)
-        case .emailSignInFailed(let error):
+        case .emailAlreadyInUse:
+            return "Cette adresse e-mail est déjà utilisée."
+        case .invalidCredentials:
+            return "Mot de passe incorrect."
+        case .userNotFound:
+            return "Aucun compte trouvé avec cette adresse e-mail."
+        case .emailAuthFailed(let error):
             return Self.describeUnderlyingSupabaseError(error)
+        case .networkError:
+            return "Problème de connexion. Vérifie ton réseau et réessaie."
         case .authRedirectFailed(let error):
             return Self.describeUnderlyingSupabaseError(error)
         case .signOutFailed(let error):
@@ -45,6 +57,9 @@ enum AppAuthError: LocalizedError {
 
     /// Texte affiché tel quel dans l’UI (erreurs réseau / GoTrue).
     private static func describeUnderlyingSupabaseError(_ error: Error) -> String {
+        if let mapped = mapKnownAuthAPIError(error) {
+            return mapped.errorDescription ?? "Une erreur est survenue."
+        }
         if let le = error as? LocalizedError {
             if let d = le.errorDescription, !d.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 return d
@@ -54,11 +69,46 @@ enum AppAuthError: LocalizedError {
             }
         }
         let ns = error as NSError
+        if ns.domain == NSURLErrorDomain {
+            return AppAuthError.networkError.errorDescription!
+        }
         if !ns.localizedDescription.isEmpty, ns.localizedDescription != "(null)" {
             return ns.localizedDescription
         }
         let s = String(describing: error)
-        return s.isEmpty ? "L’envoi du lien a échoué." : s
+        return s.isEmpty ? "Une erreur est survenue." : s
+    }
+
+    static func mapKnownAuthAPIError(_ error: Error) -> AppAuthError? {
+        let ns = error as NSError
+        if ns.domain == NSURLErrorDomain {
+            return .networkError
+        }
+
+        let message = ((error as? LocalizedError)?.errorDescription ?? error.localizedDescription)
+            .lowercased()
+
+        if message.contains("already registered")
+            || message.contains("already been registered")
+            || message.contains("user already registered") {
+            return .emailAlreadyInUse
+        }
+        if message.contains("invalid login credentials")
+            || message.contains("invalid credentials")
+            || message.contains("wrong password") {
+            return .invalidCredentials
+        }
+        if message.contains("user not found")
+            || message.contains("no user found") {
+            return .userNotFound
+        }
+        if message.contains("network")
+            || message.contains("internet")
+            || message.contains("timed out")
+            || message.contains("could not connect") {
+            return .networkError
+        }
+        return nil
     }
 }
 
@@ -135,43 +185,91 @@ final class AuthManager: NSObject, ObservableObject {
         await finalize(SupabaseManager.shared.appUser(from: session.user))
     }
 
-    // MARK: - Email magic link
+    // MARK: - Email + mot de passe
 
-    /// Retourne `true` si le lien a bien été envoyé.
-    func signInWithEmail(_ email: String) async -> Bool {
-        guard !email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
+    /// Crée un compte. Retourne `true` si la session est établie.
+    func signUpWithEmail(email: String, password: String) async -> Bool {
+        let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard AuthFormValidator.isValidEmail(trimmedEmail),
+              AuthFormValidator.isValidPassword(password) else { return false }
+
         isLoading = true
         lastError = nil
         defer { isLoading = false }
+
         do {
-            try await SupabaseManager.shared.sendMagicLink(email: email)
+            let user = try await SupabaseManager.shared.signUpWithEmailPassword(
+                email: trimmedEmail,
+                password: password
+            )
+            await finalize(user)
             return true
         } catch {
-            lastError = .emailSignInFailed(error)
+            lastError = Self.mapEmailAuthError(error)
             return false
         }
     }
 
-    /// Magic link e-mail **ou** OAuth (Google) : `amisa://login-callback`.
+    /// Connexion e-mail + mot de passe. Retourne `true` si la session est établie.
+    func signInWithEmailPassword(email: String, password: String) async -> Bool {
+        let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard AuthFormValidator.isValidEmail(trimmedEmail), !password.isEmpty else { return false }
+
+        isLoading = true
+        lastError = nil
+        defer { isLoading = false }
+
+        do {
+            let user = try await SupabaseManager.shared.signInWithEmailPassword(
+                email: trimmedEmail,
+                password: password
+            )
+            await finalize(user)
+            return true
+        } catch {
+            lastError = Self.mapEmailAuthError(error)
+            return false
+        }
+    }
+
+    /// Envoie un e-mail de réinitialisation du mot de passe.
+    func resetPassword(email: String) async -> Bool {
+        let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard AuthFormValidator.isValidEmail(trimmedEmail) else { return false }
+
+        isLoading = true
+        lastError = nil
+        defer { isLoading = false }
+
+        do {
+            try await SupabaseManager.shared.resetPasswordForEmail(trimmedEmail)
+            return true
+        } catch {
+            lastError = Self.mapEmailAuthError(error)
+            return false
+        }
+    }
+
+    private static func mapEmailAuthError(_ error: Error) -> AppAuthError {
+        if let known = AppAuthError.mapKnownAuthAPIError(error) {
+            return known
+        }
+        return .emailAuthFailed(error)
+    }
+
+    /// OAuth Google ou réinitialisation mot de passe : `amisa://auth-callback`.
     func handleAuthRedirect(url: URL) async {
         isLoading = true
         lastError = nil
         defer { isLoading = false }
         do {
-            _ = try await SupabaseManager.shared.finishMagicLink(from: url)
+            _ = try await SupabaseManager.shared.finishAuthRedirect(from: url)
             let user = try await SupabaseManager.shared.fetchCurrentSessionUser()
             await finalize(user)
         } catch {
             lastError = .authRedirectFailed(error)
-            #if DEBUG
-            print("[DeepLink] auth callback failed:", error.localizedDescription)
-            #endif
+            print("[GOOGLE_AUTH] auth redirect failed:", error.localizedDescription)
         }
-    }
-
-    /// @deprecated Utiliser ``handleAuthRedirect(url:)``.
-    func handleMagicLinkCallback(url: URL) async {
-        await handleAuthRedirect(url: url)
     }
 
     private func observeSupabaseAuthState() async {
@@ -219,6 +317,7 @@ final class AuthManager: NSObject, ObservableObject {
     // MARK: - Internal
 
     private func finalize(_ user: AppUser) async {
+        GuestSessionStore.shared.exitGuestMode()
         currentUser = user
         isAuthenticated = true
         await ProfileManager.shared.syncAfterSignIn(user: user)

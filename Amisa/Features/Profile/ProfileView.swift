@@ -5,6 +5,7 @@ struct ProfileView: View {
     @EnvironmentObject private var router: Router
     @ObservedObject private var store = ProfileStore.shared
     @ObservedObject private var auth  = AuthManager.shared
+    @ObservedObject private var guest = GuestSessionStore.shared
     @State private var showSettings      = false
     @State private var showAuthSheet     = false
     @State private var showAllAnalyses   = false
@@ -49,9 +50,6 @@ struct ProfileView: View {
         }
         .sheet(isPresented: $showAuthSheet) {
             AuthBottomSheet(onSignedIn: { @MainActor in showAuthSheet = false })
-                .presentationDetents([.height(560)])
-                .presentationCornerRadius(32)
-                .presentationBackground(.ultraThinMaterial)
         }
         .sheet(isPresented: $showAllAnalyses) {
             NavigationStack {
@@ -76,16 +74,20 @@ struct ProfileView: View {
                     remoteURLString: nil,
                     diameter: 72,
                     initials: nil,
-                    fallbackSymbolName: "person.fill",
+                    fallbackSymbolName: guest.isGuest ? "person.crop.circle" : "person.fill",
                     fallbackFillColor: DesignTokens.accentMuted
                 )
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Non connecté")
+                    Text(guest.isGuest
+                         ? String(localized: "Mode invité")
+                         : String(localized: "Non connecté"))
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundStyle(DesignTokens.textPrimary)
 
-                    Text("Connecte-toi pour retrouver tes\nanalyses sur tous tes appareils.")
+                    Text(guest.isGuest
+                         ? String(localized: "Crée un compte pour synchroniser tes favoris et retrouver tes analyses sur tous tes appareils.")
+                         : String(localized: "Connecte-toi pour retrouver tes\nanalyses sur tous tes appareils."))
                         .font(.system(size: 13))
                         .foregroundStyle(DesignTokens.textSecondary)
                         .lineSpacing(2)
@@ -96,7 +98,12 @@ struct ProfileView: View {
             Button {
                 showAuthSheet = true
             } label: {
-                Label("Se connecter", systemImage: "person.badge.plus")
+                Label(
+                    guest.isGuest
+                        ? String(localized: "Créer un compte")
+                        : String(localized: "Se connecter"),
+                    systemImage: guest.isGuest ? "person.crop.circle.badge.plus" : "person.badge.plus"
+                )
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)

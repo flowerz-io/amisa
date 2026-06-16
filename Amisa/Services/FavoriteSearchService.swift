@@ -24,8 +24,10 @@ final class FavoriteSearchService {
         allRecords().contains(where: { $0.id == id })
     }
 
+    @MainActor
     @discardableResult
     func toggle(session: SearchSession) -> Bool {
+        guard GuestSessionStore.shared.canUseCloudFeatures else { return false }
         var list = allRecords()
         if let idx = list.firstIndex(where: { $0.id == session.id }) {
             list.remove(at: idx)

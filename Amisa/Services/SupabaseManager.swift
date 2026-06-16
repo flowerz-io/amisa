@@ -109,6 +109,7 @@ final class SupabaseManager {
             supabaseKey: supabaseAnonKey,
             options: SupabaseClientOptions(
                 auth: .init(
+                    redirectToURL: AmisaAuthRedirect.callbackURL,
                     emitLocalSessionAsInitialSession: true
                 )
             )
@@ -225,78 +226,77 @@ final class SupabaseManager {
         return appUser(from: session.user)
     }
 
-    /// OAuth Google (PKCE) : ouvre ``ASWebAuthenticationSession``, callback `amisa://login-callback`.
+    /// OAuth Google (PKCE) : ``ASWebAuthenticationSession`` avec callback `amisa://auth-callback`.
     @discardableResult
     func signInWithGoogleOAuth() async throws -> Session {
-        print("[GoogleAuth] Supabase configured:", client != nil)
-
         let client = try requireClient()
-        guard let redirectTo = URL(string: "amisa://login-callback") else {
-            throw URLError(.badURL)
-        }
+        let redirectTo = AmisaAuthRedirect.callbackURL
 
-        print("[GoogleAuth] Starting OAuth with redirect:", redirectTo.absoluteString)
+        print("[GOOGLE_AUTH] start redirectTo=\(redirectTo.absoluteString)")
 
         let session = try await client.auth.signInWithOAuth(
             provider: .google,
             redirectTo: redirectTo
         )
 
-        #if DEBUG
-        print("[GoogleAuth] OAuth terminé — user id=\(session.user.id.uuidString)")
-        #endif
-
+        print("[GOOGLE_AUTH] session restored userId=\(session.user.id.uuidString)")
         return session
     }
 
-    func sendMagicLink(email: String) async throws {
+    func signUpWithEmailPassword(email: String, password: String) async throws -> AppUser {
         let client = try requireClient()
         let trimmed = email.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let redirectTo = URL(string: "amisa://login-callback") else {
-            throw URLError(.badURL)
-        }
 
         #if DEBUG
-        print("[Supabase][MagicLink] email envoyé (OTP) : \(trimmed)")
-        print("[Supabase][MagicLink] début signInWithOTP → redirectTo=\(redirectTo.absoluteString)")
+        print("[Supabase][Auth] signUp email=\(trimmed)")
         #endif
 
-        do {
-            try await client.auth.signInWithOTP(
-                email: trimmed,
-                redirectTo: redirectTo,
-                shouldCreateUser: true
-            )
-            #if DEBUG
-            print("[Supabase][MagicLink] succès signInWithOTP (email envoyé côté Supabase)")
-            #endif
-        } catch {
-            #if DEBUG
-            print("[Supabase][MagicLink] erreur Supabase : \(error)")
-            if let le = error as? LocalizedError {
-                print("[Supabase][MagicLink] erreur détaillée : \(le.errorDescription ?? "(sans description)")")
-            }
-            #endif
-            throw error
+        let response = try await client.auth.signUp(email: trimmed, password: password)
+        if let session = response.session {
+            return appUser(from: session.user)
         }
+
+        // Confirmation e-mail désactivée côté Supabase : tenter la connexion directe.
+        let session = try await client.auth.signIn(email: trimmed, password: password)
+        return appUser(from: session.user)
     }
 
-    /// Complète le flux Magic Link / PKCE après ouverture du deep link.
-    @discardableResult
-    func finishMagicLink(from url: URL) async throws -> Session {
+    func signInWithEmailPassword(email: String, password: String) async throws -> AppUser {
         let client = try requireClient()
+        let trimmed = email.trimmingCharacters(in: .whitespacesAndNewlines)
+
         #if DEBUG
-        print("[Supabase][DeepLink] début session(from:) URL=\(url.absoluteString)")
+        print("[Supabase][Auth] signIn email=\(trimmed)")
         #endif
+
+        let session = try await client.auth.signIn(email: trimmed, password: password)
+        return appUser(from: session.user)
+    }
+
+    func resetPasswordForEmail(_ email: String) async throws {
+        let client = try requireClient()
+        let trimmed = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        let redirectTo = AmisaAuthRedirect.callbackURL
+
+        #if DEBUG
+        print("[Supabase][Auth] resetPassword email=\(trimmed) redirectTo=\(redirectTo.absoluteString)")
+        #endif
+
+        try await client.auth.resetPasswordForEmail(trimmed, redirectTo: redirectTo)
+    }
+
+    /// Complète OAuth Google ou réinitialisation mot de passe après ouverture du deep link.
+    @discardableResult
+    func finishAuthRedirect(from url: URL) async throws -> Session {
+        let client = try requireClient()
+        print("[GOOGLE_AUTH] callback received=\(url.absoluteString)")
         do {
             let session = try await client.auth.session(from: url)
-            #if DEBUG
-            print("[Supabase][DeepLink] succès session — user id=\(session.user.id.uuidString)")
-            #endif
+            print("[GOOGLE_AUTH] session restored userId=\(session.user.id.uuidString)")
             return session
         } catch {
             #if DEBUG
-            print("[Supabase][DeepLink] erreur session(from:) : \(error)")
+            print("[GOOGLE_AUTH] session(from:) failed:", error)
             #endif
             throw error
         }

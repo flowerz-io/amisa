@@ -50,7 +50,7 @@ Ce groupe doit être activé sur les deux targets (Balibu et BalibuShareExtensio
 ## Fichiers Plist importants
 
 ### Balibu/Info.plist
-- `CFBundleURLTypes` : URL scheme `balibu://` pour ouvrir l’app depuis l’extension
+- `CFBundleURLTypes` : URL scheme `amisa://` (OAuth `amisa://auth-callback`) pour ouvrir l’app depuis l’extension
 - `LSApplicationQueriesSchemes` : si besoin d’ouvrir des liens externes
 - `NSPhotoLibraryUsageDescription` : pour l’import depuis Photos
 - `NSCameraUsageDescription` : si caméra utilisée plus tard

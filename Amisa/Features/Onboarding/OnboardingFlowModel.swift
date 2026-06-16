@@ -130,10 +130,11 @@ final class OnboardingFlowModel: ObservableObject {
         goTo(.gender)
     }
 
-    func continueWithoutAccount() {
+    func continueAsGuest() {
+        GuestSessionStore.shared.enterGuestMode()
         isAuthSheetPresented = false
-        print("[ONBOARDING] auth completed")
-        goTo(.gender)
+        print("[ONBOARDING] continued as guest — onboarding completed")
+        completeOnboarding()
     }
 
     func selectGender(_ gender: String) {

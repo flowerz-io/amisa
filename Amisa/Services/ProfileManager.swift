@@ -27,7 +27,7 @@ final class ProfileManager: ObservableObject {
 
     // MARK: - Public API
 
-    /// Après connexion (magic link, Apple, etc.).
+    /// Après connexion (Apple, Google, e-mail, etc.).
     func syncAfterSignIn(user: AppUser) async {
         await refreshProfileFromServer(userId: user.id)
         await flushPendingOnboardingFields(userId: user.id)

@@ -188,12 +188,12 @@ final class Router: ObservableObject {
 
     func handleIncomingURL(_ url: URL) {
         let scheme = url.scheme?.lowercased() ?? ""
-        guard scheme == "amisa" || scheme == "balibu" else { return }
+        guard scheme == AmisaAuthRedirect.scheme else { return }
         let host = (url.host ?? "").lowercased()
         let storage = ShareStorageService.shared
 
-        if host == "login-callback" {
-            print("[Amisa][DeepLink] received:", url.absoluteString)
+        if AmisaAuthRedirect.isAuthCallback(url) {
+            print("[GOOGLE_AUTH] callback received=\(url.absoluteString)")
             Task {
                 await AuthManager.shared.handleAuthRedirect(url: url)
             }

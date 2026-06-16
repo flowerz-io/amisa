@@ -2,7 +2,7 @@
 //  OnboardingAuthSheetView.swift
 //  Amisa
 //
-//  Modal auth premium — verre fumé sombre, ancré en bas.
+//  Modal auth premium — verre fumé sombre, ancré en bas, hauteur au contenu.
 //
 
 import SwiftUI
@@ -11,10 +11,9 @@ struct OnboardingAuthSheetView: View {
     @ObservedObject var model: OnboardingFlowModel
     @State private var backdropVisible = false
     @State private var panelSlidIn = false
+    @State private var panelHeight: CGFloat = AuthSheetMetrics.fallbackHeight
 
-    /// Le bas du panneau dépasse légèrement sous l’écran (sheet physique).
-    private let bottomBleed: CGFloat = 22
-    private let panelSlideDistance: CGFloat = 480
+    private let bottomSafeBleed: CGFloat = 8
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -26,8 +25,8 @@ struct OnboardingAuthSheetView: View {
 
             panel
                 .padding(.horizontal, 16)
-                .padding(.bottom, -bottomBleed)
-                .offset(y: panelSlidIn ? 0 : panelSlideDistance)
+                .padding(.bottom, bottomSafeBleed)
+                .offset(y: panelSlidIn ? 0 : panelHeight + 48)
         }
         .ignoresSafeArea(edges: .bottom)
         .preferredColorScheme(.dark)
@@ -45,16 +44,22 @@ struct OnboardingAuthSheetView: View {
                 .fill(OnboardingTheme.warmGrayMuted.opacity(0.55))
                 .frame(width: 36, height: 4)
                 .padding(.top, 10)
-                .padding(.bottom, 8)
+                .padding(.bottom, 6)
 
             AuthCoordinatorCore(
                 embed: .onboardingPremium(close: { dismiss() }),
-                skipTrailing: { @MainActor in model.continueWithoutAccount() },
+                onContinueAsGuest: { @MainActor in model.continueAsGuest() },
                 onAuthenticated: { @MainActor in model.completeAuth() }
             )
-            .padding(.bottom, 10 + bottomBleed)
         }
+        .frame(maxWidth: 520)
         .frame(maxWidth: .infinity)
+        .fixedSize(horizontal: false, vertical: true)
+        .reportAuthSheetHeight()
+        .onPreferenceChange(AuthSheetHeightKey.self) { measured in
+            guard measured > 0 else { return }
+            panelHeight = measured
+        }
         .background { panelBackground }
         .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
         .overlay {

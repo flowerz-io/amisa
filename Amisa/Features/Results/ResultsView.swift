@@ -340,6 +340,7 @@ struct ResultsView: View {
 
     private func toggleFavorite() {
         guard case .loaded(let session) = viewModel.state else { return }
+        guard GuestSessionStore.shared.canUseCloudFeatures else { return }
         isFavorite = FavoriteSearchService.shared.toggle(session: session)
     }
 
