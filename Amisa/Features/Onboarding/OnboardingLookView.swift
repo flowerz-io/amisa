@@ -8,43 +8,26 @@ import SwiftUI
 /// Portrait éditorial mode : largeur:hauteur = 3:5.
 private let lookCardWidthToHeight: CGFloat = 3 / 5
 private let immersiveLookSpacing: CGFloat = 14
-private let immersiveLookHorizontalPadding: CGFloat = 12
 
 struct OnboardingLookView: View {
     @ObservedObject var model: OnboardingFlowModel
+    @Environment(\.onboardingLayoutMetrics) private var metrics
     @State private var appeared = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            OnboardingStepHeader(
-                segment: 4,
-                title: "Choisis un look\nà analyser",
-                subtitle: "Amisa va retrouver les pièces similaires pour toi."
-            )
-            .padding(.top, 8)
-            .onboardingStepEntrance(appeared)
+        OnboardingStepScroll {
+            VStack(spacing: metrics.isCompactHeight ? 16 : 24) {
+                OnboardingStepHeader(
+                    segment: 4,
+                    title: "Choisis un look\nà analyser",
+                    subtitle: "Amisa va retrouver les pièces similaires pour toi."
+                )
+                .padding(.top, 8)
+                .onboardingStepEntrance(appeared)
 
-            Spacer()
-
-            GeometryReader { geo in
-                let cardSize = lookCardSize(in: geo.size)
-                HStack(alignment: .center, spacing: immersiveLookSpacing) {
-                    ForEach(Array(model.demoLooks.enumerated()), id: \.element.id) { index, look in
-                        Button {
-                            model.selectLook(look)
-                        } label: {
-                            ImmersiveLookCard(look: look)
-                                .frame(width: cardSize.width, height: cardSize.height)
-                        }
-                        .buttonStyle(OnboardingSelectablePressStyle())
-                        .onboardingStaggeredEntrance(appeared, index: index, baseDelay: 0.08)
-                    }
-                }
-                .frame(width: geo.size.width, height: geo.size.height, alignment: .center)
+                lookCardsRow
+                    .padding(.horizontal, metrics.horizontalPadding)
             }
-            .padding(.horizontal, immersiveLookHorizontalPadding)
-
-            Spacer()
         }
         .onboardingScreen()
         .onAppear {
@@ -54,10 +37,31 @@ struct OnboardingLookView: View {
         }
     }
 
-    /// Dimensions identiques pour les deux cards, ratio 3:5, maximisées (le padding horizontal est déjà appliqué au conteneur).
-    private func lookCardSize(in size: CGSize) -> CGSize {
-        let maxCardWidth = (size.width - immersiveLookSpacing) / 2
-        let width = min(maxCardWidth, size.height * lookCardWidthToHeight)
+    private var lookCardsRow: some View {
+        let cardSize = lookCardSize(
+            availableWidth: min(metrics.maxContentWidth, metrics.width) - metrics.horizontalPadding * 2,
+            availableHeight: metrics.height * (metrics.isLandscape ? 0.42 : 0.48)
+        )
+
+        return HStack(alignment: .center, spacing: immersiveLookSpacing) {
+            ForEach(Array(model.demoLooks.enumerated()), id: \.element.id) { index, look in
+                Button {
+                    model.selectLook(look)
+                } label: {
+                    ImmersiveLookCard(look: look)
+                        .frame(width: cardSize.width, height: cardSize.height)
+                }
+                .buttonStyle(OnboardingSelectablePressStyle())
+                .onboardingStaggeredEntrance(appeared, index: index, baseDelay: 0.08)
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func lookCardSize(availableWidth: CGFloat, availableHeight: CGFloat) -> CGSize {
+        let maxCardWidth = max(120, (availableWidth - immersiveLookSpacing) / 2)
+        let widthFromHeight = availableHeight * lookCardWidthToHeight
+        let width = min(maxCardWidth, widthFromHeight)
         let height = width / lookCardWidthToHeight
         return CGSize(width: width, height: height)
     }

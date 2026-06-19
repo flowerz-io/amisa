@@ -26,12 +26,8 @@ struct AuthStartView: View {
         auth.isLoading || auth.isGoogleOAuthInProgress
     }
 
-    private var isFieldFocused: Bool {
-        emailFocused || passwordFocused
-    }
-
     var body: some View {
-        AuthKeyboardAdaptiveContainer(keyboardActive: isFieldFocused) {
+        AuthSheetFormScroll {
             startContent
         }
         .preferredColorScheme(theme.isPremium ? .dark : nil)
@@ -71,14 +67,20 @@ struct AuthStartView: View {
                     theme: theme,
                     placeholder: String(localized: "Email"),
                     text: $email,
-                    focused: $emailFocused
+                    focused: $emailFocused,
+                    onFocusChange: { isFocused in
+                        if isFocused { AuthSheetLog.keyboard("email field focused (signup)") }
+                    }
                 )
                 AuthIconPasswordField(
                     theme: theme,
                     placeholder: String(localized: "Password"),
                     text: $password,
                     contentType: .newPassword,
-                    focused: $passwordFocused
+                    focused: $passwordFocused,
+                    onFocusChange: { isFocused in
+                        if isFocused { AuthSheetLog.keyboard("password field focused (signup)") }
+                    }
                 )
             }
 

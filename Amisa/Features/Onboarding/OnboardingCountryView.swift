@@ -13,6 +13,7 @@ private struct CountryOption: Identifiable, Hashable {
 
 struct OnboardingCountryView: View {
     @ObservedObject var model: OnboardingFlowModel
+    @Environment(\.onboardingLayoutMetrics) private var metrics
     @State private var appeared = false
     @State private var highlightedId: String?
 
@@ -32,31 +33,32 @@ struct OnboardingCountryView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            OnboardingStepHeader(
-                segment: 2,
-                title: "Depuis quelle zone\nfais-tu tes achats ?",
-                subtitle: "On adapte la devise et les résultats Vinted selon ta zone."
-            )
-            .padding(.top, 8)
-            .onboardingStepEntrance(appeared)
+            OnboardingStepScroll {
+                VStack(spacing: 16) {
+                    OnboardingStepHeader(
+                        segment: 2,
+                        title: "Depuis quelle zone\nfais-tu tes achats ?",
+                        subtitle: "On adapte la devise et les résultats Vinted selon ta zone."
+                    )
+                    .padding(.top, 8)
+                    .onboardingStepEntrance(appeared)
 
-            ScrollView(.vertical, showsIndicators: false) {
-                LazyVStack(spacing: 10) {
-                    ForEach(Array(countries.enumerated()), id: \.element.id) { index, country in
-                        countryRow(country)
-                            .onboardingStaggeredEntrance(appeared, index: index, baseDelay: 0.06)
+                    LazyVStack(spacing: 10) {
+                        ForEach(Array(countries.enumerated()), id: \.element.id) { index, country in
+                            countryRow(country)
+                                .onboardingStaggeredEntrance(appeared, index: index, baseDelay: 0.06)
+                        }
                     }
+                    .padding(.horizontal, metrics.horizontalPadding)
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 20)
-                .padding(.bottom, 16)
             }
 
-            OnboardingSecondaryTextButton(title: String(localized: "Passer cette étape")) {
-                model.selectCountry("")
+            OnboardingPinnedFooter {
+                OnboardingSecondaryTextButton(title: String(localized: "Passer cette étape")) {
+                    model.selectCountry("")
+                }
+                .onboardingStepEntrance(appeared, delay: 0.12)
             }
-            .padding(.bottom, 28)
-            .onboardingStepEntrance(appeared, delay: 0.12)
         }
         .onboardingScreen()
         .onAppear {

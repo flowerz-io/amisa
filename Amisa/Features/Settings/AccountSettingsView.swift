@@ -2,13 +2,13 @@
 //  AccountSettingsView.swift
 //  Balibu
 //
-//  Paramètres du compte : e-mail, téléphone, nom d'utilisateur.
+//  Paramètres du compte : e-mail, téléphone, nom d'utilisateur, suppression.
 //
 
 import SwiftUI
 
 struct AccountSettingsView: View {
-    // TODO: Brancher sur AuthManager / ProfileManager quand Supabase est configuré
+    @ObservedObject private var auth = AuthManager.shared
     @State private var email: String = ""
     @State private var phone: String = ""
     @State private var username: String = ""
@@ -16,12 +16,42 @@ struct AccountSettingsView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 28) {
-                lumaSection("Informations") {
-                    accountRow(icon: "envelope.fill",   color: BrandColors.secondaryOrange, label: "E-mail",           value: email.isEmpty   ? "—" : email)
+                lumaSection(String(localized: "Informations")) {
+                    accountRow(icon: "envelope.fill", color: BrandColors.secondaryOrange, label: String(localized: "E-mail"), value: email.isEmpty ? "—" : email)
                     lumaDivider()
-                    accountRow(icon: "phone.fill",      color: .green,  label: "Téléphone",        value: phone.isEmpty   ? "—" : phone)
+                    accountRow(icon: "phone.fill", color: .green, label: String(localized: "Téléphone"), value: phone.isEmpty ? "—" : phone)
                     lumaDivider()
-                    accountRow(icon: "at.circle.fill",  color: .orange, label: "Nom d'utilisateur", value: username.isEmpty ? "—" : username)
+                    accountRow(icon: "at.circle.fill", color: .orange, label: String(localized: "Nom d'utilisateur"), value: username.isEmpty ? "—" : username)
+                }
+
+                if auth.isAuthenticated {
+                    lumaSection(String(localized: "Zone de danger")) {
+                        NavigationLink {
+                            DeleteAccountView()
+                        } label: {
+                            HStack(spacing: 12) {
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .fill(Color.red)
+                                    .frame(width: 32, height: 32)
+                                    .overlay {
+                                        Image(systemName: "trash.fill")
+                                            .font(.system(size: 15, weight: .semibold))
+                                            .foregroundStyle(.white)
+                                    }
+                                Text(String(localized: "Supprimer mon compte"))
+                                    .font(.system(size: 16))
+                                    .foregroundStyle(.red)
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(.tertiary)
+                            }
+                            .padding(.horizontal, 16)
+                            .frame(height: 52)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
             }
             .padding(.horizontal, 16)
@@ -29,16 +59,21 @@ struct AccountSettingsView: View {
             .padding(.bottom, 40)
         }
         .background(Color(uiColor: .systemGroupedBackground))
-        .navigationTitle("Paramètres du compte")
+        .navigationTitle(String(localized: "Paramètres du compte"))
         .navigationBarTitleDisplayMode(.large)
         .onAppear { populateFromAuth() }
+        .onChange(of: auth.currentUser?.id) { _, _ in populateFromAuth() }
     }
 
     private func populateFromAuth() {
-        // TODO: lire depuis ProfileManager.shared.profile quand Supabase est actif
-        if let user = AuthManager.shared.currentUser {
-            email    = user.email ?? ""
+        if let user = auth.currentUser {
+            email = user.email ?? ""
             username = user.displayName
+        }
+        if let profile = ProfileManager.shared.profile {
+            if let display = profile.displayName, !display.isEmpty {
+                username = display
+            }
         }
     }
 

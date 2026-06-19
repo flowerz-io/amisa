@@ -7,6 +7,122 @@
 
 import SwiftUI
 
+// MARK: - Layout responsive (iPhone + iPad)
+
+struct OnboardingLayoutMetrics: Equatable {
+    let size: CGSize
+    let safeTop: CGFloat
+    let safeBottom: CGFloat
+
+    init(size: CGSize, safeArea: EdgeInsets) {
+        self.size = size
+        self.safeTop = safeArea.top
+        self.safeBottom = safeArea.bottom
+    }
+
+    var width: CGFloat { size.width }
+    var height: CGFloat { size.height }
+    var isPad: Bool { width >= 600 }
+    var isLandscape: Bool { width > height }
+    var isCompactHeight: Bool { height < 700 }
+    var isVeryCompactHeight: Bool { height < 580 }
+
+    var maxContentWidth: CGFloat {
+        isPad ? min(560, width - 48) : width
+    }
+
+    var horizontalPadding: CGFloat { isPad ? 32 : 20 }
+
+    var footerBottomPadding: CGFloat {
+        max(safeBottom, isPad ? 20 : 12) + 8
+    }
+
+    var scrollBottomPadding: CGFloat { 20 }
+
+    var stepTitleSize: CGFloat {
+        if isVeryCompactHeight { return 26 }
+        if isPad && !isLandscape { return 36 }
+        return isCompactHeight ? 28 : 32
+    }
+
+    var stepSubtitleSize: CGFloat { isCompactHeight ? 14 : 16 }
+
+    var heroCardsHeight: CGFloat {
+        let ratio: CGFloat = isLandscape ? 0.36 : 0.40
+        return min(400, max(200, height * ratio))
+    }
+
+    var heroCardImageHeight: CGFloat {
+        if isVeryCompactHeight { return 108 }
+        if isPad { return 156 }
+        return isCompactHeight ? 124 : 148
+    }
+
+    var genderCardHeight: CGFloat {
+        min(280, max(170, height * 0.34))
+    }
+
+    var genderIconSize: CGFloat {
+        if isVeryCompactHeight { return 48 }
+        return isPad ? 72 : 60
+    }
+
+    var notificationMockupHeight: CGFloat {
+        min(320, max(190, height * 0.34))
+    }
+
+    var paywallHeroTitleSize: CGFloat {
+        if isVeryCompactHeight { return 24 }
+        return isPad ? 32 : 28
+    }
+
+    var paywallBenefitSpacing: CGFloat { isCompactHeight ? 8 : 10 }
+}
+
+private struct OnboardingLayoutMetricsKey: EnvironmentKey {
+    static let defaultValue = OnboardingLayoutMetrics(
+        size: CGSize(width: 390, height: 844),
+        safeArea: EdgeInsets()
+    )
+}
+
+extension EnvironmentValues {
+    var onboardingLayoutMetrics: OnboardingLayoutMetrics {
+        get { self[OnboardingLayoutMetricsKey.self] }
+        set { self[OnboardingLayoutMetricsKey.self] = newValue }
+    }
+}
+
+/// Contenu défilant avec largeur max centrée (iPad).
+struct OnboardingStepScroll<Content: View>: View {
+    @Environment(\.onboardingLayoutMetrics) private var metrics
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            content()
+                .frame(maxWidth: metrics.maxContentWidth)
+                .frame(maxWidth: .infinity)
+                .padding(.bottom, metrics.scrollBottomPadding)
+        }
+    }
+}
+
+/// Pied de page fixe (CTA toujours visible, safe area incluse).
+struct OnboardingPinnedFooter<Content: View>: View {
+    @Environment(\.onboardingLayoutMetrics) private var metrics
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        content()
+            .frame(maxWidth: metrics.maxContentWidth)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, metrics.horizontalPadding)
+            .padding(.top, 10)
+            .padding(.bottom, metrics.footerBottomPadding)
+    }
+}
+
 // MARK: - Palette
 
 enum OnboardingTheme {
@@ -168,29 +284,31 @@ struct OnboardingStepHeader: View {
     let segment: Int
     let title: String
     let subtitle: String
+    @Environment(\.onboardingLayoutMetrics) private var metrics
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: metrics.isCompactHeight ? 10 : 14) {
             Text("ÉTAPE \(segment) · \(OnboardingFlowModel.progressSegmentCount)")
                 .font(.system(size: 11, weight: .bold, design: .default))
                 .tracking(1.2)
                 .foregroundStyle(OnboardingTheme.warmGray)
 
             Text(title)
-                .font(.system(size: 34, weight: .bold, design: .default))
+                .font(.system(size: metrics.stepTitleSize, weight: .bold, design: .default))
                 .foregroundStyle(OnboardingTheme.offWhite)
                 .multilineTextAlignment(.leading)
                 .lineSpacing(2)
                 .fixedSize(horizontal: false, vertical: true)
 
             Text(subtitle)
-                .font(.system(size: 16, weight: .regular, design: .default))
+                .font(.system(size: metrics.stepSubtitleSize, weight: .regular, design: .default))
                 .foregroundStyle(OnboardingTheme.warmGray)
                 .multilineTextAlignment(.leading)
                 .lineSpacing(4)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 24)
+        .padding(.horizontal, metrics.horizontalPadding)
     }
 }
 

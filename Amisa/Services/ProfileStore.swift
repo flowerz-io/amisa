@@ -116,6 +116,34 @@ final class ProfileStore: ObservableObject {
         d.removeObject(forKey: bannerRemoteKey)
     }
 
+    /// Efface toutes les données profil locales (suppression de compte).
+    func clearAllForAccountDeletion() {
+        let oldAvatar = avatarFileName
+        let oldBanner = bannerFileName
+
+        firstName = ""
+        lastName = ""
+        avatarFileName = nil
+        bannerFileName = nil
+        avatarRemoteURLString = nil
+        bannerRemoteURLString = nil
+
+        if let avatar = oldAvatar {
+            ImagePersistenceService.shared.deleteImage(fileName: avatar)
+        }
+        if let banner = oldBanner {
+            ImagePersistenceService.shared.deleteImage(fileName: banner)
+        }
+
+        let d = UserDefaults.standard
+        d.removeObject(forKey: firstKey)
+        d.removeObject(forKey: lastKey)
+        d.removeObject(forKey: avatarKey)
+        d.removeObject(forKey: bannerKey)
+        d.removeObject(forKey: avatarRemoteKey)
+        d.removeObject(forKey: bannerRemoteKey)
+    }
+
     func avatarImage() -> UIImage? {
         guard let name = avatarFileName else { return nil }
         return ImagePersistenceService.shared.loadUIImage(fileName: name)

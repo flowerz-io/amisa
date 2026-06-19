@@ -7,6 +7,7 @@ import SwiftUI
 
 struct OnboardingGenderView: View {
     @ObservedObject var model: OnboardingFlowModel
+    @Environment(\.onboardingLayoutMetrics) private var metrics
     @State private var appeared = false
     @State private var highlightedId: String?
 
@@ -16,26 +17,24 @@ struct OnboardingGenderView: View {
     ]
 
     var body: some View {
-        VStack(spacing: 0) {
-            OnboardingStepHeader(
-                segment: 1,
-                title: "Tu recherches\nprincipalement pour :",
-                subtitle: "On adapte les résultats, les tailles et les suggestions."
-            )
-            .padding(.top, 8)
-            .onboardingStepEntrance(appeared)
+        OnboardingStepScroll {
+            VStack(spacing: metrics.isCompactHeight ? 20 : 28) {
+                OnboardingStepHeader(
+                    segment: 1,
+                    title: "Tu recherches\nprincipalement pour :",
+                    subtitle: "On adapte les résultats, les tailles et les suggestions."
+                )
+                .padding(.top, 8)
+                .onboardingStepEntrance(appeared)
 
-            Spacer(minLength: 24)
-
-            HStack(spacing: 14) {
-                ForEach(Array(options.enumerated()), id: \.element.id) { index, option in
-                    genderCard(option)
-                        .onboardingStaggeredEntrance(appeared, index: index + 1, baseDelay: 0.08)
+                HStack(spacing: 14) {
+                    ForEach(Array(options.enumerated()), id: \.element.id) { index, option in
+                        genderCard(option)
+                            .onboardingStaggeredEntrance(appeared, index: index + 1, baseDelay: 0.08)
+                    }
                 }
+                .padding(.horizontal, metrics.horizontalPadding)
             }
-            .padding(.horizontal, 20)
-
-            Spacer()
         }
         .onboardingScreen()
         .onAppear {
@@ -79,18 +78,18 @@ struct OnboardingGenderView: View {
                 VStack(spacing: 0) {
                     Spacer()
                     Image(systemName: option.editorialIcon)
-                        .font(.system(size: 64, weight: .ultraLight))
+                        .font(.system(size: metrics.genderIconSize, weight: .ultraLight))
                         .foregroundStyle(OnboardingTheme.offWhite.opacity(0.78))
                         .symbolRenderingMode(.hierarchical)
                         .padding(.bottom, 8)
                     Text(option.label)
-                        .font(.system(size: 22, weight: .bold))
+                        .font(.system(size: metrics.isCompactHeight ? 18 : 22, weight: .bold))
                         .foregroundStyle(OnboardingTheme.offWhite)
-                    Spacer(minLength: 32)
+                    Spacer(minLength: metrics.isCompactHeight ? 20 : 32)
                 }
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 280)
+            .frame(height: metrics.genderCardHeight)
             .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 24, style: .continuous)

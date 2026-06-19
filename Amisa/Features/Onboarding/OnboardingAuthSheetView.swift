@@ -2,7 +2,7 @@
 //  OnboardingAuthSheetView.swift
 //  Amisa
 //
-//  Modal auth premium — verre fumé sombre, ancré en bas, hauteur au contenu.
+//  Modal auth premium — verre fumé sombre, ancré en bas, hauteur fixe.
 //
 
 import SwiftUI
@@ -11,9 +11,10 @@ struct OnboardingAuthSheetView: View {
     @ObservedObject var model: OnboardingFlowModel
     @State private var backdropVisible = false
     @State private var panelSlidIn = false
-    @State private var panelHeight: CGFloat = AuthSheetMetrics.fallbackHeight
 
+    private let panelHeight = AuthSheetMetrics.fixedSheetHeight
     private let bottomSafeBleed: CGFloat = 8
+    private let contentHeight: CGFloat = AuthSheetMetrics.fixedSheetHeight - AuthSheetMetrics.onboardingHandleHeight
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -30,7 +31,10 @@ struct OnboardingAuthSheetView: View {
         }
         .ignoresSafeArea(edges: .bottom)
         .preferredColorScheme(.dark)
-        .onAppear { present() }
+        .onAppear {
+            AuthSheetLog.sheet("onboarding panel presented height=\(Int(panelHeight))pt")
+            present()
+        }
         .onChange(of: model.isAuthSheetPresented) { _, visible in
             if !visible, panelSlidIn || backdropVisible {
                 retractPanel(markDismissed: false)
@@ -51,15 +55,12 @@ struct OnboardingAuthSheetView: View {
                 onContinueAsGuest: { @MainActor in model.continueAsGuest() },
                 onAuthenticated: { @MainActor in model.completeAuth() }
             )
+            .frame(height: contentHeight, alignment: .top)
+            .ignoresSafeArea(.keyboard, edges: .bottom)
         }
         .frame(maxWidth: 520)
         .frame(maxWidth: .infinity)
-        .fixedSize(horizontal: false, vertical: true)
-        .reportAuthSheetHeight()
-        .onPreferenceChange(AuthSheetHeightKey.self) { measured in
-            guard measured > 0 else { return }
-            panelHeight = measured
-        }
+        .frame(height: panelHeight, alignment: .top)
         .background { panelBackground }
         .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
         .overlay {

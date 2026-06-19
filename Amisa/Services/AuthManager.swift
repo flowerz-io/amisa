@@ -314,6 +314,15 @@ final class AuthManager: NSObject, ObservableObject {
         }
     }
 
+    /// Après suppression de compte côté serveur — réinitialise l’état local sans nouvel appel signOut.
+    func resetAfterAccountDeletion() {
+        currentUser = nil
+        isAuthenticated = false
+        lastError = nil
+        isLoading = false
+        isGoogleOAuthInProgress = false
+    }
+
     // MARK: - Internal
 
     private func finalize(_ user: AppUser) async {

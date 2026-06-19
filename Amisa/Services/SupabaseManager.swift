@@ -313,6 +313,24 @@ final class SupabaseManager {
         try await client.auth.signOut()
     }
 
+    /// Suppression définitive du compte connecté (RPC `delete_own_account`).
+    func deleteOwnAccount() async throws {
+        let client = try requireClient()
+        try await client.rpc("delete_own_account").execute()
+        #if DEBUG
+        print("[Supabase][Auth] delete_own_account RPC success")
+        #endif
+    }
+
+    /// Nettoyage best-effort des fichiers storage avant suppression du compte.
+    func deleteUserStorageAssets(userId: String) async throws {
+        let client = try requireClient()
+        let avatarPath = "\(userId)/avatar.jpg"
+        let bannerPath = "\(userId)/banner.jpg"
+        try? await client.storage.from("avatars").remove(paths: [avatarPath])
+        try? await client.storage.from("banners").remove(paths: [bannerPath])
+    }
+
     // MARK: - Profiles & Storage
 
     func fetchProfile(userId: String) async -> UserProfile? {

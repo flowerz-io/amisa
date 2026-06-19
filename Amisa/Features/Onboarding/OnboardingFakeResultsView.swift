@@ -16,6 +16,7 @@ private let feminineHeaderCropZoom: CGFloat = 1.55
 
 struct OnboardingFakeResultsView: View {
     @ObservedObject var model: OnboardingFlowModel
+    @Environment(\.onboardingLayoutMetrics) private var metrics
     @State private var appeared = false
 
     private var look: DemoLook? { model.selectedLook }
@@ -61,6 +62,8 @@ struct OnboardingFakeResultsView: View {
                 .padding(.top, resultsGridRowSpacing)
                 .padding(.bottom, 32)
         }
+        .frame(maxWidth: metrics.maxContentWidth)
+        .frame(maxWidth: .infinity)
     }
 
     private var resultsCTASection: some View {

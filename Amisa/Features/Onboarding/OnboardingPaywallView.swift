@@ -13,40 +13,50 @@ private struct PaywallBenefit: Identifiable {
 }
 
 private let paywallBenefits: [PaywallBenefit] = [
-    PaywallBenefit(icon: "infinity", title: "Analyses illimitées", subtitle: "Scanne autant de looks que tu veux"),
-    PaywallBenefit(icon: "bolt.fill", title: "Résultats plus rapides", subtitle: "Priorité dans la file d’analyse"),
-    PaywallBenefit(icon: "bell.badge.fill", title: "Alertes instantanées", subtitle: "Sois le premier sur les bonnes affaires"),
-    PaywallBenefit(icon: "sparkles", title: "Meilleures annonces", subtitle: "Tri premium sur Vinted"),
-    PaywallBenefit(icon: "heart.fill", title: "Favoris & moodboards", subtitle: "Sauvegarde tes pièces préférées"),
+    PaywallBenefit(
+        icon: "infinity",
+        title: "Analyses illimitées",
+        subtitle: "Scanne autant de vêtements que tu veux"
+    ),
+    PaywallBenefit(
+        icon: "bell.badge.fill",
+        title: "Alertes instantanées",
+        subtitle: "Sois alerté dès qu'une nouvelle annonce correspond à tes recherches enregistrées"
+    ),
 ]
 
 struct OnboardingPaywallView: View {
     @ObservedObject var model: OnboardingFlowModel
+    @Environment(\.onboardingLayoutMetrics) private var metrics
     @State private var appeared = false
 
     var body: some View {
-        GeometryReader { geo in
-            let compact = geo.size.height < 760
+        VStack(spacing: 0) {
+            OnboardingStepScroll {
+                VStack(spacing: metrics.isCompactHeight ? 14 : 20) {
+                    paywallHero
+                        .onboardingStepEntrance(appeared)
 
-            VStack(spacing: 0) {
-                paywallHero(compact: compact)
-                    .onboardingStepEntrance(appeared)
+                    freeTierBadge
+                        .padding(.horizontal, metrics.horizontalPadding)
+                        .onboardingStepEntrance(appeared, delay: 0.04)
 
-                benefitsList(compact: compact)
-                    .padding(.top, compact ? 10 : 14)
-                    .onboardingStepEntrance(appeared, delay: 0.08)
+                    benefitsList
+                        .padding(.top, 4)
+                        .onboardingStepEntrance(appeared, delay: 0.08)
 
-                pricingCard(compact: compact)
-                    .padding(.horizontal, 24)
-                    .padding(.top, compact ? 22 : 28)
-                    .onboardingStepEntrance(appeared, delay: 0.16)
+                    pricingCard
+                        .padding(.horizontal, metrics.horizontalPadding)
+                        .padding(.top, metrics.isCompactHeight ? 16 : 22)
+                        .onboardingStepEntrance(appeared, delay: 0.16)
+                }
+                .padding(.top, 4)
+            }
 
-                Spacer(minLength: compact ? 6 : 10)
-
-                ctaBlock(compact: compact)
+            OnboardingPinnedFooter {
+                ctaBlock
                     .onboardingStepEntrance(appeared, delay: 0.2)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
         .onAppear {
             withAnimation(OnboardingMotion.springPremium.delay(0.06)) {
@@ -55,44 +65,71 @@ struct OnboardingPaywallView: View {
         }
     }
 
-    private func paywallHero(compact: Bool) -> some View {
+    private var paywallHero: some View {
         ZStack {
             Circle()
                 .fill(OnboardingTheme.accentRed.opacity(0.07))
-                .frame(width: compact ? 160 : 180)
+                .frame(width: metrics.isCompactHeight ? 140 : 180)
                 .blur(radius: 40)
                 .offset(y: -12)
 
-            VStack(spacing: compact ? 8 : 10) {
-                Text("CLUB PRIVÉ")
+            VStack(spacing: metrics.isCompactHeight ? 8 : 10) {
+                Text("PREMIUM")
                     .font(.system(size: 10, weight: .bold))
                     .tracking(2)
                     .foregroundStyle(OnboardingTheme.accentRed)
 
-                Text("Ton assistant\nfashion personnel")
-                    .font(.system(size: compact ? 28 : 30, weight: .bold))
+                Text("Analyses sans limite")
+                    .font(.system(size: metrics.paywallHeroTitleSize, weight: .bold))
                     .foregroundStyle(OnboardingTheme.offWhite)
                     .multilineTextAlignment(.center)
                     .lineSpacing(2)
-                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
 
-                Text("L’expérience complète Amisa — analyses, alertes et résultats premium.")
-                    .font(.system(size: compact ? 13 : 14))
+                Text("Passe à Premium pour scanner à volonté et recevoir des alertes sur tes recherches enregistrées.")
+                    .font(.system(size: metrics.isCompactHeight ? 13 : 14))
                     .foregroundStyle(OnboardingTheme.warmGray)
                     .multilineTextAlignment(.center)
                     .lineSpacing(2)
-                    .padding(.horizontal, 28)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.9)
+                    .padding(.horizontal, metrics.horizontalPadding + 8)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(.top, 4)
     }
 
-    private func benefitsList(compact: Bool) -> some View {
-        VStack(spacing: compact ? 6 : 8) {
+    private var freeTierBadge: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "5.circle.fill")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(OnboardingTheme.warmGray)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Version gratuite")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(OnboardingTheme.offWhite)
+                Text("5 analyses par mois")
+                    .font(.system(size: 12))
+                    .foregroundStyle(OnboardingTheme.warmGray)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(OnboardingTheme.cardFill)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(OnboardingTheme.cardStroke, lineWidth: 1)
+                }
+        }
+    }
+
+    private var benefitsList: some View {
+        VStack(spacing: metrics.paywallBenefitSpacing) {
             ForEach(Array(paywallBenefits.enumerated()), id: \.element.id) { index, benefit in
-                HStack(spacing: 12) {
+                HStack(alignment: .top, spacing: 12) {
                     Image(systemName: benefit.icon)
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(OnboardingTheme.accentRed)
@@ -102,15 +139,15 @@ struct OnboardingPaywallView: View {
                                 .fill(OnboardingTheme.accentRed.opacity(0.12))
                         }
 
-                    VStack(alignment: .leading, spacing: 1) {
+                    VStack(alignment: .leading, spacing: 3) {
                         Text(benefit.title)
-                            .font(.system(size: compact ? 13 : 14, weight: .semibold))
+                            .font(.system(size: metrics.isCompactHeight ? 13 : 14, weight: .semibold))
                             .foregroundStyle(OnboardingTheme.offWhite)
-                            .lineLimit(1)
+                            .fixedSize(horizontal: false, vertical: true)
                         Text(benefit.subtitle)
-                            .font(.system(size: compact ? 11 : 12))
+                            .font(.system(size: metrics.isCompactHeight ? 11 : 12))
                             .foregroundStyle(OnboardingTheme.warmGray)
-                            .lineLimit(1)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
 
                     Spacer(minLength: 0)
@@ -118,9 +155,10 @@ struct OnboardingPaywallView: View {
                     Image(systemName: "checkmark")
                         .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(OnboardingTheme.accentRed.opacity(0.8))
+                        .padding(.top, 4)
                 }
                 .padding(.horizontal, 14)
-                .padding(.vertical, compact ? 8 : 9)
+                .padding(.vertical, metrics.isCompactHeight ? 10 : 12)
                 .background {
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .fill(OnboardingTheme.cardFill)
@@ -132,10 +170,10 @@ struct OnboardingPaywallView: View {
                 .onboardingStaggeredEntrance(appeared, index: index + 3, baseDelay: 0.14)
             }
         }
-        .padding(.horizontal, 24)
+        .padding(.horizontal, metrics.horizontalPadding)
     }
 
-    private func pricingCard(compact: Bool) -> some View {
+    private var pricingCard: some View {
         OnboardingGlassCard(cornerRadius: 20) {
             HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 2) {
@@ -149,14 +187,14 @@ struct OnboardingPaywallView: View {
                 Spacer()
                 VStack(alignment: .trailing, spacing: 0) {
                     Text("7,99 €")
-                        .font(.system(size: compact ? 22 : 24, weight: .bold))
+                        .font(.system(size: metrics.isCompactHeight ? 22 : 24, weight: .bold))
                         .foregroundStyle(OnboardingTheme.offWhite)
                     Text("/ mois")
                         .font(.system(size: 11))
                         .foregroundStyle(OnboardingTheme.warmGray)
                 }
             }
-            .padding(compact ? 14 : 16)
+            .padding(metrics.isCompactHeight ? 14 : 16)
         }
         .overlay {
             RoundedRectangle(cornerRadius: 20, style: .continuous)
@@ -164,8 +202,8 @@ struct OnboardingPaywallView: View {
         }
     }
 
-    private func ctaBlock(compact: Bool) -> some View {
-        VStack(spacing: compact ? 8 : 10) {
+    private var ctaBlock: some View {
+        VStack(spacing: metrics.isCompactHeight ? 8 : 10) {
             OnboardingPrimaryButton(title: String(localized: "Essayer gratuitement 3 jours")) {
                 model.completeOnboarding()
             }
@@ -183,10 +221,8 @@ struct OnboardingPaywallView: View {
                 .font(.system(size: 10))
                 .foregroundStyle(OnboardingTheme.warmGrayMuted)
                 .multilineTextAlignment(.center)
-                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 8)
         }
-        .padding(.horizontal, 24)
-        .padding(.bottom, 12)
     }
 }

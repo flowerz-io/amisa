@@ -7,6 +7,7 @@ import SwiftUI
 
 struct NotificationOnboardingStepView: View {
     @ObservedObject var model: OnboardingFlowModel
+    @Environment(\.onboardingLayoutMetrics) private var metrics
     @AppStorage("amisa.notification.educationCompleted") private var notificationEducationCompleted = false
 
     @State private var appeared = false
@@ -15,41 +16,41 @@ struct NotificationOnboardingStepView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            OnboardingStepHeader(
-                segment: 3,
-                title: "Ne rate plus les\nmeilleures trouvailles",
-                subtitle: "Amisa t’alerte quand de nouvelles annonces correspondent à tes recherches."
-            )
-            .padding(.top, 4)
-            .onboardingStepEntrance(appeared)
+            OnboardingStepScroll {
+                VStack(spacing: metrics.isCompactHeight ? 18 : 24) {
+                    OnboardingStepHeader(
+                        segment: 3,
+                        title: "Ne rate plus les\nmeilleures trouvailles",
+                        subtitle: "Amisa t’alerte quand de nouvelles annonces correspondent à tes recherches enregistrées."
+                    )
+                    .padding(.top, 4)
+                    .onboardingStepEntrance(appeared)
 
-            Spacer(minLength: 20)
-
-            notificationMockup
-                .padding(.horizontal, 28)
-                .onboardingStaggeredEntrance(appeared, index: 1, baseDelay: 0.1)
-
-            Spacer(minLength: 24)
-
-            VStack(spacing: 10) {
-                OnboardingPrimaryButton(
-                    title: requestInFlight
-                        ? String(localized: "Activation…")
-                        : String(localized: "Activer les notifications"),
-                    icon: requestInFlight ? nil : "bell.badge.fill"
-                ) {
-                    Task { await activateNotifications() }
-                }
-                .disabled(requestInFlight)
-                .opacity(requestInFlight ? 0.85 : 1)
-
-                OnboardingSecondaryTextButton(title: String(localized: "Plus tard")) {
-                    finishStep()
+                    notificationMockup
+                        .padding(.horizontal, metrics.horizontalPadding)
+                        .onboardingStaggeredEntrance(appeared, index: 1, baseDelay: 0.1)
                 }
             }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 32)
-            .onboardingStepEntrance(appeared, delay: 0.16)
+
+            OnboardingPinnedFooter {
+                VStack(spacing: 10) {
+                    OnboardingPrimaryButton(
+                        title: requestInFlight
+                            ? String(localized: "Activation…")
+                            : String(localized: "Activer les notifications"),
+                        icon: requestInFlight ? nil : "bell.badge.fill"
+                    ) {
+                        Task { await activateNotifications() }
+                    }
+                    .disabled(requestInFlight)
+                    .opacity(requestInFlight ? 0.85 : 1)
+
+                    OnboardingSecondaryTextButton(title: String(localized: "Plus tard")) {
+                        finishStep()
+                    }
+                }
+                .onboardingStepEntrance(appeared, delay: 0.16)
+            }
         }
         .onboardingScreen()
         .onAppear {
@@ -66,7 +67,7 @@ struct NotificationOnboardingStepView: View {
         ZStack {
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .fill(Color.black.opacity(0.35))
-                .frame(height: 320)
+                .frame(height: metrics.notificationMockupHeight)
                 .overlay {
                     RoundedRectangle(cornerRadius: 28, style: .continuous)
                         .stroke(OnboardingTheme.cardStroke, lineWidth: 1)

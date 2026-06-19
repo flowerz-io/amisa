@@ -19,15 +19,13 @@ struct EmailLoginView: View {
     @FocusState private var emailFocused: Bool
     @FocusState private var passwordFocused: Bool
 
-    private var isFieldFocused: Bool {
-        emailFocused || passwordFocused
-    }
-
     var body: some View {
-        AuthKeyboardAdaptiveContainer(keyboardActive: isFieldFocused) {
+        AuthSheetFormScroll {
             loginContent
         }
-        .onAppear { emailFocused = true }
+        .onAppear {
+            AuthSheetLog.emailLogin("view appeared")
+        }
         .preferredColorScheme(theme.isPremium ? .dark : nil)
     }
 
@@ -63,14 +61,20 @@ struct EmailLoginView: View {
                         theme: theme,
                         placeholder: String(localized: "Email"),
                         text: $email,
-                        focused: $emailFocused
+                        focused: $emailFocused,
+                        onFocusChange: { isFocused in
+                            if isFocused { AuthSheetLog.keyboard("email field focused (login)") }
+                        }
                     )
                     AuthIconPasswordField(
                         theme: theme,
                         placeholder: String(localized: "Password"),
                         text: $password,
                         contentType: .password,
-                        focused: $passwordFocused
+                        focused: $passwordFocused,
+                        onFocusChange: { isFocused in
+                            if isFocused { AuthSheetLog.keyboard("password field focused (login)") }
+                        }
                     )
                 }
                 .padding(.horizontal, 20)
@@ -115,6 +119,7 @@ struct EmailLoginView: View {
     }
 
     private func submitLogin() {
+        AuthSheetLog.emailLogin("submit tapped")
         resetSuccessMessage = nil
         localError = nil
         auth.lastError = nil
@@ -134,6 +139,7 @@ struct EmailLoginView: View {
     }
 
     private func resetPasswordTapped() {
+        AuthSheetLog.emailLogin("forgot password tapped")
         resetSuccessMessage = nil
         localError = nil
         auth.lastError = nil

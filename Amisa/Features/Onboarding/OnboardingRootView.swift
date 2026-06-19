@@ -11,8 +11,12 @@ struct OnboardingRootView: View {
     private static let chromeRowHeight: CGFloat = 40
     /// Espace sous la safe area avant le chrome.
     private static let chromeTopPadding: CGFloat = 12
-    /// Marge supplémentaire au-dessus de la ligne retour + progression.
+    /// Marge supplémentaire au-dessus de la ligne retour + progression (iPhone).
     private static let chromeRowExtraTopMargin: CGFloat = 40
+
+    private func chromeExtraTopMargin(metrics: OnboardingLayoutMetrics) -> CGFloat {
+        metrics.isPad ? 20 : Self.chromeRowExtraTopMargin
+    }
 
     init(onComplete: @escaping () -> Void) {
         _model = StateObject(wrappedValue: OnboardingFlowModel(onComplete: onComplete))
@@ -23,19 +27,25 @@ struct OnboardingRootView: View {
             OnboardingCinematicBackground(glowIntensity: backgroundGlowIntensity)
 
             GeometryReader { geo in
+                let metrics = OnboardingLayoutMetrics(
+                    size: geo.size,
+                    safeArea: geo.safeAreaInsets
+                )
                 let safeTop = geo.safeAreaInsets.top
                 let showsChrome = showsBackButton || model.step.showsProgressBar
                 let chromeBlock = showsChrome
-                    ? (Self.chromeRowExtraTopMargin + Self.chromeRowHeight)
+                    ? (chromeExtraTopMargin(metrics: metrics) + Self.chromeRowHeight)
                     : 0
                 let topInset = safeTop + Self.chromeTopPadding + chromeBlock
 
                 ZStack(alignment: .top) {
                     stepContent
+                        .environment(\.onboardingLayoutMetrics, metrics)
                         .padding(.top, topInset)
+                        .padding(.bottom, geo.safeAreaInsets.bottom)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
-                    chrome(safeTop: safeTop)
+                    chrome(safeTop: safeTop, metrics: metrics)
                 }
             }
         }
@@ -90,7 +100,7 @@ struct OnboardingRootView: View {
     }
 
     @ViewBuilder
-    private func chrome(safeTop: CGFloat) -> some View {
+    private func chrome(safeTop: CGFloat, metrics: OnboardingLayoutMetrics) -> some View {
         if showsBackButton || model.step.showsProgressBar {
             HStack(alignment: .center, spacing: 12) {
                 if showsBackButton {
@@ -107,8 +117,10 @@ struct OnboardingRootView: View {
                 }
             }
             .frame(height: Self.chromeRowHeight)
-            .padding(.horizontal, 20)
-            .padding(.top, safeTop + Self.chromeTopPadding + Self.chromeRowExtraTopMargin)
+            .frame(maxWidth: metrics.maxContentWidth)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, metrics.horizontalPadding)
+            .padding(.top, safeTop + Self.chromeTopPadding + chromeExtraTopMargin(metrics: metrics))
             .frame(maxWidth: .infinity, alignment: .leading)
         }
     }

@@ -7,56 +7,43 @@
 
 import SwiftUI
 
-// MARK: - Hauteur sheet (content-sized)
+// MARK: - Logs
 
-struct AuthSheetHeightKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = max(value, nextValue())
+enum AuthSheetLog {
+    static func sheet(_ message: String) {
+        print("[AUTH_SHEET] \(message)")
+    }
+
+    static func emailLogin(_ message: String) {
+        print("[EMAIL_LOGIN] \(message)")
+    }
+
+    static func keyboard(_ message: String) {
+        print("[KEYBOARD] \(message)")
     }
 }
 
-extension View {
-    /// Mesure la hauteur intrinsèque du contenu auth pour `presentationDetents`.
-    func reportAuthSheetHeight() -> some View {
-        background {
-            GeometryReader { proxy in
-                Color.clear.preference(key: AuthSheetHeightKey.self, value: proxy.size.height)
-            }
-        }
-    }
-}
+// MARK: - Hauteur sheet (fixe — pas de remesure au clavier)
 
 enum AuthSheetMetrics {
     /// Marge sous le dernier élément (ex. « Continuer en tant qu’invité »).
     static let bottomInset: CGFloat = 28
-    /// Hauteur de repli avant la première mesure.
-    static let fallbackHeight: CGFloat = 560
-    /// Plafond sur petits écrans / clavier ouvert.
-    static func maxSheetHeight(for screenHeight: CGFloat) -> CGFloat {
-        min(screenHeight * 0.92, 720)
-    }
+    /// Hauteur fixe du sheet — le contenu défile à l’intérieur si le clavier est ouvert.
+    static let fixedSheetHeight: CGFloat = 560
+    /// Hauteur du handle onboarding (capsule + padding).
+    static let onboardingHandleHeight: CGFloat = 28
 }
 
-// MARK: - Scroll adaptatif (clavier uniquement)
+// MARK: - Conteneur formulaire (scroll interne, sheet fixe)
 
-struct AuthKeyboardAdaptiveContainer<Content: View>: View {
-    let keyboardActive: Bool
+struct AuthSheetFormScroll<Content: View>: View {
     @ViewBuilder var content: () -> Content
 
     var body: some View {
-        Group {
-            if keyboardActive {
-                ScrollView(showsIndicators: false) {
-                    content()
-                }
-                .scrollDismissesKeyboard(.interactively)
-                .frame(maxHeight: AuthSheetMetrics.maxSheetHeight(for: UIScreen.main.bounds.height) * 0.62)
-            } else {
-                content()
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+        ScrollView(showsIndicators: false) {
+            content()
         }
+        .scrollDismissesKeyboard(.interactively)
     }
 }
 
@@ -187,6 +174,7 @@ struct AuthIconEmailField: View {
     let placeholder: String
     @Binding var text: String
     @FocusState.Binding var focused: Bool
+    var onFocusChange: ((Bool) -> Void)? = nil
 
     var body: some View {
         HStack(spacing: 12) {
@@ -211,6 +199,9 @@ struct AuthIconEmailField: View {
                 .stroke(focused ? theme.fieldFocusedStroke : theme.fieldStroke, lineWidth: focused ? 1.5 : 1)
         )
         .focused($focused)
+        .onChange(of: focused) { _, isFocused in
+            onFocusChange?(isFocused)
+        }
     }
 }
 
@@ -220,6 +211,7 @@ struct AuthIconPasswordField: View {
     @Binding var text: String
     var contentType: UITextContentType = .password
     @FocusState.Binding var focused: Bool
+    var onFocusChange: ((Bool) -> Void)? = nil
 
     var body: some View {
         HStack(spacing: 12) {
@@ -243,6 +235,9 @@ struct AuthIconPasswordField: View {
                 .stroke(focused ? theme.fieldFocusedStroke : theme.fieldStroke, lineWidth: focused ? 1.5 : 1)
         )
         .focused($focused)
+        .onChange(of: focused) { _, isFocused in
+            onFocusChange?(isFocused)
+        }
     }
 }
 

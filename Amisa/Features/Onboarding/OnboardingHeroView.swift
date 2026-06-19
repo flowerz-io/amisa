@@ -7,6 +7,7 @@ import SwiftUI
 
 struct OnboardingHeroView: View {
     @ObservedObject var model: OnboardingFlowModel
+    @Environment(\.onboardingLayoutMetrics) private var metrics
     @StateObject private var parallax = OnboardingParallaxMotion()
     @State private var appeared = false
     @State private var floatPhase = false
@@ -14,28 +15,26 @@ struct OnboardingHeroView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Spacer()
+            OnboardingStepScroll {
+                VStack(spacing: metrics.isCompactHeight ? 20 : 28) {
+                    floatingCardsLayer
+                        .frame(height: metrics.heroCardsHeight)
+                        .scaleEffect(appeared ? 1 : 0.94)
+                        .opacity(appeared ? 1 : 0)
 
-            floatingCardsLayer
-                .frame(height: 400)
-                .scaleEffect(appeared ? 1 : 0.94)
-                .opacity(appeared ? 1 : 0)
-
-            Spacer(minLength: 24)
-
-            headlineBlock
-                .padding(.horizontal, 24)
-                .onboardingStepEntrance(appeared, delay: 0.12)
-
-            Spacer(minLength: 28)
-
-            OnboardingPrimaryButton(title: String(localized: "Commencer")) {
-                model.openAuthSheet()
+                    headlineBlock
+                        .padding(.horizontal, metrics.horizontalPadding)
+                        .onboardingStepEntrance(appeared, delay: 0.12)
+                }
+                .padding(.top, 8)
             }
-            .padding(.horizontal, 24)
-            .onboardingStepEntrance(appeared, delay: 0.2)
 
-            Spacer(minLength: 44)
+            OnboardingPinnedFooter {
+                OnboardingPrimaryButton(title: String(localized: "Commencer")) {
+                    model.openAuthSheet()
+                }
+                .onboardingStepEntrance(appeared, delay: 0.2)
+            }
         }
         .onAppear {
             parallax.start()
@@ -56,6 +55,7 @@ struct OnboardingHeroView: View {
             if cards.count >= 2 {
                 HeroFloatingCard(
                     card: cards[1],
+                    imageHeight: metrics.heroCardImageHeight,
                     x: 62, y: 28,
                     rotation: 9, scale: 0.86,
                     floatPhase: floatPhase,
@@ -68,6 +68,7 @@ struct OnboardingHeroView: View {
             if cards.count >= 3 {
                 HeroFloatingCard(
                     card: cards[2],
+                    imageHeight: metrics.heroCardImageHeight,
                     x: -58, y: 44,
                     rotation: -11, scale: 0.82,
                     floatPhase: floatPhase,
@@ -80,6 +81,7 @@ struct OnboardingHeroView: View {
             if cards.count >= 1 {
                 HeroFloatingCard(
                     card: cards[0],
+                    imageHeight: metrics.heroCardImageHeight,
                     x: 0, y: 0,
                     rotation: -2.5, scale: 1,
                     floatPhase: floatPhase,
@@ -93,9 +95,9 @@ struct OnboardingHeroView: View {
     }
 
     private var headlineBlock: some View {
-        let titleFont = Font.system(size: 32, weight: .bold)
+        let titleFont = Font.system(size: metrics.stepTitleSize, weight: .bold)
 
-        return VStack(alignment: .leading, spacing: 14) {
+        return VStack(alignment: .leading, spacing: metrics.isCompactHeight ? 10 : 14) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Trouve")
                     .font(titleFont)
@@ -109,11 +111,12 @@ struct OnboardingHeroView: View {
             }
             .tracking(-0.2)
 
-            Text("Importe une photo ou partage une image. Amisa retrouve les meilleures annonces Vinted similaires.")
-                .font(.system(size: 16, weight: .regular))
+            Text("Importe une photo ou partage une image. Amisa retrouve les annonces Vinted similaires.")
+                .font(.system(size: metrics.stepSubtitleSize, weight: .regular))
                 .foregroundStyle(OnboardingTheme.warmGray)
                 .multilineTextAlignment(.leading)
                 .lineSpacing(4)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -162,6 +165,7 @@ private struct HeroLavaGradientText: View {
 
 private struct HeroFloatingCard: View {
     let card: OnboardingHeroCardData
+    let imageHeight: CGFloat
     let x: CGFloat
     let y: CGFloat
     let rotation: Double
@@ -190,7 +194,7 @@ private struct HeroFloatingCard: View {
         OnboardingGlassCard(cornerRadius: 20) {
             VStack(alignment: .leading, spacing: 0) {
                 OnboardingAssetImageView(imageName: card.imageName)
-                    .frame(height: 148)
+                    .frame(height: imageHeight)
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
 
                 VStack(alignment: .leading, spacing: 4) {
@@ -209,7 +213,7 @@ private struct HeroFloatingCard: View {
                 .padding(14)
             }
         }
-        .frame(width: 212)
+        .frame(width: min(212, imageHeight * 1.35))
         .offset(
             x: x + parallax.width * depthFactor,
             y: y + floatOffset + parallax.height * depthFactor

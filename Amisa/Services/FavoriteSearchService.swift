@@ -45,6 +45,10 @@ final class FavoriteSearchService {
         save(list)
     }
 
+    func clearAll() {
+        defaults.removeObject(forKey: storageKey)
+    }
+
     private func save(_ records: [FavoriteSearchRecord]) {
         guard let data = try? JSONEncoder().encode(records) else { return }
         defaults.set(data, forKey: storageKey)

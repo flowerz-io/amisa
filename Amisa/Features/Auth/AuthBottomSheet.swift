@@ -13,7 +13,8 @@ struct AuthBottomSheet: View {
     var onSignedIn: @MainActor @Sendable () -> Void
 
     @Environment(\.dismiss) private var dismiss
-    @State private var sheetHeight: CGFloat = AuthSheetMetrics.fallbackHeight
+
+    private let sheetHeight = AuthSheetMetrics.fixedSheetHeight
 
     var body: some View {
         AuthCoordinatorCore(
@@ -21,16 +22,10 @@ struct AuthBottomSheet: View {
             onContinueAsGuest: nil,
             onAuthenticated: { @MainActor in onSignedIn() }
         )
-        .reportAuthSheetHeight()
-        .onPreferenceChange(AuthSheetHeightKey.self) { measured in
-            guard measured > 0 else { return }
-            let capped = min(
-                measured,
-                AuthSheetMetrics.maxSheetHeight(for: UIScreen.main.bounds.height)
-            )
-            withAnimation(.easeOut(duration: 0.2)) {
-                sheetHeight = capped
-            }
+        .frame(height: sheetHeight, alignment: .top)
+        .ignoresSafeArea(.keyboard, edges: .bottom)
+        .onAppear {
+            AuthSheetLog.sheet("modal presented height=\(Int(sheetHeight))pt")
         }
         .presentationDetents([.height(sheetHeight)])
         .presentationDragIndicator(.visible)
@@ -105,16 +100,24 @@ struct AuthCoordinatorCore: View {
                         { @MainActor @Sendable in handler() }
                     },
                     onClose: { @MainActor in closeModalOnly() },
-                    onEmailLogin: { screen = .emailLogin }
+                    onEmailLogin: {
+                        AuthSheetLog.sheet("navigate email login")
+                        screen = .emailLogin
+                    }
                 )
             case .emailLogin:
                 EmailLoginView(
                     theme: theme,
-                    onBack: { screen = .start }
+                    onBack: {
+                        AuthSheetLog.sheet("back to signup")
+                        screen = .start
+                    }
                 )
             }
         }
-        .animation(.spring(response: 0.36, dampingFraction: 0.82), value: screen)
+        .transaction { transaction in
+            transaction.animation = .spring(response: 0.36, dampingFraction: 0.82)
+        }
         .onChange(of: auth.isAuthenticated) { _, ok in
             guard ok else { return }
             Task { await MainActor.run {
